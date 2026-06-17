@@ -1,0 +1,34 @@
+# Components
+
+## Purpose
+
+- Owns reusable React components shared by app routes, including layouts, auth helpers, reservation ticket UI, forms, home quote UI, and UI primitives.
+
+## Ownership
+
+- Top-level components own cross-route shells and utilities such as `StaffLayout.jsx`, `PublicLayout.jsx`, `AuthLayout.jsx`, `ProtectedRoute.jsx`, and `ScrollToTop.jsx`.
+- `forms/` owns reservation form inputs shared by staff and quote flows.
+- `home/` owns public-home-specific quote components.
+- `ticket/` owns single-ticket preview and payment-dialog components.
+- `tickets/` owns staff reservation list, card, table, stats, and status badge components.
+- `ui/AGENTS.md` owns shadcn-style UI primitives and toast helpers.
+
+## Local Contracts
+
+- Components must not introduce new persistence contracts; route mutations and storage live in `lib/`.
+- `components/home/QuoteForm.jsx` creates Convex quote tickets through `lib/store.js` and may call the app-level quote webhook route after creation.
+- Keep shared components route-agnostic unless they are in a domain folder such as `home/`, `ticket/`, or `tickets/`.
+- Preserve `@/components/ui/*` import paths for UI primitives.
+
+## Work Guidance
+
+- Prefer composing existing `components/ui/` primitives before adding new styling primitives.
+- Keep domain components focused on display and interaction; business calculations belong in `lib/calc.js` or `lib/store.js`.
+
+## Verification
+
+- Run `npm run build` after component API or layout changes when feasible.
+
+## Child DOX Index
+
+- `ui/AGENTS.md` owns reusable UI primitive components generated or maintained in shadcn style.
