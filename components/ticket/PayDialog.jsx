@@ -54,15 +54,14 @@ export default function PayDialog({ open, onOpenChange, faqLink, onConfirmPaymen
               <DialogTitle>Before you pay</DialogTitle>
               <DialogDescription className="pt-2 leading-relaxed">
                 Please confirm that you have read and agree to the{" "}
-                <Link href="/ritz-info" onClick={() => close(false)} className="text-blue-600 underline underline-offset-2 hover:text-blue-700">Ritz Info</Link>
+                <Link href="/ritz-info" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline underline-offset-2 hover:text-blue-700">Ritz Info</Link>
                 {" "}and{" "}
-                <Link href="/faq" onClick={() => close(false)} className="text-blue-600 underline underline-offset-2 hover:text-blue-700">FAQ terms</Link>.
+                <Link href="/faq" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline underline-offset-2 hover:text-blue-700">FAQ terms</Link>.
               </DialogDescription>
             </DialogHeader>
 
-            <div className="rounded-lg bg-gray-100 px-4 py-3 text-sm text-gray-700 leading-relaxed">
-              A cleaning fee of ${settings.cleaningFee} is paid directly to the Ritz at check-in and is not part of your quoted price.{" "}
-              <Link href="/ritz-info" onClick={() => close(false)} className="text-blue-600 underline underline-offset-2 hover:text-blue-700">Read the full Ritz info &amp; FAQ</Link>.
+            <div className="rounded-lg border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-800 leading-relaxed">
+              A cleaning fee of ${settings.cleaningFee} is paid directly to the Ritz at check-in and is not part of your quoted price.
             </div>
 
             <div className="flex items-center gap-2.5">
