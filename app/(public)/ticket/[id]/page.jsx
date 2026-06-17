@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,39 @@ export default function TicketPage() {
   const settings = useSettings() || DEFAULT_SETTINGS;
   const { updateTicket } = useTicketActions();
   const [payOpen, setPayOpen] = useState(false);
+  const [paymentProofUrl, setPaymentProofUrl] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadPaymentProofUrl() {
+      if (!ticket?.paymentScreenshotKey) {
+        setPaymentProofUrl(null);
+        return;
+      }
+
+      const response = await fetch("/api/payment-proof/view-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ticketId: ticket.id, key: ticket.paymentScreenshotKey }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to load payment proof");
+      }
+
+      const data = await response.json();
+      if (!cancelled) setPaymentProofUrl(data.viewUrl);
+    }
+
+    loadPaymentProofUrl().catch(() => {
+      if (!cancelled) setPaymentProofUrl(null);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [ticket?.id, ticket?.paymentScreenshotKey]);
 
   if (ticket === undefined) {
     return (
@@ -52,11 +85,43 @@ export default function TicketPage() {
   const canPay = hasPrice && !["CONFIRMED", "PAYMENT RECEIVED", "COMPLETED", "CANCELLED"].includes(ticket.status);
   const isPaid = ["PAYMENT RECEIVED", "COMPLETED"].includes(ticket.status);
 
-  const handlePayment = async (method, screenshot) => {
+  const uploadPaymentProof = async (file) => {
+    const uploadUrlResponse = await fetch("/api/payment-proof/upload-url", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ticketId: ticket.id,
+        fileName: file.name,
+        contentType: file.type,
+      }),
+    });
+
+    if (!uploadUrlResponse.ok) {
+      throw new Error("Failed to prepare payment proof upload");
+    }
+
+    const { key, uploadUrl } = await uploadUrlResponse.json();
+    const uploadResponse = await fetch(uploadUrl, {
+      method: "PUT",
+      headers: { "Content-Type": file.type },
+      body: file,
+    });
+
+    if (!uploadResponse.ok) {
+      throw new Error("Failed to upload payment proof");
+    }
+
+    return key;
+  };
+
+  const handlePayment = async (method, screenshotFile) => {
+    const paymentScreenshotKey = await uploadPaymentProof(screenshotFile);
+
     await updateTicket(ticket.id, {
       status: "PAYMENT RECEIVED",
       paymentMethod: method,
-      paymentScreenshot: screenshot || null,
+      paymentScreenshot: null,
+      paymentScreenshotKey,
       paymentDate: new Date().toISOString().slice(0, 10),
     });
   };
@@ -147,10 +212,10 @@ export default function TicketPage() {
 
         <TicketPreview ticket={ticket} settings={settings} />
 
-        {ticket.paymentScreenshot && (
+        {(paymentProofUrl || ticket.paymentScreenshot) && (
           <div className="border rounded-xl bg-card p-4">
             <p className="text-sm font-medium mb-2">Payment proof</p>
-            <img src={ticket.paymentScreenshot} alt="Payment proof" className="rounded-lg border max-h-72 object-contain" />
+            <img src={paymentProofUrl || ticket.paymentScreenshot} alt="Payment proof" className="rounded-lg border max-h-72 object-contain" />
           </div>
         )}
 

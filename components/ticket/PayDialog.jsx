@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
@@ -17,16 +17,28 @@ export default function PayDialog({ open, onOpenChange, faqLink, onConfirmPaymen
   const [step, setStep] = useState("terms");
   const [agreed, setAgreed] = useState(false);
   const [method, setMethod] = useState("");
-  const [screenshot, setScreenshot] = useState(null);
+  const [screenshotFile, setScreenshotFile] = useState(null);
+  const [screenshotPreview, setScreenshotPreview] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   const handleFile = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => setScreenshot(reader.result);
-    reader.readAsDataURL(file);
+    if (!file.type.startsWith("image/")) {
+      setError("Payment proof must be an image.");
+      return;
+    }
+    setError("");
+    setScreenshotFile(file);
+    setScreenshotPreview(URL.createObjectURL(file));
   };
+
+  useEffect(() => {
+    return () => {
+      if (screenshotPreview) URL.revokeObjectURL(screenshotPreview);
+    };
+  }, [screenshotPreview]);
 
   const close = (v) => {
     onOpenChange(v);
@@ -34,16 +46,24 @@ export default function PayDialog({ open, onOpenChange, faqLink, onConfirmPaymen
       setStep("terms");
       setAgreed(false);
       setMethod("");
-      setScreenshot(null);
+      setScreenshotFile(null);
+      setScreenshotPreview(null);
       setSaving(false);
+      setError("");
     }
   };
 
-  const save = () => {
-    if (!method || !screenshot) return;
+  const save = async () => {
+    if (!method || !screenshotFile) return;
     setSaving(true);
-    onConfirmPayment(method, screenshot);
-    close(false);
+    try {
+      await onConfirmPayment(method, screenshotFile);
+      close(false);
+    } catch {
+      setError("Payment proof upload failed. Please try again.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -113,13 +133,17 @@ export default function PayDialog({ open, onOpenChange, faqLink, onConfirmPaymen
 
             <div className="space-y-2">
               <p className="text-sm font-medium">Payment Screenshot (required)</p>
-              {screenshot ? (
+              {error && <p className="text-xs text-red-600">{error}</p>}
+              {screenshotPreview ? (
                 <div className="relative border rounded-lg overflow-hidden">
-                  <img src={screenshot} alt="Payment proof" className="w-full max-h-48 object-contain bg-secondary/30" />
+                  <img src={screenshotPreview} alt="Payment proof" className="w-full max-h-48 object-contain bg-secondary/30" />
                   <Button
                     variant="secondary" size="icon"
                     className="absolute top-2 right-2 h-7 w-7"
-                    onClick={() => setScreenshot(null)}
+                    onClick={() => {
+                      setScreenshotFile(null);
+                      setScreenshotPreview(null);
+                    }}
                   >
                     <X className="w-3.5 h-3.5" />
                   </Button>
@@ -135,7 +159,7 @@ export default function PayDialog({ open, onOpenChange, faqLink, onConfirmPaymen
 
             <DialogFooter className="gap-2">
               <Button variant="outline" onClick={() => setStep("terms")}>Back</Button>
-              <Button disabled={!method || !screenshot || saving} onClick={save} className="bg-blue-600 hover:bg-blue-700 text-white">Confirm Payment</Button>
+              <Button disabled={!method || !screenshotFile || saving} onClick={save} className="bg-blue-600 hover:bg-blue-700 text-white">{saving ? "Uploading..." : "Confirm Payment"}</Button>
             </DialogFooter>
           </>
         )}
