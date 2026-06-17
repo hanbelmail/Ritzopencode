@@ -74,6 +74,14 @@ export default function TicketPage() {
         </div>
       </header>
 
+      {canPay && (
+        <div className="sticky top-0 z-40 border-b bg-background/95 p-3 shadow-md backdrop-blur md:hidden">
+          <Button size="lg" className="w-full" onClick={() => setPayOpen(true)}>
+            <CreditCard className="w-4 h-4 mr-2" /> Pay {fmtMoney(ticket.rateOffered)}
+          </Button>
+        </div>
+      )}
+
       <main className="max-w-3xl mx-auto px-5 py-8 space-y-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -116,7 +124,7 @@ export default function TicketPage() {
             <Field label="Nights" value={ticket.nights} />
             <Field label="Room" value={ticket.roomType} />
             <Field label="Referred by" value={ticket.referredBy} />
-            <Field label="Confirmation date" value={ticket.confirmationDate ? fmtDate(ticket.confirmationDate) : null} />
+            <Field label="Quote date" value={ticket.createdAt ? fmtDate(ticket.createdAt) : null} />
             <Field label="Retail rate" value={hasPrice ? fmtMoney(ticket.retailPrice) : "Pending"} />
             <Field label="Discount" value={hasPrice ? `${ticket.discountPct}% off` : "Pending"} />
             <Field label="Your price" value={hasPrice ? fmtMoney(ticket.rateOffered) : "Pending"} />
@@ -131,6 +139,12 @@ export default function TicketPage() {
           )}
         </div>
 
+        {canPay && (
+          <Button size="lg" className="hidden md:flex w-full" onClick={() => setPayOpen(true)}>
+            <CreditCard className="w-4 h-4 mr-2" /> Pay {fmtMoney(ticket.rateOffered)}
+          </Button>
+        )}
+
         <TicketPreview ticket={ticket} settings={settings} />
 
         {ticket.paymentScreenshot && (
@@ -138,12 +152,6 @@ export default function TicketPage() {
             <p className="text-sm font-medium mb-2">Payment proof</p>
             <img src={ticket.paymentScreenshot} alt="Payment proof" className="rounded-lg border max-h-72 object-contain" />
           </div>
-        )}
-
-        {canPay && (
-          <Button size="lg" className="w-full" onClick={() => setPayOpen(true)}>
-            <CreditCard className="w-4 h-4 mr-2" /> Pay {fmtMoney(ticket.rateOffered)}
-          </Button>
         )}
 
         <PayDialog
