@@ -40,6 +40,7 @@ export default function PayDialog({ open, onOpenChange, faqLink, onConfirmPaymen
   };
 
   const save = () => {
+    if (!method || !screenshot) return;
     setSaving(true);
     onConfirmPayment(method, screenshot);
     close(false);
@@ -104,14 +105,14 @@ export default function PayDialog({ open, onOpenChange, faqLink, onConfirmPaymen
             </Select>
 
             {method && activeMethods.find((m) => m.name === method)?.instructions && (
-              <div className="flex items-start gap-2 bg-secondary/40 border rounded-lg px-3 py-2.5">
-                <Info className="w-3.5 h-3.5 mt-0.5 text-muted-foreground shrink-0" />
-                <p className="text-xs text-muted-foreground leading-relaxed">{activeMethods.find((m) => m.name === method).instructions}</p>
+              <div className="flex items-start gap-2 rounded-lg border border-green-200 bg-green-50 px-3 py-2.5">
+                <Info className="w-3.5 h-3.5 mt-0.5 text-green-700 shrink-0" />
+                <p className="text-xs text-green-800 leading-relaxed">{activeMethods.find((m) => m.name === method).instructions}</p>
               </div>
             )}
 
             <div className="space-y-2">
-              <p className="text-sm font-medium">Payment Screenshot (optional)</p>
+              <p className="text-sm font-medium">Payment Screenshot (required)</p>
               {screenshot ? (
                 <div className="relative border rounded-lg overflow-hidden">
                   <img src={screenshot} alt="Payment proof" className="w-full max-h-48 object-contain bg-secondary/30" />
@@ -134,7 +135,7 @@ export default function PayDialog({ open, onOpenChange, faqLink, onConfirmPaymen
 
             <DialogFooter className="gap-2">
               <Button variant="outline" onClick={() => setStep("terms")}>Back</Button>
-              <Button disabled={!method || saving} onClick={save} className="bg-blue-600 hover:bg-blue-700 text-white">Confirm Payment</Button>
+              <Button disabled={!method || !screenshot || saving} onClick={save} className="bg-blue-600 hover:bg-blue-700 text-white">Confirm Payment</Button>
             </DialogFooter>
           </>
         )}
