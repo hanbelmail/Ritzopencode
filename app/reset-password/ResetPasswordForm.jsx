@@ -2,7 +2,8 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useAuthActions } from "@convex-dev/auth/react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,8 +12,11 @@ import { Lock, Loader2, AlertTriangle } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
 
 export default function ResetPasswordForm() {
+  const router = useRouter();
+  const { signIn } = useAuthActions();
   const searchParams = useSearchParams();
-  const resetToken = searchParams.get("token");
+  const resetCode = searchParams.get("code");
+  const email = searchParams.get("email");
 
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -27,11 +31,22 @@ export default function ResetPasswordForm() {
       return;
     }
     setLoading(true);
-    setError("Password reset needs a Convex Auth email provider such as Resend before it can be used.");
-    setLoading(false);
+    try {
+      const formData = new FormData();
+      formData.set("email", email);
+      formData.set("code", resetCode);
+      formData.set("newPassword", newPassword);
+      formData.set("flow", "reset-verification");
+      await signIn("password", formData);
+      router.push("/dashboard");
+    } catch (err) {
+      setError(err.message || "Could not reset password");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  if (!resetToken) {
+  if (!resetCode || !email) {
     return (
       <AuthLayout
         icon={AlertTriangle}

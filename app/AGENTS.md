@@ -9,7 +9,7 @@
 - `layout.jsx` wires Convex Auth providers, global providers, app metadata, manifest/favicon links, scrolling, and toast rendering.
 - `globals.css` owns Tailwind globals and theme variables consumed across the app.
 - `login/` and `register/` own guest authentication flows backed by Convex Auth through `lib/AuthContext.jsx`.
-- `forgot-password/` and `reset-password/` own disabled reset messaging until a Convex Auth email provider is configured.
+- `forgot-password/` and `reset-password/` own Convex Auth password reset request and verification flows.
 - `api/tickets/` owns demo REST endpoints for fetching, status-filtered fetching, updating, and deleting Convex-backed reservation tickets.
 - `api/payment-proof/` owns private Cloudflare R2 signed upload and signed view URL endpoints for payment screenshots.
 - `api/quote-webhook/` owns server-side forwarding of public quote tickets to the configured external webhook.

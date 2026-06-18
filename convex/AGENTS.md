@@ -6,7 +6,7 @@
 
 ## Ownership
 
-- `auth.ts` owns Convex Auth provider configuration.
+- `auth.ts` owns Convex Auth provider configuration, including Resend-backed password reset email delivery.
 - `auth.config.ts` owns Convex Auth client trust configuration.
 - `http.ts` owns Convex HTTP routes, including auth endpoints.
 - `schema.ts` owns Convex database schema tables, including Auth, `tickets`, and `settings`.
@@ -19,6 +19,7 @@
 - Keep Convex backend files TypeScript, matching Convex conventions, while the Next.js app remains JavaScript/JSX unless explicitly changed.
 - Include `authTables` in `schema.ts` for Convex Auth compatibility.
 - Do not store Convex secrets in source files; use `npx convex env set` or the Convex dashboard.
+- Password reset emails require Convex env values `AUTH_RESEND_KEY` for the Resend API key and `AUTH_RESEND_FROM` for the sender address, for example `Waikiki Secret <reservations@app.waikikisecret.xyz>`.
 
 ## Work Guidance
 

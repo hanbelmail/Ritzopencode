@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useAuthActions } from "@convex-dev/auth/react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,15 +11,28 @@ import { Mail, ArrowLeft, Loader2 } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
 
 export default function ForgotPassword() {
+  const { signIn } = useAuthActions();
   const [email, setEmail] = useState("");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
     setLoading(true);
-    setLoading(false);
-    setSent(true);
+    try {
+      const formData = new FormData();
+      formData.set("email", email);
+      formData.set("flow", "reset");
+      formData.set("redirectTo", `/reset-password?email=${encodeURIComponent(email)}`);
+      await signIn("password", formData);
+      setSent(true);
+    } catch (err) {
+      setError(err.message || "Could not send password reset email");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -34,10 +48,15 @@ export default function ForgotPassword() {
     >
       {sent ? (
         <p className="text-sm text-foreground text-center">
-          Password reset email is not configured yet. Add a Convex Auth email provider such as Resend to enable reset links for {email}.
+          If an account exists for {email}, a password reset link has been sent.
         </p>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+              {error}
+            </div>
+          )}
           <div className="space-y-2">
             <Label htmlFor="email">Email address</Label>
             <div className="relative">
