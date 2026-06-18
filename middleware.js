@@ -49,6 +49,8 @@ export default convexAuthNextjsMiddleware(async (request, { convexAuth }) => {
   if (isAuthRoute(request) && (await convexAuth.isAuthenticated())) {
     return nextjsMiddlewareRedirect(request, "/dashboard");
   }
+}, {
+  shouldHandleCode: (request) => request.nextUrl.pathname !== "/reset-password",
 });
 
 export const config = {

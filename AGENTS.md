@@ -92,7 +92,7 @@ When the user requests a durable behavior change, record it here or in the relev
 - Preserve the current JavaScript/JSX file style; do not introduce TypeScript unless explicitly requested.
 - Treat `lib/store.js` constants and Convex tables as reservation/settings data contracts; legacy `ritz_*` localStorage keys are read only for one-time browser data migration.
 - Keep public guest flows, staff-authenticated flows, reusable components, and storage/business logic separated by their owning child DOX files.
-- `middleware.js` protects staff routes with Convex Auth and allows `/api/tickets(.*)` access through either Convex Auth or a server-side `N8N_API_KEY` sent as `Authorization: Bearer <key>` or `x-api-key`.
+- `middleware.js` protects staff routes with Convex Auth, skips automatic Convex Auth `code` handling on `/reset-password` so password-reset links keep their verification code, and allows `/api/tickets(.*)` access through either Convex Auth or a server-side `N8N_API_KEY` sent as `Authorization: Bearer <key>` or `x-api-key`.
 
 ## Verification
 
