@@ -29,12 +29,12 @@ function isSameDay(a, b) {
 
 // ─── colour map ──────────────────────────────────────────────────────────────
 const STATUS_COLORS = {
-  CONFIRMED:         { bg: "#1e3a5f", text: "#fff" },
-  "PAYMENT RECEIVED":{ bg: "#1e3a5f", text: "#fff" },
-  COMPLETED:         { bg: "#6b7280", text: "#fff" },
-  PENDING:           { bg: "#0d9488", text: "#fff" },
-  QUOTE:             { bg: "#9ca3af", text: "#fff" },
-  CANCELLED:         { bg: "#ef4444", text: "#fff" },
+  QUOTE: "bg-slate-600 text-white border-slate-700",
+  PENDING: "bg-amber-600 text-white border-amber-700",
+  CONFIRMED: "bg-blue-700 text-white border-blue-800",
+  "PAYMENT RECEIVED": "bg-emerald-700 text-white border-emerald-800",
+  COMPLETED: "bg-primary text-primary-foreground border-primary",
+  CANCELLED: "bg-red-700 text-white border-red-800",
 };
 
 const PAYMENT_ICONS = {
@@ -226,7 +226,7 @@ function MonthGrid({ year, month, reservations, settings }) {
               {/* Reservation bars (absolute overlay) */}
               {weekBars[wi].map((seg, si) => {
                 const res = seg.reservation;
-                const color = STATUS_COLORS[res.status] || STATUS_COLORS.CONFIRMED;
+                const color = STATUS_COLORS[res.status] || STATUS_COLORS.QUOTE;
                 const colWidth = 100 / 7;
                 const left  = `${seg.visualStart * colWidth}%`;
                 const width = `${(seg.visualEnd - seg.visualStart) * colWidth}%`;
@@ -246,14 +246,12 @@ function MonthGrid({ year, month, reservations, settings }) {
                 return (
                   <div
                     key={si}
-                    className="absolute flex items-center px-2 overflow-hidden z-20"
+                    className={`absolute flex items-center px-2 overflow-hidden z-20 border ${color}`}
                     style={{
                       left,
                       width,
                       top,
                       height: "18px",
-                      backgroundColor: color.bg,
-                      color: color.text,
                       clipPath,
                       borderRadius: "2px",
                     }}
@@ -261,7 +259,7 @@ function MonthGrid({ year, month, reservations, settings }) {
                     <span className="truncate text-[11px] font-medium leading-none flex items-center gap-1 w-full">
                       <span className="truncate">{res.guestName || res.guests?.[0] || "Guest"}</span>
                       {res.paymentMethod && (
-                        <span className="shrink-0 ml-auto bg-white/20 rounded px-0.5 text-[9px] font-bold">
+                        <span className="shrink-0 ml-auto bg-current/10 rounded px-0.5 text-[9px] font-bold">
                           {paymentIcon(res.paymentMethod)}
                         </span>
                       )}
@@ -347,9 +345,9 @@ export default function CalendarView() {
 
         {/* Legend */}
         <div className="flex flex-wrap gap-3 mb-6 text-xs">
-          {Object.entries(STATUS_COLORS).map(([status, { bg }]) => (
+          {Object.entries(STATUS_COLORS).map(([status, color]) => (
             <div key={status} className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-sm inline-block" style={{ backgroundColor: bg }} />
+              <span className={`w-3 h-3 rounded-sm inline-block border ${color}`} />
               <span className="text-gray-600">{status}</span>
             </div>
           ))}
