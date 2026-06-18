@@ -74,7 +74,7 @@ function buildWeeks(year, month) {
 }
 
 // ─── compute bar segments for a reservation ─────────────────────────────────
-// Returns array of { weekIdx, colStart, colSpan, isFirst, isLast, reservation }
+// Returns array of { weekIdx, colStart, colSpan, visualStart, visualEnd, isFirst, isLast, reservation }
 function computeSegments(reservation, weeks) {
   const start = parseDate(reservation.checkIn);
   const end   = parseDate(reservation.checkOut);
@@ -88,7 +88,7 @@ function computeSegments(reservation, weeks) {
     let colStart = -1, colSpan = 0;
     week.forEach((day, col) => {
       if (!day) return;
-      const inRange = day >= start && day < end;
+      const inRange = day >= start && day <= end;
       if (inRange) {
         if (colStart === -1) colStart = col;
         colSpan++;
@@ -100,10 +100,15 @@ function computeSegments(reservation, weeks) {
     const firstDayOfWeek = week.find(Boolean);
     const lastDayOfWeek  = week.filter(Boolean).slice(-1)[0];
 
+    const lastCol = colStart + colSpan - 1;
     const isFirst = isSameDay(week[colStart], start) || (colStart === week.findIndex(Boolean) && start < firstDayOfWeek);
-    const isLast  = isSameDay(addDays(week[colStart + colSpan - 1], 0), addDays(end, -1)) || (colStart + colSpan - 1 === week.findLastIndex(Boolean) && end > lastDayOfWeek);
+    const isLast  = isSameDay(week[lastCol], end) || (lastCol === week.findLastIndex(Boolean) && end > lastDayOfWeek);
+    const startsOnCheckIn = isSameDay(week[colStart], start);
+    const endsOnCheckOut = isSameDay(week[lastCol], end);
+    const visualStart = colStart + (startsOnCheckIn ? 0.5 : 0);
+    const visualEnd = lastCol + (endsOnCheckOut ? 0.5 : 1);
 
-    segments.push({ weekIdx, colStart, colSpan, isFirst, isLast, reservation });
+    segments.push({ weekIdx, colStart, colSpan, visualStart, visualEnd, isFirst, isLast, reservation });
   });
 
   return segments;
@@ -127,7 +132,7 @@ function MonthGrid({ year, month, reservations, settings }) {
         while (true) {
           const occupied = result[seg.weekIdx].filter(s => s.row === row);
           const overlaps = occupied.some(s =>
-            seg.colStart < s.colStart + s.colSpan && seg.colStart + seg.colSpan > s.colStart
+            seg.visualStart < s.visualEnd && seg.visualEnd > s.visualStart
           );
           if (!overlaps) break;
           row++;
@@ -223,8 +228,8 @@ function MonthGrid({ year, month, reservations, settings }) {
                 const res = seg.reservation;
                 const color = STATUS_COLORS[res.status] || STATUS_COLORS.CONFIRMED;
                 const colWidth = 100 / 7;
-                const left  = `calc(${seg.colStart * colWidth}% + 2px)`;
-                const width = `calc(${seg.colSpan * colWidth}% - 4px)`;
+                const left  = `${seg.visualStart * colWidth}%`;
+                const width = `${(seg.visualEnd - seg.visualStart) * colWidth}%`;
                 const top   = `${22 + seg.row * 22}px`;
 
                 // Slant clip path
@@ -238,34 +243,29 @@ function MonthGrid({ year, month, reservations, settings }) {
                   clipPath = `polygon(0% 0%, 100% 0%, calc(100% - ${slantPx}px) 100%, 0% 100%)`;
                 }
 
-                // Very short tail (checkout-only marker)
-                const isTail = seg.colSpan === 1 && !seg.isFirst && seg.isLast;
-
                 return (
                   <div
                     key={si}
                     className="absolute flex items-center px-2 overflow-hidden z-20"
                     style={{
                       left,
-                      width: isTail ? "18px" : width,
+                      width,
                       top,
                       height: "18px",
-                      backgroundColor: isTail ? "#1e3a5f" : color.bg,
+                      backgroundColor: color.bg,
                       color: color.text,
                       clipPath,
-                      borderRadius: isTail ? "2px" : "2px",
+                      borderRadius: "2px",
                     }}
                   >
-                    {!isTail && (
-                      <span className="truncate text-[11px] font-medium leading-none flex items-center gap-1 w-full">
-                        <span className="truncate">{res.guestName || res.guests?.[0] || "Guest"}</span>
-                        {res.paymentMethod && (
-                          <span className="shrink-0 ml-auto bg-white/20 rounded px-0.5 text-[9px] font-bold">
-                            {paymentIcon(res.paymentMethod)}
-                          </span>
-                        )}
-                      </span>
-                    )}
+                    <span className="truncate text-[11px] font-medium leading-none flex items-center gap-1 w-full">
+                      <span className="truncate">{res.guestName || res.guests?.[0] || "Guest"}</span>
+                      {res.paymentMethod && (
+                        <span className="shrink-0 ml-auto bg-white/20 rounded px-0.5 text-[9px] font-bold">
+                          {paymentIcon(res.paymentMethod)}
+                        </span>
+                      )}
+                    </span>
                   </div>
                 );
               })}
