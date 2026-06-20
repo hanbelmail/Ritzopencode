@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { BedDouble, Waves, Sofa, Sparkles, Search, ArrowRight, Info, BookOpen, MapPin, Star, CheckCircle, CalendarDays, ShieldCheck, ConciergeBell } from "lucide-react";
+import { BedDouble, Waves, Sofa, Sparkles, Search, ArrowRight, Info, BookOpen, MapPin, Star, ConciergeBell } from "lucide-react";
 import QuoteForm from "@/components/home/QuoteForm";
 import { DEFAULT_SETTINGS, useSettings } from "@/lib/store";
 import { fmtMoney } from "@/lib/calc";
@@ -102,11 +102,6 @@ export default function Home() {
                   </div>
                 ))}
               </div>
-              <div className="mt-4 rounded-[8px] bg-[#1f1e1b] p-4 font-mono text-[12px] leading-relaxed text-[#a09d96]">
-                <p><span className="text-[#e8a55a]">rate_window</span>: 2-5+ nights</p>
-                <p><span className="text-[#5db8a6]">cleaning_fee</span>: paid directly at hotel</p>
-                <p><span className="text-[#faf9f5]">guest_quote</span>: ticketed after review</p>
-              </div>
             </div>
           </div>
         </section>
@@ -183,18 +178,6 @@ export default function Home() {
                 <p className="mb-4 inline-flex rounded-full bg-[#cc785c] px-3 py-1 text-xs font-medium uppercase tracking-[0.14em] text-white">Private quote</p>
                 <h2 className={`${serif} text-4xl font-medium leading-[1.08] tracking-[-0.035em] md:text-5xl`}>Tell us your dates. We'll prepare the ticket.</h2>
                 <p className="mt-5 text-base leading-[1.65] text-[#a09d96]">The quote flow stays simple: submit guest details, receive a Ticket ID, then return anytime to view confirmed pricing and payment instructions.</p>
-              </div>
-              <div className="grid gap-3 text-sm text-[#faf9f5] sm:grid-cols-3 md:grid-cols-1 lg:grid-cols-3">
-                {[
-                  { icon: CalendarDays, label: "Date-based review" },
-                  { icon: ShieldCheck, label: "No resort fee markup" },
-                  { icon: CheckCircle, label: "Ticketed follow-up" },
-                ].map(({ icon: Icon, label }) => (
-                  <div key={label} className="rounded-[12px] bg-[#252320] p-4">
-                    <Icon className="mb-3 h-4 w-4 text-[#5db8a6]" />
-                    {label}
-                  </div>
-                ))}
               </div>
             </div>
             <QuoteForm />
