@@ -105,5 +105,5 @@ When the user requests a durable behavior change, record it here or in the relev
 - `components/AGENTS.md` owns reusable React components outside route files, including layouts, forms, tickets, ticket preview/payment, home quote form, and auth helpers.
 - `convex/AGENTS.md` owns Convex backend configuration, schema, HTTP routes, and Convex Auth provider setup.
 - `lib/AGENTS.md` owns shared providers, auth context, Convex-backed store hooks, legacy localStorage migration helpers, calculations, app params, query client setup, and utilities.
-- Root owns `middleware.js`, `hooks/`, `public/`, root config files, package manifests, and workspace-level generated/ignored directories unless a child DOX is later added.
+- Root owns `middleware.js`, `hooks/`, `public/`, root config files, package manifests, and workspace-level generated/ignored directories unless a child DOX is later added; `public/api-documentation.html` is the static custom App Router API reference.
 - `.next/`, `.next-build/`, and `node_modules/` are generated or installed artifacts and are not editable DOX domains.

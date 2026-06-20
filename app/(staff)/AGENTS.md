@@ -2,13 +2,13 @@
 
 ## Purpose
 
-- Owns authenticated staff reservation management pages and staff-only API testing tools.
+- Owns authenticated staff reservation management pages and staff-only quote webhook settings.
 
 ## Ownership
 
 - `layout.jsx` owns client-side staff route guarding and wraps pages with `components/StaffLayout.jsx`; `middleware.js` owns server-side staff route redirects.
 - `dashboard/` owns reservation list, board/table switching, filtering, deletion, status updates, and summary stats.
-- `api-dashboard/` owns the staff-only demo console for testing ticket API requests and managing the quote webhook URL/enabled setting.
+- `api-dashboard/` owns the staff-only quote webhook URL/enabled setting.
 - `new/` owns reservation creation.
 - `calendar/`, `clients/`, and `settings/` own their respective staff management views.
 

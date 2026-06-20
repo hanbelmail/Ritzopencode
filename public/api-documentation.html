@@ -1,0 +1,573 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ritz Reservations API Documentation</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #171513;
+      --muted: #6f6960;
+      --line: #e7ded4;
+      --panel: #fffaf4;
+      --panel-strong: #f4eadf;
+      --brand: #b86043;
+      --brand-dark: #7f3e2a;
+      --code: #1d1b18;
+      --code-text: #f9f3eb;
+      --ok: #2f7d68;
+      --warn: #9b621b;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: #fbf7f1;
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.55;
+    }
+
+    header {
+      background: linear-gradient(135deg, #171513 0%, #332a22 62%, #b86043 100%);
+      color: #fffaf4;
+      padding: 56px 24px;
+    }
+
+    main {
+      width: min(1160px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 32px 0 72px;
+    }
+
+    h1, h2, h3 { line-height: 1.12; margin: 0; }
+
+    h1 {
+      max-width: 860px;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(2.3rem, 8vw, 5.3rem);
+      font-weight: 500;
+      letter-spacing: -0.055em;
+    }
+
+    h2 {
+      margin-top: 48px;
+      font-size: clamp(1.7rem, 4vw, 2.6rem);
+      letter-spacing: -0.035em;
+    }
+
+    h3 { margin-top: 24px; font-size: 1.2rem; }
+
+    p { margin: 12px 0 0; color: var(--muted); }
+
+    a { color: var(--brand-dark); }
+
+    .eyebrow {
+      display: inline-flex;
+      margin-bottom: 20px;
+      border: 1px solid rgb(255 250 244 / 0.35);
+      border-radius: 999px;
+      padding: 6px 12px;
+      color: #f0d9c7;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .subtitle { max-width: 760px; color: #e8d9ca; font-size: 1.05rem; }
+
+    .grid { display: grid; gap: 18px; }
+
+    .cards { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin-top: 20px; }
+
+    .card, .endpoint {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--panel);
+      box-shadow: 0 20px 60px rgb(41 31 20 / 0.08);
+    }
+
+    .card { padding: 22px; }
+
+    .endpoint { margin-top: 22px; overflow: hidden; }
+
+    .endpoint-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid var(--line);
+      background: var(--panel-strong);
+      padding: 18px 20px;
+    }
+
+    .endpoint-body { padding: 20px; }
+
+    .method {
+      min-width: 68px;
+      border-radius: 999px;
+      padding: 5px 10px;
+      color: white;
+      text-align: center;
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+    }
+
+    .get { background: #2f6fbd; }
+    .post { background: #2f7d68; }
+    .patch { background: #9b621b; }
+    .delete { background: #a13f3f; }
+    .put { background: #5a4aa0; }
+
+    .path {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      font-size: 0.98rem;
+      font-weight: 700;
+      overflow-wrap: anywhere;
+    }
+
+    .tag {
+      display: inline-flex;
+      border-radius: 999px;
+      background: #fffaf4;
+      padding: 4px 9px;
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+
+    table {
+      width: 100%;
+      margin-top: 14px;
+      border-collapse: collapse;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      font-size: 0.92rem;
+    }
+
+    th, td { border-bottom: 1px solid var(--line); padding: 11px 12px; text-align: left; vertical-align: top; }
+    th { background: #f7eee4; color: #4c4339; }
+    tr:last-child td { border-bottom: 0; }
+
+    code, pre {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    }
+
+    code.inline {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+      padding: 1px 5px;
+      color: #4a3128;
+    }
+
+    pre {
+      overflow-x: auto;
+      margin: 14px 0 0;
+      border-radius: 14px;
+      background: var(--code);
+      padding: 16px;
+      color: var(--code-text);
+      font-size: 0.9rem;
+    }
+
+    .note {
+      margin-top: 14px;
+      border-left: 4px solid var(--brand);
+      border-radius: 12px;
+      background: #fff4e8;
+      padding: 13px 15px;
+      color: #5a4332;
+    }
+
+    .toc {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 24px;
+    }
+
+    .toc a {
+      border: 1px solid rgb(255 250 244 / 0.35);
+      border-radius: 999px;
+      padding: 8px 12px;
+      color: #fffaf4;
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+
+    .status-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .status-list code { border-radius: 999px; background: #f4eadf; padding: 5px 9px; color: #4c4339; }
+
+    footer { border-top: 1px solid var(--line); margin-top: 56px; padding-top: 20px; color: var(--muted); font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <span class="eyebrow">API reference</span>
+    <h1>Ritz Reservations API Documentation</h1>
+    <p class="subtitle">Static reference for the Next.js App Router API endpoints used by staff tools, ticket automation, payment-proof uploads, and quote webhook forwarding.</p>
+    <nav class="toc" aria-label="Documentation sections">
+      <a href="#overview">Overview</a>
+      <a href="#auth">Authentication</a>
+      <a href="#tickets">Tickets</a>
+      <a href="#payment-proof">Payment Proof</a>
+      <a href="#quote-webhook">Quote Webhook</a>
+      <a href="#errors">Errors</a>
+    </nav>
+  </header>
+
+  <main>
+    <section id="overview">
+      <h2>Overview</h2>
+      <div class="grid cards">
+        <div class="card">
+          <h3>Base URL</h3>
+          <p>Use your deployed app origin, for example:</p>
+          <pre>https://your-domain.com</pre>
+          <p>Local development usually uses:</p>
+          <pre>http://localhost:3000</pre>
+        </div>
+        <div class="card">
+          <h3>Content Type</h3>
+          <p>JSON endpoints accept and return <code class="inline">application/json</code>. Signed R2 upload URLs accept the image content type requested when the URL was created.</p>
+        </div>
+        <div class="card">
+          <h3>Data Source</h3>
+          <p>Tickets are stored in Convex. API route handlers read and mutate ticket data through Convex server functions.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="auth">
+      <h2>Authentication</h2>
+      <p>The <code class="inline">/api/tickets</code> endpoints are protected by middleware. They can be accessed by an authenticated Convex Auth session or by a server-side API key.</p>
+
+      <table>
+        <thead>
+          <tr><th>Method</th><th>Header</th><th>Value</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Bearer token</td><td><code>Authorization</code></td><td><code>Bearer $N8N_API_KEY</code></td></tr>
+          <tr><td>API key header</td><td><code>x-api-key</code></td><td><code>$N8N_API_KEY</code></td></tr>
+        </tbody>
+      </table>
+
+      <div class="note">The <code class="inline">N8N_API_KEY</code> value lives in server environment variables. Do not expose it in browser code.</div>
+    </section>
+
+    <section id="tickets">
+      <h2>Ticket Endpoints</h2>
+      <p>These endpoints are useful for staff tools and trusted automation. All examples below include the API key header.</p>
+
+      <div class="endpoint">
+        <div class="endpoint-head">
+          <span class="method get">GET</span>
+          <span class="path">/api/tickets</span>
+          <span class="tag">Protected</span>
+        </div>
+        <div class="endpoint-body">
+          <p>Returns all tickets sorted newest first.</p>
+          <h3>Example Request</h3>
+          <pre>curl -X GET "https://your-domain.com/api/tickets" \
+  -H "Authorization: Bearer $N8N_API_KEY"</pre>
+          <h3>Example Response</h3>
+          <pre>{
+  "tickets": [
+    {
+      "id": "8d4b6b3e-4a66-48b0-8a0d-fd8f28a07000",
+      "createdAt": "2026-06-20T18:30:00.000Z",
+      "guests": ["Ava Taylor", "Noah Taylor"],
+      "checkIn": "2026-08-10",
+      "checkOut": "2026-08-14",
+      "email": "guest@example.com",
+      "phone": "+1 555 000 0000",
+      "roomType": "Deluxe Ocean View",
+      "status": "QUOTE",
+      "retailPrice": null,
+      "adjustment": 0,
+      "total": null,
+      "nights": 4
+    }
+  ]
+}</pre>
+        </div>
+      </div>
+
+      <div class="endpoint">
+        <div class="endpoint-head">
+          <span class="method get">GET</span>
+          <span class="path">/api/tickets?status=QUOTE</span>
+          <span class="tag">Protected</span>
+        </div>
+        <div class="endpoint-body">
+          <p>Returns tickets filtered by exact status string.</p>
+          <h3>Common Status Values</h3>
+          <div class="status-list">
+            <code>QUOTE</code><code>CONFIRMED</code><code>PAYMENT RECEIVED</code><code>COMPLETED</code><code>CANCELLED</code>
+          </div>
+          <h3>Example Request</h3>
+          <pre>curl -X GET "https://your-domain.com/api/tickets?status=CONFIRMED" \
+  -H "x-api-key: $N8N_API_KEY"</pre>
+          <h3>Example Response</h3>
+          <pre>{
+  "tickets": [
+    {
+      "id": "8d4b6b3e-4a66-48b0-8a0d-fd8f28a07000",
+      "status": "CONFIRMED",
+      "checkIn": "2026-08-10",
+      "checkOut": "2026-08-14"
+    }
+  ],
+  "filter": { "status": "CONFIRMED" }
+}</pre>
+        </div>
+      </div>
+
+      <div class="endpoint">
+        <div class="endpoint-head">
+          <span class="method get">GET</span>
+          <span class="path">/api/tickets/{id}</span>
+          <span class="tag">Protected</span>
+        </div>
+        <div class="endpoint-body">
+          <p>Returns a single ticket by its public ticket ID.</p>
+          <h3>Path Parameters</h3>
+          <table>
+            <thead><tr><th>Name</th><th>Required</th><th>Description</th></tr></thead>
+            <tbody><tr><td><code>id</code></td><td>Yes</td><td>Ticket ID generated when the quote or reservation was created.</td></tr></tbody>
+          </table>
+          <h3>Example Request</h3>
+          <pre>curl -X GET "https://your-domain.com/api/tickets/8d4b6b3e-4a66-48b0-8a0d-fd8f28a07000" \
+  -H "Authorization: Bearer $N8N_API_KEY"</pre>
+          <h3>Example Response</h3>
+          <pre>{
+  "ticket": {
+    "id": "8d4b6b3e-4a66-48b0-8a0d-fd8f28a07000",
+    "guests": ["Ava Taylor"],
+    "checkIn": "2026-08-10",
+    "checkOut": "2026-08-14",
+    "status": "QUOTE"
+  }
+}</pre>
+        </div>
+      </div>
+
+      <div class="endpoint">
+        <div class="endpoint-head">
+          <span class="method patch">PATCH</span>
+          <span class="path">/api/tickets/{id}</span>
+          <span class="tag">Protected</span>
+        </div>
+        <div class="endpoint-body">
+          <p>Partially updates a ticket. If <code class="inline">retailPrice</code>, <code class="inline">adjustment</code>, <code class="inline">checkIn</code>, or <code class="inline">checkOut</code> changes, derived pricing is recalculated with current settings.</p>
+          <h3>Request Body</h3>
+          <table>
+            <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>status</code></td><td>string</td><td>Ticket status such as <code>CONFIRMED</code> or <code>PAYMENT RECEIVED</code>.</td></tr>
+              <tr><td><code>retailPrice</code></td><td>number, null, or empty string</td><td>Retail room price. Empty string and null become null.</td></tr>
+              <tr><td><code>adjustment</code></td><td>number, null, or empty string</td><td>Manual pricing adjustment. Empty string and null become null.</td></tr>
+              <tr><td><code>checkIn</code></td><td>string</td><td>Date in <code>YYYY-MM-DD</code> format.</td></tr>
+              <tr><td><code>checkOut</code></td><td>string</td><td>Date in <code>YYYY-MM-DD</code> format.</td></tr>
+              <tr><td><code>paymentScreenshotKey</code></td><td>string</td><td>Private R2 object key returned by the payment upload URL flow.</td></tr>
+            </tbody>
+          </table>
+          <h3>Example Request</h3>
+          <pre>curl -X PATCH "https://your-domain.com/api/tickets/8d4b6b3e-4a66-48b0-8a0d-fd8f28a07000" \
+  -H "Authorization: Bearer $N8N_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status": "CONFIRMED",
+    "retailPrice": 2800,
+    "adjustment": 0,
+    "checkIn": "2026-08-10",
+    "checkOut": "2026-08-14"
+  }'</pre>
+          <h3>Example Response</h3>
+          <pre>{
+  "ticket": {
+    "id": "8d4b6b3e-4a66-48b0-8a0d-fd8f28a07000",
+    "status": "CONFIRMED",
+    "retailPrice": 2800,
+    "adjustment": 0,
+    "nights": 4,
+    "discountPct": 40,
+    "total": 1680,
+    "costPerNight": 420
+  }
+}</pre>
+        </div>
+      </div>
+
+      <div class="endpoint">
+        <div class="endpoint-head">
+          <span class="method delete">DELETE</span>
+          <span class="path">/api/tickets/{id}</span>
+          <span class="tag">Protected</span>
+        </div>
+        <div class="endpoint-body">
+          <p>Deletes a ticket by ID.</p>
+          <h3>Example Request</h3>
+          <pre>curl -X DELETE "https://your-domain.com/api/tickets/8d4b6b3e-4a66-48b0-8a0d-fd8f28a07000" \
+  -H "Authorization: Bearer $N8N_API_KEY"</pre>
+          <h3>Example Response</h3>
+          <pre>{
+  "deleted": true,
+  "id": "8d4b6b3e-4a66-48b0-8a0d-fd8f28a07000"
+}</pre>
+        </div>
+      </div>
+    </section>
+
+    <section id="payment-proof">
+      <h2>Payment Proof Endpoints</h2>
+      <p>Payment proof images are stored in private Cloudflare R2 objects. The app creates short-lived signed URLs for upload and view access.</p>
+
+      <div class="endpoint">
+        <div class="endpoint-head">
+          <span class="method post">POST</span>
+          <span class="path">/api/payment-proof/upload-url</span>
+          <span class="tag">JSON</span>
+        </div>
+        <div class="endpoint-body">
+          <p>Creates a 5-minute signed R2 URL that can upload one image file for an existing ticket.</p>
+          <h3>Request Body</h3>
+          <table>
+            <thead><tr><th>Field</th><th>Required</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>ticketId</code></td><td>Yes</td><td>Existing ticket ID.</td></tr>
+              <tr><td><code>fileName</code></td><td>No</td><td>Original file name. Used only to infer the file extension.</td></tr>
+              <tr><td><code>contentType</code></td><td>Yes</td><td>Must start with <code>image/</code>, for example <code>image/png</code>.</td></tr>
+            </tbody>
+          </table>
+          <h3>Example Request</h3>
+          <pre>curl -X POST "https://your-domain.com/api/payment-proof/upload-url" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "ticketId": "8d4b6b3e-4a66-48b0-8a0d-fd8f28a07000",
+    "fileName": "payment.png",
+    "contentType": "image/png"
+  }'</pre>
+          <h3>Example Response</h3>
+          <pre>{
+  "key": "payment-proofs/8d4b6b3e-4a66-48b0-8a0d-fd8f28a07000/4e8b0bb1-37a5-41a9-88fe-5d0423e8c000.png",
+  "uploadUrl": "https://...signed-r2-url..."
+}</pre>
+        </div>
+      </div>
+
+      <div class="endpoint">
+        <div class="endpoint-head">
+          <span class="method put">PUT</span>
+          <span class="path">{uploadUrl}</span>
+          <span class="tag">Cloudflare R2 signed URL</span>
+        </div>
+        <div class="endpoint-body">
+          <p>This is not an app route. Use the signed URL returned by <code class="inline">/api/payment-proof/upload-url</code> to upload the image bytes directly to R2.</p>
+          <h3>Example Request</h3>
+          <pre>curl -X PUT "$UPLOAD_URL" \
+  -H "Content-Type: image/png" \
+  --data-binary "@payment.png"</pre>
+          <div class="note">After upload succeeds, save the returned <code class="inline">key</code> on the ticket with <code class="inline">PATCH /api/tickets/{id}</code> as <code class="inline">paymentScreenshotKey</code>.</div>
+        </div>
+      </div>
+
+      <div class="endpoint">
+        <div class="endpoint-head">
+          <span class="method post">POST</span>
+          <span class="path">/api/payment-proof/view-url</span>
+          <span class="tag">JSON</span>
+        </div>
+        <div class="endpoint-body">
+          <p>Creates a 5-minute signed R2 URL for viewing a saved payment proof image.</p>
+          <h3>Request Body</h3>
+          <table>
+            <thead><tr><th>Field</th><th>Required</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>ticketId</code></td><td>Yes</td><td>Existing ticket ID.</td></tr>
+              <tr><td><code>key</code></td><td>Yes</td><td>Must start with <code>payment-proofs/{ticketId}/</code> and match the ticket's stored <code>paymentScreenshotKey</code>.</td></tr>
+            </tbody>
+          </table>
+          <h3>Example Request</h3>
+          <pre>curl -X POST "https://your-domain.com/api/payment-proof/view-url" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "ticketId": "8d4b6b3e-4a66-48b0-8a0d-fd8f28a07000",
+    "key": "payment-proofs/8d4b6b3e-4a66-48b0-8a0d-fd8f28a07000/4e8b0bb1-37a5-41a9-88fe-5d0423e8c000.png"
+  }'</pre>
+          <h3>Example Response</h3>
+          <pre>{
+  "viewUrl": "https://...signed-r2-view-url..."
+}</pre>
+        </div>
+      </div>
+    </section>
+
+    <section id="quote-webhook">
+      <h2>Quote Webhook Endpoint</h2>
+
+      <div class="endpoint">
+        <div class="endpoint-head">
+          <span class="method post">POST</span>
+          <span class="path">/api/quote-webhook</span>
+          <span class="tag">JSON</span>
+        </div>
+        <div class="endpoint-body">
+          <p>Forwards a quote ticket object to the configured external webhook URL when webhook sending is enabled in settings.</p>
+          <h3>Request Body</h3>
+          <table>
+            <thead><tr><th>Field</th><th>Required</th><th>Description</th></tr></thead>
+            <tbody><tr><td><code>ticket</code></td><td>Yes</td><td>JSON object to send to the configured webhook URL.</td></tr></tbody>
+          </table>
+          <h3>Example Request</h3>
+          <pre>curl -X POST "https://your-domain.com/api/quote-webhook" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "ticket": {
+      "id": "8d4b6b3e-4a66-48b0-8a0d-fd8f28a07000",
+      "guests": ["Ava Taylor"],
+      "email": "guest@example.com",
+      "phone": "+1 555 000 0000",
+      "checkIn": "2026-08-10",
+      "checkOut": "2026-08-14",
+      "roomType": "Deluxe Ocean View",
+      "status": "QUOTE"
+    }
+  }'</pre>
+          <h3>Example Responses</h3>
+          <pre>{ "sent": true, "status": 200 }</pre>
+          <pre>{ "skipped": true, "reason": "Webhook is disabled" }</pre>
+          <div class="note">If webhook sending is enabled but no webhook URL is configured, this endpoint returns <code class="inline">400</code>.</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="errors">
+      <h2>Error Format</h2>
+      <p>API errors return JSON with an <code class="inline">error</code> string.</p>
+      <pre>{ "error": "Ticket not found" }</pre>
+
+      <table>
+        <thead><tr><th>Status</th><th>Common Reason</th></tr></thead>
+        <tbody>
+          <tr><td><code>400</code></td><td>Invalid JSON body, missing required fields, invalid image content type, invalid payment proof key, webhook URL not configured.</td></tr>
+          <tr><td><code>401</code></td><td>Missing Convex Auth session and missing or invalid <code>N8N_API_KEY</code> for protected ticket endpoints.</td></tr>
+          <tr><td><code>404</code></td><td>Ticket not found or payment proof not found for ticket.</td></tr>
+          <tr><td><code>500</code></td><td>Server configuration or persistence failure.</td></tr>
+          <tr><td><code>502</code></td><td>Configured quote webhook returned a non-success status.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <footer>
+      Source routes: <code>app/api/tickets</code>, <code>app/api/payment-proof</code>, and <code>app/api/quote-webhook</code>. Convex Auth HTTP routes are managed by Convex Auth and are not custom app API endpoints.
+    </footer>
+  </main>
+</body>
+</html>
