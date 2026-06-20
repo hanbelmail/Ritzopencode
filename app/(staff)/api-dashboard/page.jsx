@@ -7,6 +7,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { DEFAULT_SETTINGS, STATUSES, useSettings, useSettingsActions, useTickets } from "@/lib/store";
+import { Code2, Send, Webhook, Terminal } from "lucide-react";
+
+const serif = "font-['Cormorant_Garamond',_'EB_Garamond',_'Times_New_Roman',_serif]";
+const inputClass = "h-10 rounded-[8px] border-[#e6dfd8] bg-[#faf9f5] text-[#141413] shadow-none placeholder:text-[#8e8b82] focus-visible:ring-[#cc785c]";
+const primaryButton = "h-10 rounded-[8px] bg-[#cc785c] px-5 text-sm font-medium text-white shadow-none hover:bg-[#a9583e]";
 
 const sampleUpdate = {
   status: "CONFIRMED",
@@ -95,42 +100,57 @@ export default function ApiDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f7f7f7] p-4 md:p-8">
-      <div className="mx-auto max-w-6xl space-y-6">
-        <div className="rounded-2xl border bg-card p-5 shadow-sm">
-          <p className="text-sm font-medium uppercase tracking-[0.2em] text-muted-foreground">API test console</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight">Ticket API Dashboard</h1>
-          <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-            Test the demo REST endpoints backed by Convex tickets. Price and date updates recalculate ticket totals.
-          </p>
+    <div className="min-h-screen bg-[#faf9f5] px-5 py-8 text-[#141413] md:px-8 lg:px-10">
+      <div className="mx-auto max-w-[1200px] space-y-6">
+        <div className="rounded-[16px] bg-[#181715] p-6 text-[#faf9f5] md:p-8">
+          <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-end">
+            <div>
+              <p className="mb-3 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-[#a09d96]">
+                <Code2 className="h-4 w-4 text-[#cc785c]" /> API test console
+              </p>
+              <h1 className={`${serif} text-5xl font-medium leading-[1.02] tracking-[-0.04em] md:text-6xl`}>Ticket API Dashboard</h1>
+              <p className="mt-4 max-w-3xl text-sm leading-[1.65] text-[#a09d96]">
+                Test the demo REST endpoints backed by Convex tickets. Price and date updates recalculate ticket totals.
+              </p>
+            </div>
+            <div className="rounded-[12px] bg-[#252320] p-4 font-mono text-xs leading-relaxed text-[#a09d96]">
+              <p><span className="text-[#e8a55a]">auth</span>: staff route</p>
+              <p><span className="text-[#5db8a6]">source</span>: Convex tickets</p>
+              <p><span className="text-[#faf9f5]">console</span>: REST demo</p>
+            </div>
+          </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
-          <div className="space-y-4 rounded-2xl border bg-card p-5 shadow-sm">
-            <form onSubmit={saveWebhookSettings} className="space-y-4 rounded-xl border bg-secondary/40 p-4">
+        <div className="grid gap-6 lg:grid-cols-[0.92fr_1.08fr]">
+          <div className="space-y-4">
+            <form onSubmit={saveWebhookSettings} className="space-y-4 rounded-[12px] bg-[#efe9de] p-5">
               <div>
-                <h2 className="text-lg font-semibold">Quote webhook</h2>
-                <p className="text-sm text-muted-foreground">Send every home page quote ticket to n8n after it is created.</p>
+                <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-[8px] bg-[#faf9f5] text-[#cc785c]">
+                  <Webhook className="h-5 w-5" />
+                </div>
+                <h2 className="text-lg font-medium text-[#252523]">Quote webhook</h2>
+                <p className="mt-1 text-sm leading-relaxed text-[#6c6a64]">Send every home page quote ticket to n8n after it is created.</p>
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="webhook-url">n8n webhook URL</Label>
+                <Label htmlFor="webhook-url" className="text-sm font-medium text-[#252523]">n8n webhook URL</Label>
                 <Input
                   id="webhook-url"
                   type="url"
                   value={webhookUrl}
                   onChange={(event) => setWebhookUrl(event.target.value)}
                   placeholder="https://n9n.aquaskals.com/webhook-test/get-a-quota"
+                  className={inputClass}
                 />
               </div>
-              <div className="flex items-center justify-between rounded-lg border bg-card px-3 py-2">
-                <Label htmlFor="webhook-enabled" className="text-sm font-medium">Webhook active</Label>
+              <div className="flex items-center justify-between rounded-[8px] border border-[#e6dfd8] bg-[#faf9f5] px-3 py-2">
+                <Label htmlFor="webhook-enabled" className="text-sm font-medium text-[#252523]">Webhook active</Label>
                 <Switch id="webhook-enabled" checked={webhookEnabled} onCheckedChange={setWebhookEnabled} />
               </div>
-              <Button type="submit" className="w-full">{webhookSaved ? "Webhook saved" : "Save webhook settings"}</Button>
+              <Button type="submit" className={`${primaryButton} w-full`}>{webhookSaved ? "Webhook saved" : "Save webhook settings"}</Button>
             </form>
 
-            <div className="grid gap-2">
-              <label className="text-sm font-medium">Request example</label>
+            <div className="grid gap-3 rounded-[12px] border border-[#e6dfd8] bg-[#faf9f5] p-5">
+              <label className="text-sm font-medium text-[#252523]">Request example</label>
               <div className="grid gap-2 sm:grid-cols-2">
                 {examples.map((example) => (
                   <button
@@ -138,7 +158,9 @@ export default function ApiDashboardPage() {
                     type="button"
                     onClick={() => setMethod(example.method)}
                     className={`rounded-xl border px-3 py-2 text-left text-sm transition ${
-                      method === example.method ? "border-primary bg-primary text-primary-foreground" : "hover:bg-secondary"
+                      method === example.method
+                        ? "border-[#cc785c] bg-[#cc785c] text-white"
+                        : "border-[#e6dfd8] bg-[#faf9f5] text-[#252523] hover:bg-[#efe9de]"
                     }`}
                   >
                     <span className="block font-medium">{example.label}</span>
@@ -148,27 +170,28 @@ export default function ApiDashboardPage() {
               </div>
             </div>
 
-            <div className="grid gap-2">
-              <label className="text-sm font-medium" htmlFor="ticket-id">Ticket ID</label>
+            <div className="grid gap-2 rounded-[12px] border border-[#e6dfd8] bg-[#faf9f5] p-5">
+              <label className="text-sm font-medium text-[#252523]" htmlFor="ticket-id">Ticket ID</label>
               <Input
                 id="ticket-id"
                 value={ticketId}
                 onChange={(event) => setTicketId(event.target.value)}
                 placeholder={firstTicketId || "Paste a ticket ID"}
+                className={inputClass}
               />
               {firstTicketId && !ticketId && (
-                <p className="text-xs text-muted-foreground">Using first reservation ID: {firstTicketId}</p>
+                <p className="text-xs text-[#6c6a64]">Using first reservation ID: {firstTicketId}</p>
               )}
             </div>
 
             {selected.needsStatus && (
-              <div className="grid gap-2">
-                <label className="text-sm font-medium" htmlFor="ticket-status">Status</label>
+              <div className="grid gap-2 rounded-[12px] border border-[#e6dfd8] bg-[#faf9f5] p-5">
+                <label className="text-sm font-medium text-[#252523]" htmlFor="ticket-status">Status</label>
                 <select
                   id="ticket-status"
                   value={status}
                   onChange={(event) => setStatus(event.target.value)}
-                  className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  className="h-10 rounded-[8px] border border-[#e6dfd8] bg-[#faf9f5] px-3 py-2 text-sm text-[#141413] outline-none focus:ring-1 focus:ring-[#cc785c]"
                 >
                   {STATUSES.map((value) => (
                     <option key={value} value={value}>{value}</option>
@@ -178,32 +201,36 @@ export default function ApiDashboardPage() {
             )}
 
             {method.startsWith("PATCH") && (
-              <div className="grid gap-2">
-                <label className="text-sm font-medium" htmlFor="request-body">JSON body</label>
+              <div className="grid gap-2 rounded-[12px] border border-[#e6dfd8] bg-[#faf9f5] p-5">
+                <label className="text-sm font-medium text-[#252523]" htmlFor="request-body">JSON body</label>
                 <Textarea
                   id="request-body"
                   value={body}
                   onChange={(event) => setBody(event.target.value)}
-                  className="min-h-40 font-mono text-xs"
+                  className="min-h-40 rounded-[8px] border-[#e6dfd8] bg-[#faf9f5] font-mono text-xs text-[#141413] shadow-none focus-visible:ring-[#cc785c]"
                 />
               </div>
             )}
 
-            <div className="rounded-xl bg-secondary p-3 font-mono text-xs">
-              <div>{method.split(" ")[0]} {endpoint}</div>
+            <div className="rounded-[12px] bg-[#181715] p-4 font-mono text-xs text-[#faf9f5]">
+              <div><span className="text-[#e8a55a]">{method.split(" ")[0]}</span> {endpoint}</div>
             </div>
 
-            <Button onClick={runRequest} disabled={loading} className="w-full">
+            <Button onClick={runRequest} disabled={loading} className={`${primaryButton} w-full`}>
+              <Send className="mr-1.5 h-4 w-4" />
               {loading ? "Running..." : "Run request"}
             </Button>
           </div>
 
-          <div className="space-y-4 rounded-2xl border bg-card p-5 shadow-sm">
+          <div className="space-y-4 rounded-[12px] bg-[#181715] p-5 text-[#faf9f5]">
             <div>
-              <h2 className="text-lg font-semibold">Response</h2>
-              <p className="text-sm text-muted-foreground">Output includes HTTP status, ok flag, and JSON response body.</p>
+              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-[8px] bg-[#252320] text-[#5db8a6]">
+                <Terminal className="h-5 w-5" />
+              </div>
+              <h2 className="text-lg font-medium">Response</h2>
+              <p className="mt-1 text-sm leading-relaxed text-[#a09d96]">Output includes HTTP status, ok flag, and JSON response body.</p>
             </div>
-            <pre className="min-h-96 overflow-auto rounded-xl bg-zinc-950 p-4 text-xs leading-relaxed text-zinc-100">
+            <pre className="min-h-96 overflow-auto rounded-[12px] bg-[#1f1e1b] p-4 font-mono text-xs leading-relaxed text-[#faf9f5]">
               {response}
             </pre>
           </div>

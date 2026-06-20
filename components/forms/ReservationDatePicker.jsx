@@ -75,15 +75,15 @@ function CalendarMonth({ month, checkIn, checkOut, focusField, onSelectDate, blo
           <div key={i} className={`relative flex items-center justify-center`}>
             {/* Range background strip */}
             {inRange && (
-              <div className="absolute inset-y-0 left-0 right-0 bg-blue-100" />
+              <div className="absolute inset-y-0 left-0 right-0 bg-[#efe9de]" />
             )}
             {/* Half-strip for start */}
             {start_ && checkOut && (
-              <div className="absolute inset-y-0 right-0 left-1/2 bg-blue-100" />
+              <div className="absolute inset-y-0 right-0 left-1/2 bg-[#efe9de]" />
             )}
             {/* Half-strip for end */}
             {end_ && checkIn && (
-              <div className="absolute inset-y-0 left-0 right-1/2 bg-blue-100" />
+              <div className="absolute inset-y-0 left-0 right-1/2 bg-[#efe9de]" />
             )}
 
             <button
@@ -94,11 +94,11 @@ function CalendarMonth({ month, checkIn, checkOut, focusField, onSelectDate, blo
                 relative z-10 w-9 h-9 flex flex-col items-center justify-center text-sm rounded-full transition-colors
                 ${outOfMonth ? "invisible" : ""}
                 ${blocked ? "cursor-not-allowed" : ""}
-                ${!disabled && !start_ && !end_ ? "hover:bg-slate-100" : ""}
-                ${start_ || end_ ? "bg-blue-600 text-white font-semibold" : ""}
-                ${past && !start_ && !end_ ? "text-gray-300 cursor-not-allowed" : ""}
-                ${!start_ && !end_ && !past && !blocked && !outOfMonth ? "text-gray-800" : ""}
-                ${isToday(date) && !start_ && !end_ ? "ring-1 ring-blue-400" : ""}
+                ${!disabled && !start_ && !end_ ? "hover:bg-[#efe9de]" : ""}
+                ${start_ || end_ ? "bg-[#cc785c] text-white font-semibold" : ""}
+                ${past && !start_ && !end_ ? "text-[#c8c0b6] cursor-not-allowed" : ""}
+                ${!start_ && !end_ && !past && !blocked && !outOfMonth ? "text-[#252523]" : ""}
+                ${isToday(date) && !start_ && !end_ ? "ring-1 ring-[#cc785c]" : ""}
               `}
             >
               {blocked && !outOfMonth ? (
@@ -107,7 +107,7 @@ function CalendarMonth({ month, checkIn, checkOut, focusField, onSelectDate, blo
                   <svg className="absolute inset-0 w-9 h-9" viewBox="0 0 36 36">
                     <polygon points="0,36 36,0 36,36" fill="#e8dcc8" opacity="0.85" />
                   </svg>
-                  <span className="relative text-xs text-gray-400">{date.getDate()}</span>
+                  <span className="relative text-xs text-[#8e8b82]">{date.getDate()}</span>
                 </span>
               ) : (
                 <span>{outOfMonth ? "" : date.getDate()}</span>
@@ -134,25 +134,25 @@ export default function ReservationDatePicker({ checkIn, checkOut, onCheckInChan
     <div className="grid grid-cols-2 gap-4">
       {/* Check-in Picker */}
       <div className="space-y-2">
-        <label className="text-sm font-medium leading-none">Check-in</label>
+        <label className="text-sm font-medium leading-none text-[#252523]">Check-in</label>
         <Popover open={checkInOpen} onOpenChange={setCheckInOpen}>
           <PopoverTrigger asChild>
             <Button
               type="button"
               variant="outline"
-              className={`w-full justify-start text-left font-normal ${!checkIn ? "text-muted-foreground" : ""}`}
+              className={`h-10 w-full justify-start rounded-[8px] border-[#e6dfd8] bg-[#faf9f5] text-left font-normal text-[#141413] shadow-none hover:bg-[#efe9de] ${!checkIn ? "text-[#6c6a64]" : ""}`}
             >
               <CalendarDays className="mr-2 h-4 w-4 shrink-0" />
               {fmtDate(checkIn) || "Pick date"}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-auto p-4" align="start">
+          <PopoverContent className="w-auto rounded-[12px] border-[#e6dfd8] bg-[#faf9f5] p-4 text-[#141413]" align="start">
             <div className="flex items-center justify-between mb-3">
-              <Button type="button" variant="ghost" size="icon" onClick={() => setCheckInMonth((m) => subMonths(m, 1))}>
+              <Button type="button" variant="ghost" size="icon" className="rounded-full hover:bg-[#efe9de]" onClick={() => setCheckInMonth((m) => subMonths(m, 1))}>
                 <ChevronLeft className="w-4 h-4" />
               </Button>
               <span className="text-sm font-semibold">{format(checkInMonth, "MMMM yyyy")}</span>
-              <Button type="button" variant="ghost" size="icon" onClick={() => setCheckInMonth((m) => addMonths(m, 1))}>
+              <Button type="button" variant="ghost" size="icon" className="rounded-full hover:bg-[#efe9de]" onClick={() => setCheckInMonth((m) => addMonths(m, 1))}>
                 <ChevronRight className="w-4 h-4" />
               </Button>
             </div>
@@ -178,25 +178,25 @@ export default function ReservationDatePicker({ checkIn, checkOut, onCheckInChan
 
       {/* Check-out Picker */}
       <div className="space-y-2">
-        <label className="text-sm font-medium leading-none">Check-out</label>
+        <label className="text-sm font-medium leading-none text-[#252523]">Check-out</label>
         <Popover open={checkOutOpen} onOpenChange={setCheckOutOpen}>
           <PopoverTrigger asChild>
             <Button
               type="button"
               variant="outline"
-              className={`w-full justify-start text-left font-normal ${!checkOut ? "text-muted-foreground" : ""}`}
+              className={`h-10 w-full justify-start rounded-[8px] border-[#e6dfd8] bg-[#faf9f5] text-left font-normal text-[#141413] shadow-none hover:bg-[#efe9de] ${!checkOut ? "text-[#6c6a64]" : ""}`}
             >
               <CalendarDays className="mr-2 h-4 w-4 shrink-0" />
               {fmtDate(checkOut) || "Pick date"}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-auto p-4" align="start">
+          <PopoverContent className="w-auto rounded-[12px] border-[#e6dfd8] bg-[#faf9f5] p-4 text-[#141413]" align="start">
             <div className="flex items-center justify-between mb-3">
-              <Button type="button" variant="ghost" size="icon" onClick={() => setCheckOutMonth((m) => subMonths(m, 1))}>
+              <Button type="button" variant="ghost" size="icon" className="rounded-full hover:bg-[#efe9de]" onClick={() => setCheckOutMonth((m) => subMonths(m, 1))}>
                 <ChevronLeft className="w-4 h-4" />
               </Button>
               <span className="text-sm font-semibold">{format(checkOutMonth, "MMMM yyyy")}</span>
-              <Button type="button" variant="ghost" size="icon" onClick={() => setCheckOutMonth((m) => addMonths(m, 1))}>
+              <Button type="button" variant="ghost" size="icon" className="rounded-full hover:bg-[#efe9de]" onClick={() => setCheckOutMonth((m) => addMonths(m, 1))}>
                 <ChevronRight className="w-4 h-4" />
               </Button>
             </div>

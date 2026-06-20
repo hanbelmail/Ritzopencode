@@ -21,36 +21,36 @@ export default function TicketCard({ ticket, onDelete, onStatusChange }) {
 
   return (
     <div
-      className="border border-gray-200 rounded-xl bg-white p-4 hover:shadow-md transition-shadow cursor-pointer shadow-sm"
+      className="rounded-[12px] border border-[#e6dfd8] bg-[#faf9f5] p-5 transition-shadow hover:shadow-[0_1px_3px_rgba(20,20,19,0.08)] cursor-pointer"
       onClick={() => router.push(`/ticket/${ticket.id}`)}
     >
       <div className="flex items-start justify-between">
         <div className="flex items-start gap-3">
-          <div className="w-8 h-8 rounded-full border flex items-center justify-center mt-0.5">
-            <Clock className="w-4 h-4 text-muted-foreground" />
+          <div className="w-9 h-9 rounded-full border border-[#e6dfd8] bg-[#efe9de] flex items-center justify-center mt-0.5">
+            <Clock className="w-4 h-4 text-[#6c6a64]" />
           </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <p className="font-semibold text-sm">{primary || "Unnamed guest"}</p>
+              <p className="font-medium text-sm text-[#141413]">{primary || "Unnamed guest"}</p>
               {ticket.roomType && (
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100">
-                  {ticket.roomType.length > 30 ? ticket.roomType.slice(0, 30) + "…" : ticket.roomType}
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#efe9de] text-[#6c6a64] border border-[#e6dfd8]">
+                  {ticket.roomType.length > 30 ? ticket.roomType.slice(0, 30) + "..." : ticket.roomType}
                 </span>
               )}
             </div>
             {others.length > 0 && (
-              <p className="text-xs text-muted-foreground mt-0.5">+{others.join(", ")}</p>
+              <p className="text-xs text-[#6c6a64] mt-0.5">+{others.join(", ")}</p>
             )}
           </div>
         </div>
         <div onClick={(e) => e.stopPropagation()}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-7 w-7">
-                <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-[#efe9de]">
+                <MoreHorizontal className="w-4 h-4 text-[#6c6a64]" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" className="rounded-[12px] border-[#e6dfd8] bg-[#faf9f5] text-[#141413]">
               <DropdownMenuItem asChild>
                 <Link href={`/ticket/${ticket.id}`}><Eye className="w-4 h-4 mr-2" />View Details</Link>
               </DropdownMenuItem>
@@ -77,18 +77,18 @@ export default function TicketCard({ ticket, onDelete, onStatusChange }) {
       </div>
 
       {ticket.phone && (
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-3">
+        <div className="flex items-center gap-1.5 text-xs text-[#6c6a64] mt-3">
           <Phone className="w-3 h-3" /> {ticket.phone}
         </div>
       )}
 
-      <div className="flex items-center gap-6 mt-2 text-xs">
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-1 mt-3 text-xs text-[#252523]">
         <span>
-          <span className="text-muted-foreground uppercase text-[10px] tracking-wide mr-1.5">Check-in</span>
+          <span className="text-[#6c6a64] uppercase text-[10px] tracking-[0.12em] mr-1.5">Check-in</span>
           {fmtDate(ticket.checkIn)}
         </span>
         <span>
-          <span className="text-muted-foreground uppercase text-[10px] tracking-wide mr-1.5">Check-out</span>
+          <span className="text-[#6c6a64] uppercase text-[10px] tracking-[0.12em] mr-1.5">Check-out</span>
           {fmtDate(ticket.checkOut)}
         </span>
       </div>
@@ -96,11 +96,11 @@ export default function TicketCard({ ticket, onDelete, onStatusChange }) {
       <div className="flex items-center justify-between mt-3">
         <div className="flex items-center gap-2">
           <StatusBadge status={ticket.status} />
-          <span className="text-[11px] px-2 py-0.5 rounded-full bg-secondary text-muted-foreground border">
+          <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#efe9de] text-[#6c6a64] border border-[#e6dfd8]">
             {ticket.nights || 0} nights
           </span>
         </div>
-        <p className="font-semibold text-sm">{fmtMoney(ticket.rateOffered)}</p>
+        <p className="font-medium text-sm text-[#141413]">{fmtMoney(ticket.rateOffered)}</p>
       </div>
     </div>
   );

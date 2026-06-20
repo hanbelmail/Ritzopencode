@@ -50,7 +50,7 @@ export default function Login() {
       footer={
         <>
           Don't have an account?{" "}
-          <Link href="/register" className="text-primary font-medium hover:underline">
+          <Link href="/register" className="text-[#cc785c] font-medium hover:underline underline-offset-4">
             Create one
           </Link>
         </>
@@ -58,7 +58,7 @@ export default function Login() {
     >
       <Button
         variant="outline"
-        className="w-full h-12 text-sm font-medium mb-6"
+        className="mb-6 h-12 w-full rounded-[8px] border-[#e6dfd8] bg-[#faf9f5] text-sm font-medium text-[#141413] shadow-none hover:bg-[#efe9de]"
         onClick={handleGoogle}
       >
         <GoogleIcon className="w-5 h-5 mr-2" />
@@ -67,24 +67,24 @@ export default function Login() {
 
       <div className="relative mb-6">
         <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-border" />
+          <div className="w-full border-t border-[#e6dfd8]" />
         </div>
         <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-card px-3 text-muted-foreground">or</span>
+          <span className="bg-[#faf9f5] px-3 text-[#8e8b82]">or</span>
         </div>
       </div>
 
       {error && (
-        <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+        <div className="mb-4 rounded-[8px] border border-[#e9c4bb] bg-[#f7e7e3] p-3 text-sm text-[#a33d32]">
           {error}
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
+          <Label htmlFor="email" className="text-sm font-medium text-[#252523]">Email</Label>
           <div className="relative">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
+            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8e8b82]" aria-hidden="true" />
             <Input
               id="email"
               type="email"
@@ -93,20 +93,20 @@ export default function Login() {
               placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="pl-10 h-12"
+              className="h-12 rounded-[8px] border-[#e6dfd8] bg-[#faf9f5] pl-10 text-[#141413] shadow-none placeholder:text-[#8e8b82] focus-visible:ring-[#cc785c]"
               required
             />
           </div>
         </div>
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <Label htmlFor="password">Password</Label>
-            <Link href="/forgot-password" className="text-xs text-primary hover:underline">
+            <Label htmlFor="password" className="text-sm font-medium text-[#252523]">Password</Label>
+            <Link href="/forgot-password" className="text-xs font-medium text-[#cc785c] hover:underline underline-offset-4">
               Forgot password?
             </Link>
           </div>
           <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
+            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8e8b82]" aria-hidden="true" />
             <Input
               id="password"
               type="password"
@@ -114,12 +114,12 @@ export default function Login() {
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="pl-10 h-12"
+              className="h-12 rounded-[8px] border-[#e6dfd8] bg-[#faf9f5] pl-10 text-[#141413] shadow-none placeholder:text-[#8e8b82] focus-visible:ring-[#cc785c]"
               required
             />
           </div>
         </div>
-        <Button type="submit" className="w-full h-12 font-medium" disabled={loading}>
+        <Button type="submit" className="h-12 w-full rounded-[8px] bg-[#cc785c] font-medium text-white shadow-none hover:bg-[#a9583e]" disabled={loading}>
           {loading ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />

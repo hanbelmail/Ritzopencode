@@ -43,15 +43,15 @@ export default function TicketTable({ tickets }) {
     setSort((s) => ({ key, dir: s.key === key ? -s.dir : 1 }));
 
   return (
-    <div className="border rounded-xl bg-card overflow-x-auto">
+    <div className="overflow-x-auto rounded-[12px] border border-[#e6dfd8] bg-[#faf9f5]">
       <Table>
         <TableHeader>
-          <TableRow className="bg-secondary/50 hover:bg-secondary/50">
+          <TableRow className="bg-[#efe9de] hover:bg-[#efe9de]">
             {columns.map((c) => (
-              <TableHead key={c.key} className="whitespace-nowrap">
+              <TableHead key={c.key} className="whitespace-nowrap text-[#6c6a64]">
                 <button className="flex items-center gap-1 text-xs font-medium" onClick={() => toggleSort(c.key)}>
                   {c.label}
-                  <ArrowUpDown className="w-3 h-3 text-muted-foreground" />
+                  <ArrowUpDown className="w-3 h-3 text-[#8e8b82]" />
                 </button>
               </TableHead>
             ))}
@@ -59,15 +59,15 @@ export default function TicketTable({ tickets }) {
         </TableHeader>
         <TableBody>
           {sorted.map((t) => (
-            <TableRow key={t.id} className="cursor-pointer" onClick={() => router.push(`/ticket/${t.id}`)}>
+            <TableRow key={t.id} className="cursor-pointer border-[#e6dfd8] hover:bg-[#f5f0e8]" onClick={() => router.push(`/ticket/${t.id}`)}>
               {columns.map((c) => (
-                <TableCell key={c.key} className="whitespace-nowrap text-sm">{c.render(t)}</TableCell>
+                <TableCell key={c.key} className="whitespace-nowrap text-sm text-[#252523]">{c.render(t)}</TableCell>
               ))}
             </TableRow>
           ))}
           {sorted.length === 0 && (
             <TableRow>
-              <TableCell colSpan={columns.length} className="text-center text-muted-foreground py-8 text-sm">
+              <TableCell colSpan={columns.length} className="text-center text-[#6c6a64] py-8 text-sm">
                 No reservations found
               </TableCell>
             </TableRow>

@@ -14,15 +14,16 @@ export default function GuestNamesInput({ guests, onChange }) {
             value={g}
             onChange={(e) => update(i, e.target.value)}
             placeholder={i === 0 ? "Primary guest name" : `Guest ${i + 1} name`}
+            className="h-10 rounded-[8px] border-[#e6dfd8] bg-[#faf9f5] shadow-none focus-visible:ring-[#cc785c]"
           />
           {guests.length > 1 && (
-            <Button type="button" variant="ghost" size="icon" className="shrink-0" onClick={() => onChange(guests.filter((_, idx) => idx !== i))}>
-              <X className="w-4 h-4 text-muted-foreground" />
+            <Button type="button" variant="ghost" size="icon" className="shrink-0 rounded-full text-[#6c6a64] hover:bg-[#efe9de] hover:text-[#141413]" onClick={() => onChange(guests.filter((_, idx) => idx !== i))}>
+              <X className="w-4 h-4" />
             </Button>
           )}
         </div>
       ))}
-      <Button type="button" variant="outline" size="sm" onClick={() => onChange([...guests, ""])}>
+      <Button type="button" variant="outline" size="sm" className="rounded-[8px] border-[#e6dfd8] bg-[#faf9f5] text-[#141413] shadow-none hover:bg-[#efe9de]" onClick={() => onChange([...guests, ""])}>
         <Plus className="w-3.5 h-3.5 mr-1" /> Add guest
       </Button>
     </div>

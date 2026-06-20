@@ -1,12 +1,12 @@
 "use client";
 
 const styles = {
-  QUOTE: "bg-secondary text-muted-foreground border-border",
-  PENDING: "bg-amber-50 text-amber-700 border-amber-200",
-  CONFIRMED: "bg-blue-50 text-blue-700 border-blue-200",
-  "PAYMENT RECEIVED": "bg-emerald-50 text-emerald-700 border-emerald-200",
-  COMPLETED: "bg-primary text-primary-foreground border-primary",
-  CANCELLED: "bg-red-50 text-red-600 border-red-200",
+  QUOTE: "bg-[#efe9de] text-[#6c6a64] border-[#e6dfd8]",
+  PENDING: "bg-[#fff4df] text-[#9a681f] border-[#ecd3a6]",
+  CONFIRMED: "bg-[#e7f4f1] text-[#2f7f71] border-[#baded7]",
+  "PAYMENT RECEIVED": "bg-[#e9f5eb] text-[#3f8b51] border-[#c7e4ce]",
+  COMPLETED: "bg-[#cc785c] text-white border-[#cc785c]",
+  CANCELLED: "bg-[#f7e7e3] text-[#a33d32] border-[#e9c4bb]",
 };
 
 export default function StatusBadge({ status }) {

@@ -26,7 +26,7 @@ export default function PublicLayout({ children }) {
         {children}
       </div>
 
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 flex items-stretch">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#faf9f5] border-t border-[#e6dfd8] flex items-stretch">
         {mobileNav.map(({ to, label, icon: Icon, exact, isAnchor }) => {
           const active = isAnchor ? false : isActive(to, exact);
           if (isAnchor) {
@@ -34,7 +34,7 @@ export default function PublicLayout({ children }) {
               <a
                 key={label}
                 href={to}
-                className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5 text-[10px] font-medium text-gray-400 hover:text-gray-700 transition-colors"
+                className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5 text-[10px] font-medium text-[#8e8b82] hover:text-[#141413] transition-colors"
               >
                 <Icon className="w-5 h-5" />
                 <span>{label}</span>
@@ -46,10 +46,10 @@ export default function PublicLayout({ children }) {
               key={to}
               href={to}
               className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5 text-[10px] font-medium transition-colors ${
-                active ? "text-primary" : "text-gray-400 hover:text-gray-700"
+                active ? "text-[#cc785c]" : "text-[#8e8b82] hover:text-[#141413]"
               }`}
             >
-              <Icon className={`w-5 h-5 ${active ? "text-primary" : ""}`} />
+              <Icon className={`w-5 h-5 ${active ? "text-[#cc785c]" : ""}`} />
               <span>{label}</span>
             </Link>
           );
