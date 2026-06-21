@@ -7,10 +7,10 @@ import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
 import { useTickets } from "@/lib/store";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameDay, isBefore, isAfter, isWithinInterval, parseISO, isToday } from "date-fns";
 
-// Get all blocked date ranges from payment-verified tickets
+// Get all blocked date ranges from finalized reservations
 function getBlockedRanges(tickets, excludeId = null) {
   return tickets
-    .filter((t) => t.status === "PAYMENT VERIFIED" && t.id !== excludeId && t.checkIn && t.checkOut)
+    .filter((t) => ["PAYMENT VERIFIED", "BOOKING CONFIRMED"].includes(t.status) && t.id !== excludeId && t.checkIn && t.checkOut)
     .map((t) => ({ checkIn: parseISO(t.checkIn), checkOut: parseISO(t.checkOut) }));
 }
 
