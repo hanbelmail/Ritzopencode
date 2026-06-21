@@ -45,12 +45,12 @@ export default function Dashboard() {
 
   const stats = useMemo(() => {
     const revenue = tickets
-      .filter((t) => ["CONFIRMED", "PAYMENT RECEIVED", "COMPLETED"].includes(t.status))
+      .filter((t) => ["PAYMENT VERIFIED", "PAYMENT SUBMITTED", "BOOKING CONFIRMED"].includes(t.status))
       .reduce((sum, t) => sum + (t.rateOffered || 0), 0);
     const clients = new Set(tickets.flatMap((t) => (t.guests || []).filter(Boolean))).size;
     return [
       { label: "Total", value: tickets.length },
-      { label: "Pending", value: tickets.filter((t) => ["PENDING", "QUOTE"].includes(t.status)).length },
+      { label: "Pending", value: tickets.filter((t) => ["PRICE SENT", "QUOTE REQUESTED"].includes(t.status)).length },
       { label: "Booked Revenue", value: fmtMoney(revenue) },
       { label: "Clients", value: clients, sub: "unique guests" },
     ];

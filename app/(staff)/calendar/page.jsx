@@ -29,11 +29,11 @@ function isSameDay(a, b) {
 
 // ─── colour map ──────────────────────────────────────────────────────────────
 const STATUS_COLORS = {
-  QUOTE: "bg-slate-600 text-white border-slate-700",
-  PENDING: "bg-amber-600 text-white border-amber-700",
-  CONFIRMED: "bg-blue-700 text-white border-blue-800",
-  "PAYMENT RECEIVED": "bg-emerald-700 text-white border-emerald-800",
-  COMPLETED: "bg-primary text-primary-foreground border-primary",
+  "QUOTE REQUESTED": "bg-slate-600 text-white border-slate-700",
+  "PRICE SENT": "bg-amber-600 text-white border-amber-700",
+  "PAYMENT SUBMITTED": "bg-emerald-700 text-white border-emerald-800",
+  "PAYMENT VERIFIED": "bg-blue-700 text-white border-blue-800",
+  "BOOKING CONFIRMED": "bg-primary text-primary-foreground border-primary",
   CANCELLED: "bg-red-700 text-white border-red-800",
 };
 
@@ -226,7 +226,7 @@ function MonthGrid({ year, month, reservations, settings }) {
               {/* Reservation bars (absolute overlay) */}
               {weekBars[wi].map((seg, si) => {
                 const res = seg.reservation;
-                const color = STATUS_COLORS[res.status] || STATUS_COLORS.QUOTE;
+                const color = STATUS_COLORS[res.status] || STATUS_COLORS["QUOTE REQUESTED"];
                 const colWidth = 100 / 7;
                 const left  = `${seg.visualStart * colWidth}%`;
                 const width = `${(seg.visualEnd - seg.visualStart) * colWidth}%`;
@@ -287,7 +287,7 @@ export default function CalendarView() {
   // Build computed reservations
   const reservations = useMemo(() => {
     return tickets
-      .filter(t => t.checkIn && t.checkOut && t.status !== "CANCELLED" && t.status !== "QUOTE")
+      .filter(t => t.checkIn && t.checkOut && t.status !== "CANCELLED" && t.status !== "QUOTE REQUESTED")
       .map(t => ({
         ...t,
         guestName: t.guests?.[0] || "Guest",

@@ -33,7 +33,7 @@ export default function QuoteForm() {
       guests: guests.filter((g) => g.trim()),
       retailPrice: null,
       adjustment: 0,
-      status: "QUOTE",
+      status: "QUOTE REQUESTED",
       informedHotel: false,
       ...computed,
       rateOffered: null,

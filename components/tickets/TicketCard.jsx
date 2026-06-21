@@ -58,11 +58,14 @@ export default function TicketCard({ ticket, onDelete, onStatusChange }) {
                 <Link href={`/new?id=${ticket.id}`}><Pencil className="w-4 h-4 mr-2" />Edit</Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => onStatusChange(ticket.id, "CONFIRMED")}>
-                <CheckCircle className="w-4 h-4 mr-2" />Mark Confirmed
+              <DropdownMenuItem onClick={() => onStatusChange(ticket.id, "PAYMENT VERIFIED")}>
+                <CheckCircle className="w-4 h-4 mr-2" />Mark Payment Verified
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onStatusChange(ticket.id, "PENDING")}>
-                <CircleDot className="w-4 h-4 mr-2" />Mark Pending
+              <DropdownMenuItem onClick={() => onStatusChange(ticket.id, "PRICE SENT")}>
+                <CircleDot className="w-4 h-4 mr-2" />Mark Price Sent
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onStatusChange(ticket.id, "BOOKING CONFIRMED")}>
+                <CheckCircle className="w-4 h-4 mr-2" />Mark Booking Confirmed
               </DropdownMenuItem>
               <DropdownMenuItem className="text-destructive" onClick={() => onStatusChange(ticket.id, "CANCELLED")}>
                 <XCircle className="w-4 h-4 mr-2" />Cancel

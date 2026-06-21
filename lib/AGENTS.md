@@ -9,7 +9,7 @@
 - `defaults.js` owns server-safe default settings, quote webhook defaults, and payment method constants shared by client hooks and API routes.
 - `convex-server.js` owns server-side Convex HTTP client creation and JSON error helpers for App Router API routes.
 - `r2.js` owns server-side Cloudflare R2 S3 client setup and signed URL helpers for private payment proof objects.
-- `store.js` owns reservation tickets/settings client hooks, status constants, default/settings normalization, and legacy `ritz_*` localStorage migration keys.
+- `store.js` owns reservation tickets/settings client hooks, persisted status constants, default/settings normalization, and legacy `ritz_*` localStorage migration keys.
 - `StoreMigrator.jsx` owns one-time import of legacy browser-local reservation/settings data into Convex.
 - `AuthContext.jsx` adapts Convex Auth state/actions to the app's existing `useAuth()` contract.
 - `Providers.jsx` and `query-client.js` own app-wide client context providers outside Convex Auth.

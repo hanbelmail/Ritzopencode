@@ -81,9 +81,9 @@ export default function TicketPage() {
   }
 
   const hasPrice = ticket.rateOffered !== null && ticket.rateOffered !== undefined;
-  const isConfirmed = ticket.status === "CONFIRMED";
-  const canPay = hasPrice && !["CONFIRMED", "PAYMENT RECEIVED", "COMPLETED", "CANCELLED"].includes(ticket.status);
-  const isPaid = ["PAYMENT RECEIVED", "COMPLETED"].includes(ticket.status);
+  const isConfirmed = ticket.status === "PAYMENT VERIFIED";
+  const canPay = hasPrice && !["PAYMENT VERIFIED", "PAYMENT SUBMITTED", "BOOKING CONFIRMED", "CANCELLED"].includes(ticket.status);
+  const isPaid = ["PAYMENT SUBMITTED", "BOOKING CONFIRMED"].includes(ticket.status);
 
   const uploadPaymentProof = async (file) => {
     const uploadUrlResponse = await fetch("/api/payment-proof/upload-url", {
@@ -118,7 +118,7 @@ export default function TicketPage() {
     const paymentScreenshotKey = await uploadPaymentProof(screenshotFile);
 
     await updateTicket(ticket.id, {
-      status: "PAYMENT RECEIVED",
+      status: "PAYMENT SUBMITTED",
       paymentMethod: method,
       paymentScreenshot: null,
       paymentScreenshotKey,
@@ -156,7 +156,7 @@ export default function TicketPage() {
           <StatusBadge status={ticket.status} />
         </div>
 
-        {ticket.status === "QUOTE" && (
+        {ticket.status === "QUOTE REQUESTED" && (
           <div className="border border-amber-200 bg-amber-50 rounded-xl px-4 py-3 text-sm text-amber-800">
             Your quote is being reviewed — our team will add your price shortly. Check back soon.
           </div>

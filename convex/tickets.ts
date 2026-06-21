@@ -1,12 +1,28 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
+const legacyStatusMap: Record<string, string> = {
+  QUOTE: "QUOTE REQUESTED",
+  PENDING: "PRICE SENT",
+  "PAYMENT RECEIVED": "PAYMENT SUBMITTED",
+  CONFIRMED: "PAYMENT VERIFIED",
+  COMPLETED: "BOOKING CONFIRMED",
+};
+
+function normalizeTicket(ticket: any) {
+  if (!ticket?.status) return ticket;
+  return {
+    ...ticket,
+    status: legacyStatusMap[ticket.status] || ticket.status,
+  };
+}
+
 export const list = query({
   args: {},
   handler: async (ctx) => {
     const rows = await ctx.db.query("tickets").collect();
     return rows
-      .map((row) => row.data)
+      .map((row) => normalizeTicket(row.data))
       .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
   },
 });
@@ -18,7 +34,7 @@ export const get = query({
       .query("tickets")
       .withIndex("by_ticketId", (q) => q.eq("ticketId", id))
       .first();
-    return row?.data ?? null;
+    return row ? normalizeTicket(row.data) : null;
   },
 });
 
@@ -29,7 +45,7 @@ export const create = mutation({
     const ticket = {
       id: crypto.randomUUID(),
       createdAt: now,
-      ...data,
+      ...normalizeTicket(data),
     };
 
     await ctx.db.insert("tickets", {
@@ -55,7 +71,7 @@ export const update = mutation({
       throw new Error("Ticket not found");
     }
 
-    const updated = { ...row.data, ...data, id };
+    const updated = normalizeTicket({ ...row.data, ...data, id });
     await ctx.db.patch(row._id, {
       data: updated,
       updatedAt: new Date().toISOString(),
@@ -92,13 +108,13 @@ export const importLegacy = mutation({
 
       if (existing) {
         await ctx.db.patch(existing._id, {
-          data: { ...existing.data, ...ticket },
+          data: normalizeTicket({ ...existing.data, ...ticket }),
           updatedAt: now,
         });
       } else {
         await ctx.db.insert("tickets", {
           ticketId: ticket.id,
-          data: ticket,
+          data: normalizeTicket(ticket),
           createdAt: ticket.createdAt || now,
           updatedAt: now,
         });

@@ -33,7 +33,7 @@ export default function NewReservation() {
     retailPrice: settings.defaultRetailPrice,
     adjustment: "",
     notes: "",
-    status: "PENDING",
+    status: "PRICE SENT",
     informedHotel: false,
   });
 
@@ -52,7 +52,7 @@ export default function NewReservation() {
       retailPrice: existing ? (existing.retailPrice ?? "") : settings.defaultRetailPrice,
       adjustment: existing?.adjustment ?? "",
       notes: existing?.notes || "",
-      status: existing?.status || "PENDING",
+      status: existing?.status || "PRICE SENT",
       informedHotel: existing?.informedHotel || false,
     });
     setInitialized(true);
@@ -70,7 +70,7 @@ export default function NewReservation() {
       adjustment: form.adjustment === "" ? 0 : Number(form.adjustment),
       ...computeTicket(form, settings),
       confirmationDate:
-        form.status === "CONFIRMED" && !existing?.confirmationDate
+        form.status === "PAYMENT VERIFIED" && !existing?.confirmationDate
           ? new Date().toISOString().slice(0, 10)
           : existing?.confirmationDate || null,
     };

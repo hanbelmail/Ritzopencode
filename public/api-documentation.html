@@ -288,7 +288,7 @@
       "email": "guest@example.com",
       "phone": "+1 555 000 0000",
       "roomType": "Deluxe Ocean View",
-      "status": "QUOTE",
+      "status": "QUOTE REQUESTED",
       "retailPrice": null,
       "adjustment": 0,
       "total": null,
@@ -302,29 +302,29 @@
       <div class="endpoint">
         <div class="endpoint-head">
           <span class="method get">GET</span>
-          <span class="path">/api/tickets?status=QUOTE</span>
+          <span class="path">/api/tickets?status=QUOTE%20REQUESTED</span>
           <span class="tag">Protected</span>
         </div>
         <div class="endpoint-body">
           <p>Returns tickets filtered by exact status string.</p>
           <h3>Common Status Values</h3>
           <div class="status-list">
-            <code>QUOTE</code><code>CONFIRMED</code><code>PAYMENT RECEIVED</code><code>COMPLETED</code><code>CANCELLED</code>
+            <code>QUOTE REQUESTED</code><code>PRICE SENT</code><code>PAYMENT SUBMITTED</code><code>PAYMENT VERIFIED</code><code>BOOKING CONFIRMED</code><code>CANCELLED</code>
           </div>
           <h3>Example Request</h3>
-          <pre>curl -X GET "https://your-domain.com/api/tickets?status=CONFIRMED" \
+          <pre>curl -X GET "https://your-domain.com/api/tickets?status=PAYMENT%20VERIFIED" \
   -H "x-api-key: $N8N_API_KEY"</pre>
           <h3>Example Response</h3>
           <pre>{
   "tickets": [
     {
       "id": "8d4b6b3e-4a66-48b0-8a0d-fd8f28a07000",
-      "status": "CONFIRMED",
+      "status": "PAYMENT VERIFIED",
       "checkIn": "2026-08-10",
       "checkOut": "2026-08-14"
     }
   ],
-  "filter": { "status": "CONFIRMED" }
+  "filter": { "status": "PAYMENT VERIFIED" }
 }</pre>
         </div>
       </div>
@@ -352,7 +352,7 @@
     "guests": ["Ava Taylor"],
     "checkIn": "2026-08-10",
     "checkOut": "2026-08-14",
-    "status": "QUOTE"
+    "status": "QUOTE REQUESTED"
   }
 }</pre>
         </div>
@@ -370,7 +370,7 @@
           <table>
             <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
             <tbody>
-              <tr><td><code>status</code></td><td>string</td><td>Ticket status such as <code>CONFIRMED</code> or <code>PAYMENT RECEIVED</code>.</td></tr>
+              <tr><td><code>status</code></td><td>string</td><td>Ticket status such as <code>PAYMENT VERIFIED</code> or <code>PAYMENT SUBMITTED</code>.</td></tr>
               <tr><td><code>retailPrice</code></td><td>number, null, or empty string</td><td>Retail room price. Empty string and null become null.</td></tr>
               <tr><td><code>adjustment</code></td><td>number, null, or empty string</td><td>Manual pricing adjustment. Empty string and null become null.</td></tr>
               <tr><td><code>checkIn</code></td><td>string</td><td>Date in <code>YYYY-MM-DD</code> format.</td></tr>
@@ -383,7 +383,7 @@
   -H "Authorization: Bearer $N8N_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "status": "CONFIRMED",
+    "status": "PAYMENT VERIFIED",
     "retailPrice": 2800,
     "adjustment": 0,
     "checkIn": "2026-08-10",
@@ -393,7 +393,7 @@
           <pre>{
   "ticket": {
     "id": "8d4b6b3e-4a66-48b0-8a0d-fd8f28a07000",
-    "status": "CONFIRMED",
+    "status": "PAYMENT VERIFIED",
     "retailPrice": 2800,
     "adjustment": 0,
     "nights": 4,
@@ -537,7 +537,7 @@
       "checkIn": "2026-08-10",
       "checkOut": "2026-08-14",
       "roomType": "Deluxe Ocean View",
-      "status": "QUOTE"
+      "status": "QUOTE REQUESTED"
     }
   }'</pre>
           <h3>Example Responses</h3>
