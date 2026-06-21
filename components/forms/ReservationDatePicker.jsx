@@ -7,25 +7,64 @@ import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
 import { useTickets } from "@/lib/store";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameDay, isBefore, isAfter, isWithinInterval, parseISO, isToday } from "date-fns";
 
-// Get all blocked date ranges from finalized reservations
-function getBlockedRanges(tickets, excludeId = null) {
+// Get all reserved date ranges from finalized reservations.
+function getReservedRanges(tickets, excludeId = null) {
   return tickets
     .filter((t) => ["PAYMENT VERIFIED", "BOOKING CONFIRMED"].includes(t.status) && t.id !== excludeId && t.checkIn && t.checkOut)
     .map((t) => ({ checkIn: parseISO(t.checkIn), checkOut: parseISO(t.checkOut) }));
 }
 
-// A date is blocked if it falls within [checkIn, checkOut - 1 day] of a confirmed reservation
-// (checkOut itself is NOT blocked since a new check-in can happen that day)
-function isDateBlocked(date, blockedRanges) {
-  return blockedRanges.some(({ checkIn, checkOut }) => {
-    // Don't block checkIn or checkOut dates — another reservation can share those turnover days
-    const blockStart = addDays(checkIn, 1);
-    const blockEnd = addDays(checkOut, -1);
-    return !isBefore(date, blockStart) && !isAfter(date, blockEnd);
-  });
+function getReservationMarker(date, reservedRanges) {
+  return reservedRanges.reduce(
+    (marker, { checkIn, checkOut }) => ({
+      starts: marker.starts || isSameDay(date, checkIn),
+      ends: marker.ends || isSameDay(date, checkOut),
+      inside: marker.inside || (isAfter(date, checkIn) && isBefore(date, checkOut)),
+    }),
+    { starts: false, ends: false, inside: false }
+  );
 }
 
-function CalendarMonth({ month, checkIn, checkOut, focusField, onSelectDate, blockedRanges }) {
+function isOccupiedNight(date, { checkIn, checkOut }) {
+  return !isBefore(date, checkIn) && isBefore(date, checkOut);
+}
+
+function overlapsOccupiedNights(start, end, reservedRanges) {
+  if (!isBefore(start, end)) return false;
+  return reservedRanges.some(({ checkIn, checkOut }) => isBefore(start, checkOut) && isAfter(end, checkIn));
+}
+
+function isDateUnavailable(date, { focusField, checkIn, checkOut, reservedRanges }) {
+  if (focusField === "checkOut" && checkIn) {
+    const start = parseISO(checkIn);
+    return !isAfter(date, start) || overlapsOccupiedNights(start, date, reservedRanges);
+  }
+
+  if (focusField === "checkIn" && checkOut) {
+    const end = parseISO(checkOut);
+    return isBefore(date, end) && overlapsOccupiedNights(date, end, reservedRanges);
+  }
+
+  if (focusField === "checkIn") {
+    return reservedRanges.some((range) => isOccupiedNight(date, range));
+  }
+
+  return reservedRanges.some(({ checkIn: start, checkOut: end }) => isAfter(date, start) && isBefore(date, end));
+}
+
+function ReservationMarker({ marker }) {
+  if (!marker.starts && !marker.ends && !marker.inside) return null;
+
+  return (
+    <span className="absolute inset-0 overflow-hidden rounded-full">
+      {marker.inside && <span className="absolute inset-0 bg-[#e8dcc8]" />}
+      {marker.starts && <span className="absolute inset-y-0 right-0 w-1/2 bg-[#e8dcc8]" />}
+      {marker.ends && <span className="absolute inset-y-0 left-0 w-1/2 bg-[#e8dcc8]" />}
+    </span>
+  );
+}
+
+function CalendarMonth({ month, checkIn, checkOut, focusField, onSelectDate, reservedRanges }) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -56,13 +95,15 @@ function CalendarMonth({ month, checkIn, checkOut, focusField, onSelectDate, blo
         <div key={i} className="text-center text-xs font-medium text-muted-foreground py-1">{d}</div>
       ))}
       {days.map((date, i) => {
-        const blocked = inMonth(date) && isDateBlocked(date, blockedRanges);
+        const marker = inMonth(date) ? getReservationMarker(date, reservedRanges) : { starts: false, ends: false, inside: false };
+        const unavailable = inMonth(date) && isDateUnavailable(date, { focusField, checkIn, checkOut, reservedRanges });
         const past = isPast(date);
         const outOfMonth = !inMonth(date);
         const start_ = isStart(date);
         const end_ = isEnd(date);
         const inRange = isInRange(date);
-        const disabled = past || blocked || outOfMonth;
+        const marked = marker.starts || marker.ends || marker.inside;
+        const disabled = past || unavailable || outOfMonth;
 
         // Determine click: if focusField is checkout, only allow after checkIn
         const handleClick = () => {
@@ -93,25 +134,17 @@ function CalendarMonth({ month, checkIn, checkOut, focusField, onSelectDate, blo
               className={`
                 relative z-10 w-9 h-9 flex flex-col items-center justify-center text-sm rounded-full transition-colors
                 ${outOfMonth ? "invisible" : ""}
-                ${blocked ? "cursor-not-allowed" : ""}
+                ${unavailable ? "cursor-not-allowed" : ""}
                 ${!disabled && !start_ && !end_ ? "hover:bg-[#efe9de]" : ""}
                 ${start_ || end_ ? "bg-[#cc785c] text-white font-semibold" : ""}
                 ${past && !start_ && !end_ ? "text-[#c8c0b6] cursor-not-allowed" : ""}
-                ${!start_ && !end_ && !past && !blocked && !outOfMonth ? "text-[#252523]" : ""}
+                ${marked && !start_ && !end_ ? "text-[#6c6a64]" : ""}
+                ${!start_ && !end_ && !past && !unavailable && !outOfMonth && !marked ? "text-[#252523]" : ""}
                 ${isToday(date) && !start_ && !end_ ? "ring-1 ring-[#cc785c]" : ""}
               `}
             >
-              {blocked && !outOfMonth ? (
-                <span className="relative w-9 h-9 flex items-center justify-center rounded-full overflow-hidden">
-                  {/* Diagonal slash mask */}
-                  <svg className="absolute inset-0 w-9 h-9" viewBox="0 0 36 36">
-                    <polygon points="0,36 36,0 36,36" fill="#e8dcc8" opacity="0.85" />
-                  </svg>
-                  <span className="relative text-xs text-[#8e8b82]">{date.getDate()}</span>
-                </span>
-              ) : (
-                <span>{outOfMonth ? "" : date.getDate()}</span>
-              )}
+              {!outOfMonth && !start_ && !end_ && <ReservationMarker marker={marker} />}
+              <span className="relative z-10">{outOfMonth ? "" : date.getDate()}</span>
             </button>
           </div>
         );
@@ -126,7 +159,7 @@ export default function ReservationDatePicker({ checkIn, checkOut, onCheckInChan
   const [checkOutOpen, setCheckOutOpen] = useState(false);
   const [checkInMonth, setCheckInMonth] = useState(checkIn ? parseISO(checkIn) : new Date());
   const [checkOutMonth, setCheckOutMonth] = useState(checkOut ? parseISO(checkOut) : new Date());
-  const blockedRanges = getBlockedRanges(tickets, excludeId);
+  const reservedRanges = getReservedRanges(tickets, excludeId);
 
   const fmtDate = (d) => d ? format(parseISO(d), "MMM d, yyyy") : null;
 
@@ -161,7 +194,7 @@ export default function ReservationDatePicker({ checkIn, checkOut, onCheckInChan
               checkIn={checkIn}
               checkOut={checkOut}
               focusField="checkIn"
-              blockedRanges={blockedRanges}
+              reservedRanges={reservedRanges}
               onSelectDate={(date) => {
                 const iso = format(date, "yyyy-MM-dd");
                 onCheckInChange(iso);
@@ -205,7 +238,7 @@ export default function ReservationDatePicker({ checkIn, checkOut, onCheckInChan
               checkIn={checkIn}
               checkOut={checkOut}
               focusField="checkOut"
-              blockedRanges={blockedRanges}
+              reservedRanges={reservedRanges}
               onSelectDate={(date) => {
                 const iso = format(date, "yyyy-MM-dd");
                 onCheckOutChange(iso);

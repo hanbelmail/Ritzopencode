@@ -17,6 +17,7 @@
 
 - Components must not introduce new persistence contracts; route mutations and storage live in `lib/`.
 - `components/home/QuoteForm.jsx` creates Convex quote tickets through `lib/store.js` and may call the app-level quote webhook route after creation.
+- `components/forms/ReservationDatePicker.jsx` marks finalized reservations (`PAYMENT VERIFIED`, `BOOKING CONFIRMED`) and must preserve same-day checkout/check-in turnover behavior.
 - Keep shared components route-agnostic unless they are in a domain folder such as `home/`, `ticket/`, or `tickets/`.
 - Preserve `@/components/ui/*` import paths for UI primitives.
 
