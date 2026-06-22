@@ -1,8 +1,19 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Clock, Phone, MoreHorizontal, Pencil, Trash2, Eye, CheckCircle, CircleDot, XCircle } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,10 +25,37 @@ import { Button } from "@/components/ui/button";
 import StatusBadge from "./StatusBadge";
 import { fmtDate, fmtMoney } from "@/lib/calc";
 
+const statusActions = {
+  "PAYMENT VERIFIED": { label: "Mark Payment Verified", title: "Mark payment verified?" },
+  "PRICE SENT": { label: "Mark Price Sent", title: "Mark price sent?" },
+  "BOOKING CONFIRMED": { label: "Mark Booking Confirmed", title: "Mark booking confirmed?" },
+  CANCELLED: { label: "Cancel", title: "Cancel this reservation?" },
+};
+
 export default function TicketCard({ ticket, onDelete, onStatusChange }) {
   const router = useRouter();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [statusToConfirm, setStatusToConfirm] = useState(null);
   const guests = (ticket.guests || []).filter(Boolean);
   const [primary, ...others] = guests;
+  const pendingStatusAction = statusToConfirm ? statusActions[statusToConfirm] : null;
+
+  const confirmStatusChange = () => {
+    if (!statusToConfirm) return;
+    onStatusChange(ticket.id, statusToConfirm);
+    setStatusToConfirm(null);
+  };
+
+  const openStatusDialog = (status) => {
+    setMenuOpen(false);
+    setStatusToConfirm(status);
+  };
+
+  const openDeleteDialog = () => {
+    setMenuOpen(false);
+    setDeleteOpen(true);
+  };
 
   return (
     <div
@@ -44,7 +82,7 @@ export default function TicketCard({ ticket, onDelete, onStatusChange }) {
           </div>
         </div>
         <div onClick={(e) => e.stopPropagation()}>
-          <DropdownMenu>
+          <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-[#efe9de]">
                 <MoreHorizontal className="w-4 h-4 text-[#6c6a64]" />
@@ -58,24 +96,64 @@ export default function TicketCard({ ticket, onDelete, onStatusChange }) {
                 <Link href={`/new?id=${ticket.id}`}><Pencil className="w-4 h-4 mr-2" />Edit</Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => onStatusChange(ticket.id, "PAYMENT VERIFIED")}>
+              <DropdownMenuItem onSelect={(event) => { event.preventDefault(); openStatusDialog("PAYMENT VERIFIED"); }}>
                 <CheckCircle className="w-4 h-4 mr-2" />Mark Payment Verified
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onStatusChange(ticket.id, "PRICE SENT")}>
+              <DropdownMenuItem onSelect={(event) => { event.preventDefault(); openStatusDialog("PRICE SENT"); }}>
                 <CircleDot className="w-4 h-4 mr-2" />Mark Price Sent
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onStatusChange(ticket.id, "BOOKING CONFIRMED")}>
+              <DropdownMenuItem onSelect={(event) => { event.preventDefault(); openStatusDialog("BOOKING CONFIRMED"); }}>
                 <CheckCircle className="w-4 h-4 mr-2" />Mark Booking Confirmed
               </DropdownMenuItem>
-              <DropdownMenuItem className="text-destructive" onClick={() => onStatusChange(ticket.id, "CANCELLED")}>
+              <DropdownMenuItem className="text-destructive" onSelect={(event) => { event.preventDefault(); openStatusDialog("CANCELLED"); }}>
                 <XCircle className="w-4 h-4 mr-2" />Cancel
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-destructive" onClick={() => onDelete(ticket.id)}>
+              <DropdownMenuItem className="text-destructive" onSelect={(event) => { event.preventDefault(); openDeleteDialog(); }}>
                 <Trash2 className="w-4 h-4 mr-2" />Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          <AlertDialog open={Boolean(statusToConfirm)} onOpenChange={(open) => { if (!open) setStatusToConfirm(null); }}>
+            <AlertDialogContent className="max-w-md rounded-[18px] border-[#e6dfd8] bg-[#fffdf8] p-0 text-[#141413] shadow-2xl">
+              <div className="border-b border-[#efe9de] px-6 py-5">
+                <AlertDialogHeader className="space-y-2 text-left">
+                  <AlertDialogTitle className="text-xl font-semibold tracking-[-0.02em]">{pendingStatusAction?.title}</AlertDialogTitle>
+                  <AlertDialogDescription className="text-sm leading-6 text-[#6c6a64]">
+                    This will update {primary || "this reservation"} to <span className="font-medium text-[#252523]">{statusToConfirm}</span>.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+              </div>
+              <AlertDialogFooter className="gap-2 px-6 py-4 sm:space-x-0">
+                <AlertDialogCancel className="mt-0 rounded-[8px] border-[#d8d0c7] bg-[#faf9f5] text-[#252523] hover:bg-[#efe9de]">
+                  Cancel
+                </AlertDialogCancel>
+                <AlertDialogAction onClick={confirmStatusChange} className={`rounded-[8px] text-white ${statusToConfirm === "CANCELLED" ? "bg-[#b84f34] hover:bg-[#963f2a]" : "bg-[#cc785c] hover:bg-[#a9583e]"}`}>
+                  {pendingStatusAction?.label}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+          <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+            <AlertDialogContent className="max-w-md rounded-[18px] border-[#e6dfd8] bg-[#fffdf8] p-0 text-[#141413] shadow-2xl">
+              <div className="border-b border-[#efe9de] px-6 py-5">
+                <AlertDialogHeader className="space-y-2 text-left">
+                  <AlertDialogTitle className="text-xl font-semibold tracking-[-0.02em]">Delete this reservation?</AlertDialogTitle>
+                  <AlertDialogDescription className="text-sm leading-6 text-[#6c6a64]">
+                    This will permanently delete {primary || "this reservation"}. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+              </div>
+              <AlertDialogFooter className="gap-2 px-6 py-4 sm:space-x-0">
+                <AlertDialogCancel className="mt-0 rounded-[8px] border-[#d8d0c7] bg-[#faf9f5] text-[#252523] hover:bg-[#efe9de]">
+                  Cancel
+                </AlertDialogCancel>
+                <AlertDialogAction onClick={() => onDelete(ticket.id)} className="rounded-[8px] bg-[#b84f34] text-white hover:bg-[#963f2a]">
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
 
