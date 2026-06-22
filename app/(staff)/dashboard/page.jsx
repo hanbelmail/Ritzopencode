@@ -1,11 +1,22 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Plus, LayoutGrid, Table2 } from "lucide-react";
+import { Download, Search, Plus, LayoutGrid, Table2, Trash2 } from "lucide-react";
 import StatsBar from "@/components/tickets/StatsBar";
 import TicketCard from "@/components/tickets/TicketCard";
 import TicketTable from "@/components/tickets/TicketTable";
@@ -19,6 +30,27 @@ const dateFieldOptions = [
   { value: "checkIn", label: "Check-in" },
   { value: "checkOut", label: "Check-out" },
   { value: "createdAt", label: "Quote-created" },
+];
+
+const csvColumns = [
+  { key: "id", label: "Ticket ID" },
+  { key: "createdAt", label: "Quote Date", value: (t) => dateStamp(t.createdAt) },
+  { key: "guests", label: "Guests", value: (t) => (t.guests || []).filter(Boolean).join(", ") },
+  { key: "email", label: "Email" },
+  { key: "phone", label: "Phone" },
+  { key: "status", label: "Status" },
+  { key: "checkIn", label: "Check-in", value: (t) => dateStamp(t.checkIn) },
+  { key: "checkOut", label: "Check-out", value: (t) => dateStamp(t.checkOut) },
+  { key: "nights", label: "Nights" },
+  { key: "roomType", label: "Room Type" },
+  { key: "retailPrice", label: "Retail Price" },
+  { key: "discountPct", label: "Discount %" },
+  { key: "rateOffered", label: "Rate Offered" },
+  { key: "costPerNight", label: "Cost Per Night" },
+  { key: "paymentMethod", label: "Payment Method" },
+  { key: "informedHotel", label: "Informed Hotel", value: (t) => (t.informedHotel ? "Yes" : "No") },
+  { key: "notes", label: "Notes" },
+  { key: "referredBy", label: "Referred By" },
 ];
 
 function dateStamp(value) {
@@ -39,6 +71,11 @@ function inDateRange(value, from, to) {
   return (!from || stamp >= from) && (!to || stamp <= to);
 }
 
+function csvCell(value) {
+  const text = value === null || value === undefined ? "" : String(value);
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
 export default function Dashboard() {
   const tickets = useTickets();
   const { deleteTicket, updateTicket } = useTicketActions();
@@ -46,6 +83,7 @@ export default function Dashboard() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState({ field: "checkIn", from: "", to: "" });
+  const [selectedIds, setSelectedIds] = useState([]);
 
   const hasDateFilter = Boolean(dateFilter.from || dateFilter.to);
   const selectedDateField = dateFieldOptions.find((option) => option.value === dateFilter.field)?.label || "Date";
@@ -66,6 +104,31 @@ export default function Dashboard() {
     await updateTicket(id, { status });
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    await Promise.all(selectedIds.map((id) => deleteTicket(id)));
+    setSelectedIds([]);
+  };
+
+  const exportFilteredCsv = () => {
+    const header = csvColumns.map((column) => csvCell(column.label)).join(",");
+    const rows = filtered.map((ticket) =>
+      csvColumns
+        .map((column) => csvCell(column.value ? column.value(ticket) : ticket[column.key]))
+        .join(",")
+    );
+    const csv = [header, ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `reservations-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
+
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return tickets.filter((t) => {
@@ -79,6 +142,14 @@ export default function Dashboard() {
       return matchSearch && matchStatus && matchDate;
     });
   }, [tickets, search, statusFilter, dateFilter]);
+
+  useEffect(() => {
+    const filteredIds = new Set(filtered.map((ticket) => ticket.id));
+    setSelectedIds((current) => {
+      const next = current.filter((id) => filteredIds.has(id));
+      return next.length === current.length ? current : next;
+    });
+  }, [filtered]);
 
   const stats = useMemo(() => {
     const revenue = tickets
@@ -186,6 +257,44 @@ export default function Dashboard() {
 
         <StatsBar stats={stats} />
 
+        {view === "table" && (
+          <div className="flex flex-col gap-3 rounded-[12px] border border-[#e6dfd8] bg-[#fffdf8] p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="text-sm text-[#6c6a64]">
+              <span className="font-medium text-[#252523]">{selectedIds.length}</span> selected from <span className="font-medium text-[#252523]">{filtered.length}</span> filtered reservation{filtered.length === 1 ? "" : "s"}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" variant="outline" onClick={exportFilteredCsv} disabled={filtered.length === 0} className="rounded-[8px] border-[#d8d0c7] bg-[#faf9f5] text-[#252523] hover:bg-[#efe9de]">
+                <Download className="mr-2 h-4 w-4" /> Export CSV
+              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button type="button" variant="outline" disabled={selectedIds.length === 0} className="rounded-[8px] border-[#e4b5a7] bg-[#fff7f4] text-[#a9583e] hover:bg-[#f7e4dd]">
+                    <Trash2 className="mr-2 h-4 w-4" /> Delete selected
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent className="max-w-md rounded-[18px] border-[#e6dfd8] bg-[#fffdf8] p-0 text-[#141413] shadow-2xl">
+                  <div className="border-b border-[#efe9de] px-6 py-5">
+                    <AlertDialogHeader className="space-y-2 text-left">
+                      <AlertDialogTitle className="text-xl font-semibold tracking-[-0.02em]">Delete selected reservations?</AlertDialogTitle>
+                      <AlertDialogDescription className="text-sm leading-6 text-[#6c6a64]">
+                        This will permanently delete {selectedIds.length} selected reservation{selectedIds.length === 1 ? "" : "s"}. This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                  </div>
+                  <AlertDialogFooter className="gap-2 px-6 py-4 sm:space-x-0">
+                    <AlertDialogCancel className="mt-0 rounded-[8px] border-[#d8d0c7] bg-[#faf9f5] text-[#252523] hover:bg-[#efe9de]">
+                      Cancel
+                    </AlertDialogCancel>
+                    <AlertDialogAction onClick={handleBulkDelete} className="rounded-[8px] bg-[#b84f34] text-white hover:bg-[#963f2a]">
+                      Delete {selectedIds.length}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+          </div>
+        )}
+
       {view === "board" ? (
         <div className="space-y-3">
           {filtered.map((t) => (
@@ -198,7 +307,7 @@ export default function Dashboard() {
           )}
         </div>
       ) : (
-        <TicketTable tickets={filtered} />
+        <TicketTable tickets={filtered} selectedIds={selectedIds} onSelectedIdsChange={setSelectedIds} />
       )}
       </div>
     </div>

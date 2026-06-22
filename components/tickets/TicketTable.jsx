@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowUpDown } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import StatusBadge from "./StatusBadge";
 import { fmtDate, fmtMoney, shortId } from "@/lib/calc";
@@ -25,9 +26,10 @@ const columns = [
   { key: "referredBy", label: "Referred By", render: (t) => t.referredBy || "—" },
 ];
 
-export default function TicketTable({ tickets }) {
+export default function TicketTable({ tickets, selectedIds, onSelectedIdsChange }) {
   const router = useRouter();
   const [sort, setSort] = useState({ key: "createdAt", dir: -1 });
+  const selectable = Array.isArray(selectedIds) && typeof onSelectedIdsChange === "function";
 
   const sorted = useMemo(() => {
     const col = columns.find((c) => c.key === sort.key);
@@ -42,11 +44,39 @@ export default function TicketTable({ tickets }) {
   const toggleSort = (key) =>
     setSort((s) => ({ key, dir: s.key === key ? -s.dir : 1 }));
 
+  const sortedIds = useMemo(() => sorted.map((ticket) => ticket.id), [sorted]);
+  const selectedCount = selectable ? sortedIds.filter((id) => selectedIds.includes(id)).length : 0;
+  const allSelected = selectable && sortedIds.length > 0 && selectedCount === sortedIds.length;
+  const someSelected = selectable && selectedCount > 0 && selectedCount < sortedIds.length;
+
+  const toggleAll = (checked) => {
+    if (!selectable) return;
+    onSelectedIdsChange((current) => {
+      const otherIds = current.filter((id) => !sortedIds.includes(id));
+      return checked ? [...otherIds, ...sortedIds] : otherIds;
+    });
+  };
+
+  const toggleOne = (id, checked) => {
+    if (!selectable) return;
+    onSelectedIdsChange((current) => (checked ? [...new Set([...current, id])] : current.filter((selectedId) => selectedId !== id)));
+  };
+
   return (
     <div className="overflow-x-auto rounded-[12px] border border-[#e6dfd8] bg-[#faf9f5]">
       <Table>
         <TableHeader>
           <TableRow className="bg-[#efe9de] hover:bg-[#efe9de]">
+            {selectable && (
+              <TableHead className="w-12 text-[#6c6a64]">
+                <Checkbox
+                  aria-label="Select all reservations"
+                  checked={allSelected || (someSelected && "indeterminate")}
+                  onCheckedChange={(checked) => toggleAll(checked === true)}
+                  className="border-[#8e8b82] data-[state=checked]:border-[#cc785c] data-[state=checked]:bg-[#cc785c]"
+                />
+              </TableHead>
+            )}
             {columns.map((c) => (
               <TableHead key={c.key} className="whitespace-nowrap text-[#6c6a64]">
                 <button className="flex items-center gap-1 text-xs font-medium" onClick={() => toggleSort(c.key)}>
@@ -60,6 +90,16 @@ export default function TicketTable({ tickets }) {
         <TableBody>
           {sorted.map((t) => (
             <TableRow key={t.id} className="cursor-pointer border-[#e6dfd8] hover:bg-[#f5f0e8]" onClick={() => router.push(`/ticket/${t.id}`)}>
+              {selectable && (
+                <TableCell className="w-12" onClick={(event) => event.stopPropagation()}>
+                  <Checkbox
+                    aria-label={`Select reservation ${t.id}`}
+                    checked={selectedIds.includes(t.id)}
+                    onCheckedChange={(checked) => toggleOne(t.id, checked === true)}
+                    className="border-[#8e8b82] data-[state=checked]:border-[#cc785c] data-[state=checked]:bg-[#cc785c]"
+                  />
+                </TableCell>
+              )}
               {columns.map((c) => (
                 <TableCell key={c.key} className="whitespace-nowrap text-sm text-[#252523]">{c.render(t)}</TableCell>
               ))}
@@ -67,7 +107,7 @@ export default function TicketTable({ tickets }) {
           ))}
           {sorted.length === 0 && (
             <TableRow>
-              <TableCell colSpan={columns.length} className="text-center text-[#6c6a64] py-8 text-sm">
+              <TableCell colSpan={columns.length + (selectable ? 1 : 0)} className="text-center text-[#6c6a64] py-8 text-sm">
                 No reservations found
               </TableCell>
             </TableRow>

@@ -7,7 +7,7 @@
 ## Ownership
 
 - `layout.jsx` owns client-side staff route guarding and wraps pages with `components/StaffLayout.jsx`; `middleware.js` owns server-side staff route redirects.
-- `dashboard/` owns reservation list, board/table switching, filtering, deletion, status updates, and summary stats.
+- `dashboard/` owns reservation list, board/table switching, filtering, CSV export, deletion, status updates, and summary stats.
 - `api-dashboard/` owns the staff-only quote webhook URL/enabled setting.
 - `new/` owns reservation creation.
 - `calendar/`, `clients/`, and `settings/` own their respective staff management views.
