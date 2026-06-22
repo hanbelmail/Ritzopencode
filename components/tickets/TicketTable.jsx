@@ -2,11 +2,19 @@
 
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowUpDown } from "lucide-react";
+import { ArrowUpDown, Columns3 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import StatusBadge from "./StatusBadge";
 import { fmtDate, fmtMoney, shortId } from "@/lib/calc";
+import { readDashboardTableColumns, saveDashboardTableColumns } from "@/lib/ui-preferences";
 
 const columns = [
   { key: "id", label: "Ticket", render: (t) => <span className="font-mono text-xs">{shortId(t.id)}</span> },
@@ -26,10 +34,15 @@ const columns = [
   { key: "referredBy", label: "Referred By", render: (t) => t.referredBy || "—" },
 ];
 
+const defaultColumnKeys = columns.map((column) => column.key);
+
 export default function TicketTable({ tickets, selectedIds, onSelectedIdsChange }) {
   const router = useRouter();
   const [sort, setSort] = useState({ key: "createdAt", dir: -1 });
+  const [visibleColumns, setVisibleColumns] = useState(() => readDashboardTableColumns(defaultColumnKeys));
   const selectable = Array.isArray(selectedIds) && typeof onSelectedIdsChange === "function";
+  const visibleColumnSet = useMemo(() => new Set(visibleColumns), [visibleColumns]);
+  const activeColumns = useMemo(() => columns.filter((column) => visibleColumnSet.has(column.key)), [visibleColumnSet]);
 
   const sorted = useMemo(() => {
     const col = columns.find((c) => c.key === sort.key);
@@ -62,58 +75,95 @@ export default function TicketTable({ tickets, selectedIds, onSelectedIdsChange 
     onSelectedIdsChange((current) => (checked ? [...new Set([...current, id])] : current.filter((selectedId) => selectedId !== id)));
   };
 
+  const toggleColumn = (key, checked) => {
+    setVisibleColumns((current) => {
+      let next = current;
+      if (checked) next = [...new Set([...current, key])];
+      else if (current.length > 1) next = current.filter((columnKey) => columnKey !== key);
+
+      if (next !== current) saveDashboardTableColumns(next);
+      return next;
+    });
+  };
+
   return (
-    <div className="overflow-x-auto rounded-[12px] border border-[#e6dfd8] bg-[#faf9f5]">
-      <Table>
-        <TableHeader>
-          <TableRow className="bg-[#efe9de] hover:bg-[#efe9de]">
-            {selectable && (
-              <TableHead className="w-12 text-[#6c6a64]">
-                <Checkbox
-                  aria-label="Select all reservations"
-                  checked={allSelected || (someSelected && "indeterminate")}
-                  onCheckedChange={(checked) => toggleAll(checked === true)}
-                  className="border-[#8e8b82] data-[state=checked]:border-[#cc785c] data-[state=checked]:bg-[#cc785c]"
-                />
-              </TableHead>
-            )}
-            {columns.map((c) => (
-              <TableHead key={c.key} className="whitespace-nowrap text-[#6c6a64]">
-                <button className="flex items-center gap-1 text-xs font-medium" onClick={() => toggleSort(c.key)}>
-                  {c.label}
-                  <ArrowUpDown className="w-3 h-3 text-[#8e8b82]" />
-                </button>
-              </TableHead>
+    <div className="rounded-[12px] border border-[#e6dfd8] bg-[#faf9f5]">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e6dfd8] px-4 py-3">
+        <p className="text-xs font-medium uppercase tracking-[0.14em] text-[#8e8b82]">Table view</p>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button type="button" variant="outline" className="h-9 rounded-[8px] border-[#d8d0c7] bg-[#fffdf8] text-xs text-[#252523] hover:bg-[#efe9de]">
+              <Columns3 className="mr-2 h-4 w-4" /> Columns
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="max-h-[360px] w-56 overflow-y-auto rounded-[12px] border-[#e6dfd8] bg-[#faf9f5] p-1 text-[#141413]">
+            {columns.map((column) => (
+              <DropdownMenuCheckboxItem
+                key={column.key}
+                checked={visibleColumnSet.has(column.key)}
+                disabled={visibleColumns.length === 1 && visibleColumnSet.has(column.key)}
+                onCheckedChange={(checked) => toggleColumn(column.key, checked === true)}
+                onSelect={(event) => event.preventDefault()}
+                className="rounded-[8px] focus:bg-[#efe9de]"
+              >
+                {column.label}
+              </DropdownMenuCheckboxItem>
             ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {sorted.map((t) => (
-            <TableRow key={t.id} className="cursor-pointer border-[#e6dfd8] hover:bg-[#f5f0e8]" onClick={() => router.push(`/ticket/${t.id}`)}>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-[#efe9de] hover:bg-[#efe9de]">
               {selectable && (
-                <TableCell className="w-12" onClick={(event) => event.stopPropagation()}>
+                <TableHead className="w-12 text-[#6c6a64]">
                   <Checkbox
-                    aria-label={`Select reservation ${t.id}`}
-                    checked={selectedIds.includes(t.id)}
-                    onCheckedChange={(checked) => toggleOne(t.id, checked === true)}
+                    aria-label="Select all reservations"
+                    checked={allSelected || (someSelected && "indeterminate")}
+                    onCheckedChange={(checked) => toggleAll(checked === true)}
                     className="border-[#8e8b82] data-[state=checked]:border-[#cc785c] data-[state=checked]:bg-[#cc785c]"
                   />
-                </TableCell>
+                </TableHead>
               )}
-              {columns.map((c) => (
-                <TableCell key={c.key} className="whitespace-nowrap text-sm text-[#252523]">{c.render(t)}</TableCell>
+              {activeColumns.map((c) => (
+                <TableHead key={c.key} className="whitespace-nowrap text-[#6c6a64]">
+                  <button className="flex items-center gap-1 text-xs font-medium" onClick={() => toggleSort(c.key)}>
+                    {c.label}
+                    <ArrowUpDown className="w-3 h-3 text-[#8e8b82]" />
+                  </button>
+                </TableHead>
               ))}
             </TableRow>
-          ))}
-          {sorted.length === 0 && (
-            <TableRow>
-              <TableCell colSpan={columns.length + (selectable ? 1 : 0)} className="text-center text-[#6c6a64] py-8 text-sm">
-                No reservations found
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {sorted.map((t) => (
+              <TableRow key={t.id} className="cursor-pointer border-[#e6dfd8] hover:bg-[#f5f0e8]" onClick={() => router.push(`/ticket/${t.id}`)}>
+                {selectable && (
+                  <TableCell className="w-12" onClick={(event) => event.stopPropagation()}>
+                    <Checkbox
+                      aria-label={`Select reservation ${t.id}`}
+                      checked={selectedIds.includes(t.id)}
+                      onCheckedChange={(checked) => toggleOne(t.id, checked === true)}
+                      className="border-[#8e8b82] data-[state=checked]:border-[#cc785c] data-[state=checked]:bg-[#cc785c]"
+                    />
+                  </TableCell>
+                )}
+                {activeColumns.map((c) => (
+                  <TableCell key={c.key} className="whitespace-nowrap text-sm text-[#252523]">{c.render(t)}</TableCell>
+                ))}
+              </TableRow>
+            ))}
+            {sorted.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={activeColumns.length + (selectable ? 1 : 0)} className="text-center text-[#6c6a64] py-8 text-sm">
+                  No reservations found
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }
