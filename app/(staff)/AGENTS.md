@@ -2,12 +2,13 @@
 
 ## Purpose
 
-- Owns authenticated staff reservation management pages and staff-only quote webhook settings.
+- Owns authenticated staff reservation management pages, analytics, and staff-only quote webhook settings.
 
 ## Ownership
 
 - `layout.jsx` owns client-side staff route guarding and wraps pages with `components/StaffLayout.jsx`; `middleware.js` owns server-side staff route redirects.
 - `dashboard/` owns reservation list, board/table switching, table column controls, filtering, CSV export, deletion, status updates, and summary stats.
+- `analytics/` owns staff-only reservation analytics computed from Convex tickets, including KPI cards, charts, grouped tables, date range filtering, and analytics CSV export.
 - `api-dashboard/` owns the staff-only quote webhook URL/enabled setting.
 - `new/` owns reservation creation.
 - `calendar/`, `clients/`, and `settings/` own their respective staff management views.

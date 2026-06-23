@@ -4,16 +4,17 @@ import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutGrid, Plus, Settings, Globe, LogOut, Users, Calendar, Code, Menu, Workflow, UserRound, X } from "lucide-react";
+import { BarChart3, LayoutGrid, Plus, Settings, Globe, LogOut, Users, Calendar, Code, Menu, Workflow, UserRound, X } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutGrid },
   { to: "/calendar", label: "Calendar", icon: Calendar },
-  { to: "/clients", label: "Clients", icon: Users },
+  { to: "/analytics", label: "Analytics", icon: BarChart3 },
 ];
 
 const drawerItems = [
+  { to: "/clients", label: "Clients", description: "Guest records", icon: Users },
   { to: "/api-dashboard", label: "API", description: "Integrations and docs", icon: Code },
   { to: "/settings", label: "Settings", description: "Workspace preferences", icon: Settings },
   { to: "#", label: "Automations", description: "Coming soon", icon: Workflow, disabled: true },
@@ -22,6 +23,7 @@ const drawerItems = [
 
 const sideItems = [
   { to: "/dashboard", label: "Reservations", icon: LayoutGrid },
+  { to: "/analytics", label: "Analytics", icon: BarChart3 },
   { to: "/calendar", label: "Calendar", icon: Calendar },
   { to: "/new", label: "New Reservation", icon: Plus },
   { to: "/clients", label: "Clients", icon: Users },
