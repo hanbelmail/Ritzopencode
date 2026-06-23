@@ -11,7 +11,7 @@
 - `analytics/` owns staff-only reservation analytics computed from Convex tickets, including KPI cards, charts, grouped tables, date range filtering, and analytics CSV export.
 - `api-dashboard/` owns the staff-only quote webhook URL/enabled setting.
 - `new/` owns reservation creation.
-- `calendar/`, `clients/`, and `settings/` own their respective staff management views.
+- `calendar/`, `clients/`, and `settings/` own their respective staff management views; `settings/` includes hotel info and the persisted app name used for the browser/tab title.
 
 ## Local Contracts
 

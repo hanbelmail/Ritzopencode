@@ -95,16 +95,16 @@ export default function SettingsPage() {
         <div className="border rounded-xl bg-card p-5 md:p-6 space-y-5">
           <p className="text-xs uppercase tracking-wider text-muted-foreground">Hotel info</p>
           <div className="space-y-2">
+            <Label>App name <span className="text-muted-foreground font-normal">(browser/tab title)</span></Label>
+            <Input value={settings.appName || ""} onChange={(e) => set("appName", e.target.value)} />
+          </div>
+          <div className="space-y-2">
             <Label>Hotel name</Label>
             <Input value={settings.hotelName} onChange={(e) => set("hotelName", e.target.value)} />
           </div>
           <div className="space-y-2">
             <Label>Address</Label>
             <Input value={settings.hotelAddress} onChange={(e) => set("hotelAddress", e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label>FAQ link <span className="text-muted-foreground font-normal">(shown in the pay terms dialog)</span></Label>
-            <Input type="url" value={settings.faqLink} onChange={(e) => set("faqLink", e.target.value)} placeholder="https://…" />
           </div>
         </div>
 

@@ -456,7 +456,6 @@ export default function TicketPage() {
         <PayDialog
           open={payOpen}
           onOpenChange={setPayOpen}
-          faqLink={settings.faqLink}
           onConfirmPayment={handlePayment}
         />
       </main>

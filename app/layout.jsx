@@ -5,10 +5,12 @@ import { QueryClientProvider } from '@/lib/Providers'
 import { Toaster } from '@/components/ui/toaster'
 import ScrollToTop from '@/components/ScrollToTop'
 import StoreMigrator from '@/lib/StoreMigrator'
+import AppTitle from '@/app/AppTitle'
+import { DEFAULT_SETTINGS } from '@/lib/defaults'
 import './globals.css'
 
 export const metadata = {
-  title: 'Base44 APP',
+  title: DEFAULT_SETTINGS.appName,
   description: 'Private Reservations Management System',
 }
 
@@ -25,6 +27,7 @@ export default function RootLayout({ children }) {
             <AuthProvider>
               <QueryClientProvider>
                 <StoreMigrator />
+                <AppTitle />
                 <ScrollToTop />
                 {children}
                 <Toaster />

@@ -11,7 +11,7 @@ import { Upload, X, Info } from "lucide-react";
 import Link from "next/link";
 import { DEFAULT_SETTINGS, useSettings } from "@/lib/store";
 
-export default function PayDialog({ open, onOpenChange, faqLink, onConfirmPayment }) {
+export default function PayDialog({ open, onOpenChange, onConfirmPayment }) {
   const settings = useSettings() || DEFAULT_SETTINGS;
   const activeMethods = (settings.paymentMethods || []).filter((m) => !m.hidden);
   const [step, setStep] = useState("terms");
