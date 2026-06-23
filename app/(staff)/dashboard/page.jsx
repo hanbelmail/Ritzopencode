@@ -16,12 +16,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Download, Search, Plus, LayoutGrid, Table2, Trash2 } from "lucide-react";
-import StatsBar from "@/components/tickets/StatsBar";
+import { Download, Search, Plus, ListTodo, Table2, Trash2 } from "lucide-react";
 import TicketCard from "@/components/tickets/TicketCard";
 import TicketTable from "@/components/tickets/TicketTable";
 import { useTickets, useTicketActions, STATUSES } from "@/lib/store";
-import { fmtMoney } from "@/lib/calc";
 
 const primaryButton = "h-10 rounded-[8px] bg-[#cc785c] px-5 text-sm font-medium text-white shadow-none hover:bg-[#a9583e]";
 const darkInput = "h-10 rounded-[8px] border-[#252320] bg-[#1f1e1b] text-[#faf9f5] shadow-none placeholder:text-[#b8b3aa] focus-visible:ring-[#cc785c] [color-scheme:dark]";
@@ -151,19 +149,6 @@ export default function Dashboard() {
     });
   }, [filtered]);
 
-  const stats = useMemo(() => {
-    const revenue = tickets
-      .filter((t) => ["PAYMENT VERIFIED", "PAYMENT SUBMITTED", "BOOKING CONFIRMED"].includes(t.status))
-      .reduce((sum, t) => sum + (t.rateOffered || 0), 0);
-    const clients = new Set(tickets.flatMap((t) => (t.guests || []).filter(Boolean))).size;
-    return [
-      { label: "Total", value: tickets.length },
-      { label: "Pending", value: tickets.filter((t) => ["PRICE SENT", "QUOTE REQUESTED"].includes(t.status)).length },
-      { label: "Booked Revenue", value: fmtMoney(revenue) },
-      { label: "Clients", value: clients, sub: "unique guests" },
-    ];
-  }, [tickets]);
-
   return (
     <div className="min-h-screen bg-[#faf9f5] px-5 py-8 text-[#141413] md:px-8 lg:px-10">
       <div className="mx-auto max-w-[1200px] space-y-6">
@@ -172,7 +157,7 @@ export default function Dashboard() {
             <div className="max-w-2xl">
               <p className="mb-3 text-xs font-medium uppercase tracking-[0.16em] text-[#a09d96]">Staff workspace</p>
               <h1 className="text-4xl font-semibold leading-[1.05] tracking-[-0.04em] md:text-5xl">Reservations</h1>
-              <p className="mt-4 text-sm leading-[1.65] text-[#a09d96]">Manage every quote, payment, stay date, and guest record. Data is saved in Convex.</p>
+              <p className="mt-4 text-sm leading-[1.65] text-[#a09d96]">Manage every quote, payment, stay date, and guest record.</p>
             </div>
             <Button asChild className={primaryButton}>
               <Link href="/new"><Plus className="w-4 h-4 mr-1" /> Add Reservation</Link>
@@ -207,7 +192,7 @@ export default function Dashboard() {
                 onClick={() => setView("board")}
                 className={`flex items-center gap-1.5 border-l border-[#252320] px-3 py-2 text-xs ${view === "board" ? "bg-[#252320] font-medium text-[#faf9f5]" : "text-[#a09d96] hover:bg-[#252320]"}`}
               >
-                <LayoutGrid className="w-3.5 h-3.5" /> Board
+                <ListTodo className="w-3.5 h-3.5" /> To Do
               </button>
             </div>
           </div>
@@ -254,8 +239,6 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
-
-        <StatsBar stats={stats} />
 
         {view === "table" && (
           <div className="flex flex-col gap-3 rounded-[12px] border border-[#e6dfd8] bg-[#fffdf8] p-4 sm:flex-row sm:items-center sm:justify-between">

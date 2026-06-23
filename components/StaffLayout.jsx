@@ -101,7 +101,6 @@ export default function StaffLayout({ children }) {
           >
             <LogOut className="w-4 h-4" /> Log out
           </button>
-          <p className="px-3 pt-2 text-[10px] text-[#a09d96]">Convex - shared reservation data</p>
         </div>
       </aside>
 

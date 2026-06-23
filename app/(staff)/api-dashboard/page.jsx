@@ -42,20 +42,11 @@ export default function ApiDashboardPage() {
     <div className="min-h-screen bg-[#faf9f5] px-5 py-8 text-[#141413] md:px-8 lg:px-10">
       <div className="mx-auto max-w-[1200px] space-y-6">
         <div className="rounded-[16px] bg-[#181715] p-6 text-[#faf9f5] md:p-8">
-          <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-end">
-            <div>
-              <p className="mb-3 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-[#a09d96]">
-                <Code2 className="h-4 w-4 text-[#cc785c]" /> API dashboard
-              </p>
-              <h1 className={`${serif} text-5xl font-medium leading-[1.02] tracking-[-0.04em] md:text-6xl`}>Quote Webhook Dashboard</h1>
-              <p className="mt-4 max-w-3xl text-sm leading-[1.65] text-[#a09d96]">Manage the n8n webhook used for quote ticket notifications.</p>
-            </div>
-            <div className="rounded-[12px] bg-[#252320] p-4 font-mono text-xs leading-relaxed text-[#a09d96]">
-              <p><span className="text-[#e8a55a]">auth</span>: staff route</p>
-              <p><span className="text-[#5db8a6]">source</span>: Convex tickets</p>
-              <p><span className="text-[#faf9f5]">webhook</span>: n8n quote forwarding</p>
-            </div>
-          </div>
+          <p className="mb-3 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-[#a09d96]">
+            <Code2 className="h-4 w-4 text-[#cc785c]" /> API dashboard
+          </p>
+          <h1 className={`${serif} text-5xl font-medium leading-[1.02] tracking-[-0.04em] md:text-6xl`}>Quote Webhook Dashboard</h1>
+          <p className="mt-4 max-w-3xl text-sm leading-[1.65] text-[#a09d96]">Manage the n8n webhook used for quote ticket notifications.</p>
         </div>
 
         <div className="max-w-2xl space-y-4">
