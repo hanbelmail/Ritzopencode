@@ -12,6 +12,8 @@ import GuestNamesInput from "@/components/forms/GuestNamesInput";
 import ReservationDatePicker from "@/components/forms/ReservationDatePicker";
 import { DEFAULT_SETTINGS, useSettings, useTicket, useTicketActions, STATUSES } from "@/lib/store";
 import { computeTicket, fmtMoney } from "@/lib/calc";
+import { notifyPriceSent } from "@/lib/price-sent-email";
+import { useToast } from "@/components/ui/use-toast";
 
 export default function NewReservation() {
   const router = useRouter();
@@ -20,6 +22,7 @@ export default function NewReservation() {
   const settings = useSettings() || DEFAULT_SETTINGS;
   const existing = useTicket(editId);
   const { createTicket, updateTicket } = useTicketActions();
+  const { toast } = useToast();
   const [initialized, setInitialized] = useState(false);
 
   const [guests, setGuests] = useState([""]);
@@ -75,6 +78,21 @@ export default function NewReservation() {
           : existing?.confirmationDate || null,
     };
     const ticket = existing ? await updateTicket(existing.id, data) : await createTicket(data);
+    if (ticket.status === "PRICE SENT") {
+      try {
+        const result = await notifyPriceSent(ticket.id);
+        toast({
+          title: result.sent ? "Price email sent" : "Price email skipped",
+          description: result.sent ? "The guest received the ticket link and quote details." : result.reason,
+        });
+      } catch (error) {
+        toast({
+          title: "Price email failed",
+          description: error.message || "The reservation was saved, but the email was not sent.",
+          variant: "destructive",
+        });
+      }
+    }
     router.push(`/ticket/${ticket.id}`);
   };
 

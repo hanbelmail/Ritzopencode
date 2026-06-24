@@ -20,6 +20,8 @@ import { Download, Search, Plus, ListTodo, Table2, Trash2 } from "lucide-react";
 import TicketCard from "@/components/tickets/TicketCard";
 import TicketTable from "@/components/tickets/TicketTable";
 import { useTickets, useTicketActions, STATUSES } from "@/lib/store";
+import { notifyPriceSent } from "@/lib/price-sent-email";
+import { useToast } from "@/components/ui/use-toast";
 
 const primaryButton = "h-10 rounded-[8px] bg-[#cc785c] px-5 text-sm font-medium text-white shadow-none hover:bg-[#a9583e]";
 const darkInput = "h-10 rounded-[8px] border-[#252320] bg-[#1f1e1b] text-[#faf9f5] shadow-none placeholder:text-[#b8b3aa] focus-visible:ring-[#cc785c] [color-scheme:dark]";
@@ -77,6 +79,7 @@ function csvCell(value) {
 export default function Dashboard() {
   const tickets = useTickets();
   const { deleteTicket, updateTicket } = useTicketActions();
+  const { toast } = useToast();
   const [view, setView] = useState("board");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -100,6 +103,21 @@ export default function Dashboard() {
 
   const handleStatusChange = async (id, status) => {
     await updateTicket(id, { status });
+    if (status !== "PRICE SENT") return;
+
+    try {
+      const result = await notifyPriceSent(id);
+      toast({
+        title: result.sent ? "Price email sent" : "Price email skipped",
+        description: result.sent ? "The guest received the ticket link and quote details." : result.reason,
+      });
+    } catch (error) {
+      toast({
+        title: "Price email failed",
+        description: error.message || "The reservation was updated, but the email was not sent.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleBulkDelete = async () => {

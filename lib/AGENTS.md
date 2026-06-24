@@ -2,7 +2,7 @@
 
 ## Purpose
 
-- Owns shared providers, authentication context, Convex-backed reservation/settings store hooks, UI preference/localStorage helpers, legacy localStorage migration helpers, calculations, query client setup, app params, not-found component, and utilities.
+- Owns shared providers, authentication context, Convex-backed reservation/settings store hooks, price-sent email client helper, UI preference/localStorage helpers, legacy localStorage migration helpers, calculations, query client setup, app params, not-found component, and utilities.
 
 ## Ownership
 
@@ -10,6 +10,7 @@
 - `convex-server.js` owns server-side Convex HTTP client creation and JSON error helpers for App Router API routes.
 - `r2.js` owns server-side Cloudflare R2 S3 client setup and signed URL helpers for private payment proof objects.
 - `store.js` owns reservation tickets/settings client hooks, persisted status constants, default/settings normalization, and legacy `ritz_*` localStorage migration keys.
+- `price-sent-email.js` owns the client helper for calling the protected price-sent guest notification API after ticket saves.
 - `StoreMigrator.jsx` owns one-time import of legacy browser-local reservation/settings data into Convex.
 - `ui-preferences.js` owns browser-local UI preference keys such as dashboard table column visibility.
 - `AuthContext.jsx` adapts Convex Auth state/actions to the app's existing `useAuth()` contract.
