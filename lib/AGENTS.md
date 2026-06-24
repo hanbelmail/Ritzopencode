@@ -8,10 +8,10 @@
 
 - `defaults.js` owns server-safe default settings, including the default app name, quote webhook defaults, and payment method constants shared by client hooks and API routes.
 - `convex-server.js` owns server-side Convex HTTP client creation and JSON error helpers for App Router API routes.
-- `r2.js` owns server-side Cloudflare R2 S3 client setup and signed URL helpers for private payment proof objects.
+- `r2.js` owns server-side Cloudflare R2 S3 client setup, signed URL helpers, key validation helpers, and server-side attachment reads for private payment proof and retail price screenshot objects.
 - `store.js` owns reservation tickets/settings client hooks, persisted status constants, default/settings normalization, and legacy `ritz_*` localStorage migration keys.
 - `price-sent-email.js` owns the client helper for calling the protected price-sent guest notification API after ticket saves.
-- `price-sent-email-server.js` owns the server-side Resend template, delivery, skip rules, and successful-delivery ticket stamp for price-sent guest emails.
+- `price-sent-email-server.js` owns the server-side Resend template, delivery, retail price screenshot attachment, skip rules, and successful-delivery ticket stamp for price-sent guest emails.
 - `StoreMigrator.jsx` owns one-time import of legacy browser-local reservation/settings data into Convex.
 - `ui-preferences.js` owns browser-local UI preference keys such as dashboard table column visibility.
 - `AuthContext.jsx` adapts Convex Auth state/actions to the app's existing `useAuth()` contract.
@@ -21,10 +21,10 @@
 
 ## Local Contracts
 
-- Treat Convex `tickets` and `settings` tables as the live persistence contract for reservation/settings data, including app name and quote webhook URL/enabled settings.
+- Treat Convex `tickets` and `settings` tables as the live persistence contract for reservation/settings data, including app name, quote webhook URL/enabled settings, and R2 object-key fields such as `paymentScreenshotKey` and `retailPriceScreenshotKey`.
 - Treat legacy `ritz_*` localStorage keys as import-only compatibility contracts for existing browser data.
 - Keep browser-only storage access guarded for server rendering where applicable.
-- Keep R2 credentials server-only; client components must use API routes for signed payment proof upload/view URLs.
+- Keep R2 credentials server-only; client components must use API routes for signed payment proof and retail price screenshot upload/view URLs.
 - Do not duplicate status, payment method, settings, or ticket schema constants in route or component files.
 
 ## Work Guidance

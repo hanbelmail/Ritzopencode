@@ -14,6 +14,7 @@ import { DEFAULT_SETTINGS, useSettings, useTicket, useTicketActions, STATUSES } 
 import { computeTicket, fmtMoney } from "@/lib/calc";
 import { notifyPriceSent } from "@/lib/price-sent-email";
 import { useToast } from "@/components/ui/use-toast";
+import { Upload, X } from "lucide-react";
 
 export default function NewReservation() {
   const router = useRouter();
@@ -24,6 +25,11 @@ export default function NewReservation() {
   const { createTicket, updateTicket } = useTicketActions();
   const { toast } = useToast();
   const [initialized, setInitialized] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [retailScreenshotFile, setRetailScreenshotFile] = useState(null);
+  const [retailScreenshotPreview, setRetailScreenshotPreview] = useState(null);
+  const [retailScreenshotUrl, setRetailScreenshotUrl] = useState(null);
+  const [retailScreenshotError, setRetailScreenshotError] = useState("");
 
   const [guests, setGuests] = useState([""]);
   const [form, setForm] = useState({
@@ -64,8 +70,102 @@ export default function NewReservation() {
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
   const computed = computeTicket(form, settings);
 
+  useEffect(() => {
+    return () => {
+      if (retailScreenshotPreview) URL.revokeObjectURL(retailScreenshotPreview);
+    };
+  }, [retailScreenshotPreview]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadRetailScreenshotUrl() {
+      if (!existing?.retailPriceScreenshotKey || retailScreenshotFile) {
+        setRetailScreenshotUrl(null);
+        return;
+      }
+
+      const response = await fetch("/api/retail-price-screenshot/view-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ticketId: existing.id, key: existing.retailPriceScreenshotKey }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to load retail price screenshot");
+      }
+
+      const data = await response.json();
+      if (!cancelled) setRetailScreenshotUrl(data.viewUrl);
+    }
+
+    loadRetailScreenshotUrl().catch(() => {
+      if (!cancelled) setRetailScreenshotUrl(null);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [existing?.id, existing?.retailPriceScreenshotKey, retailScreenshotFile]);
+
+  const handleRetailScreenshot = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setRetailScreenshotError("Retail price screenshot must be an image.");
+      return;
+    }
+    if (retailScreenshotPreview) URL.revokeObjectURL(retailScreenshotPreview);
+    setRetailScreenshotError("");
+    setRetailScreenshotFile(file);
+    setRetailScreenshotPreview(URL.createObjectURL(file));
+  };
+
+  const clearRetailScreenshotSelection = () => {
+    if (retailScreenshotPreview) URL.revokeObjectURL(retailScreenshotPreview);
+    setRetailScreenshotFile(null);
+    setRetailScreenshotPreview(null);
+    setRetailScreenshotError("");
+  };
+
+  const uploadRetailScreenshot = async (ticketId, file) => {
+    const uploadUrlResponse = await fetch("/api/retail-price-screenshot/upload-url", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ticketId,
+        fileName: file.name,
+        contentType: file.type,
+      }),
+    });
+
+    if (!uploadUrlResponse.ok) {
+      throw new Error("Failed to prepare retail screenshot upload");
+    }
+
+    const { key, uploadUrl } = await uploadUrlResponse.json();
+    const uploadResponse = await fetch(uploadUrl, {
+      method: "PUT",
+      headers: { "Content-Type": file.type },
+      body: file,
+    });
+
+    if (!uploadResponse.ok) {
+      throw new Error("Failed to upload retail screenshot");
+    }
+
+    return key;
+  };
+
   const submit = async (e) => {
     e.preventDefault();
+    const hasRetailScreenshot = Boolean(retailScreenshotFile || existing?.retailPriceScreenshotKey);
+    if (form.status === "PRICE SENT" && !hasRetailScreenshot) {
+      const shouldContinue = window.confirm("No retail price screenshot is attached. Send the PRICE SENT email without the screenshot?");
+      if (!shouldContinue) return;
+    }
+
+    setSaving(true);
     const data = {
       ...form,
       guests: guests.filter((g) => g.trim()),
@@ -77,23 +177,42 @@ export default function NewReservation() {
           ? new Date().toISOString().slice(0, 10)
           : existing?.confirmationDate || null,
     };
-    const ticket = existing ? await updateTicket(existing.id, data) : await createTicket(data);
-    if (ticket.status === "PRICE SENT") {
-      try {
-        const result = await notifyPriceSent(ticket.id);
-        toast({
-          title: result.sent ? "Price email sent" : "Price email skipped",
-          description: result.sent ? "The guest received the ticket link and quote details." : result.reason,
-        });
-      } catch (error) {
-        toast({
-          title: "Price email failed",
-          description: error.message || "The reservation was saved, but the email was not sent.",
-          variant: "destructive",
+    try {
+      let ticket = existing ? await updateTicket(existing.id, data) : await createTicket(data);
+
+      if (retailScreenshotFile) {
+        const retailPriceScreenshotKey = await uploadRetailScreenshot(ticket.id, retailScreenshotFile);
+        ticket = await updateTicket(ticket.id, {
+          retailPriceScreenshot: null,
+          retailPriceScreenshotKey,
         });
       }
+
+      if (ticket.status === "PRICE SENT") {
+        try {
+          const result = await notifyPriceSent(ticket.id);
+          toast({
+            title: result.sent ? "Price email sent" : "Price email skipped",
+            description: result.sent ? "The guest received the ticket link and quote details." : result.reason,
+          });
+        } catch (error) {
+          toast({
+            title: "Price email failed",
+            description: error.message || "The reservation was saved, but the email was not sent.",
+            variant: "destructive",
+          });
+        }
+      }
+      router.push(`/ticket/${ticket.id}`);
+    } catch (error) {
+      toast({
+        title: "Reservation save failed",
+        description: error.message || "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
     }
-    router.push(`/ticket/${ticket.id}`);
   };
 
   if (editId && existing === undefined) {
@@ -103,6 +222,8 @@ export default function NewReservation() {
   if (editId && existing === null) {
     return <div className="p-8 text-sm text-muted-foreground">Reservation not found.</div>;
   }
+
+  const retailScreenshotDisplayUrl = retailScreenshotPreview || retailScreenshotUrl;
 
   return (
     <div className="p-5 md:p-8 max-w-3xl mx-auto">
@@ -161,6 +282,44 @@ export default function NewReservation() {
               <Input type="number" step="0.01" value={form.adjustment} onChange={(e) => set("adjustment", e.target.value)} placeholder="0" />
             </div>
           </div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-3">
+              <Label>Retail price screenshot <span className="text-muted-foreground font-normal">(optional)</span></Label>
+              {existing?.retailPriceScreenshotKey && !retailScreenshotFile && (
+                <span className="text-[11px] font-medium text-emerald-700">Saved</span>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">Attach the Ritz website retail price screenshot. It will be shown on the guest ticket and attached to the PRICE SENT email.</p>
+            {retailScreenshotError && <p className="text-xs text-red-600">{retailScreenshotError}</p>}
+            {retailScreenshotDisplayUrl ? (
+              <div className="relative overflow-hidden rounded-lg border bg-secondary/20">
+                <img src={retailScreenshotDisplayUrl} alt="Retail price screenshot preview" className="max-h-64 w-full object-contain" />
+                {retailScreenshotFile && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="icon"
+                    className="absolute right-2 top-2 h-8 w-8"
+                    onClick={clearRetailScreenshotSelection}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed py-6 transition-colors hover:bg-secondary/30">
+                <Upload className="h-5 w-5 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">Click to attach screenshot</span>
+                <input type="file" accept="image/*" className="hidden" onChange={handleRetailScreenshot} />
+              </label>
+            )}
+            {retailScreenshotDisplayUrl && (
+              <label className="inline-flex cursor-pointer items-center gap-2 text-xs font-medium text-[#8a5c2e] hover:underline">
+                Replace screenshot
+                <input type="file" accept="image/*" className="hidden" onChange={handleRetailScreenshot} />
+              </label>
+            )}
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
             <div className="space-y-2">
               <Label>Status</Label>
@@ -197,8 +356,8 @@ export default function NewReservation() {
         </div>
 
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={() => router.push("/dashboard")}>Cancel</Button>
-          <Button type="submit">{existing ? "Save changes" : "Create reservation"}</Button>
+          <Button type="button" variant="outline" onClick={() => router.push("/dashboard")} disabled={saving}>Cancel</Button>
+          <Button type="submit" disabled={saving}>{saving ? "Saving..." : existing ? "Save changes" : "Create reservation"}</Button>
         </div>
       </form>
     </div>

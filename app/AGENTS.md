@@ -12,6 +12,7 @@
 - `forgot-password/` and `reset-password/` own Convex Auth password reset request and verification flows.
 - `api/tickets/` owns demo REST endpoints for fetching, status-filtered fetching, updating, deleting, and sending price-sent guest email notifications for Convex-backed reservation tickets.
 - `api/payment-proof/` owns private Cloudflare R2 signed upload and signed view URL endpoints for payment screenshots.
+- `api/retail-price-screenshot/` owns private Cloudflare R2 signed upload and signed view URL endpoints for Ritz website retail price screenshots.
 - `api/quote-webhook/` owns server-side forwarding of public quote tickets to the configured external webhook.
 - `(public)/AGENTS.md` owns public guest pages and ticket lookup routes.
 - `(staff)/AGENTS.md` owns authenticated staff pages.
@@ -20,9 +21,10 @@
 
 - Route files may use client components where Convex hooks, auth context, browser navigation, or interactive state is required.
 - API route handlers may call Convex backend functions through `ConvexHttpClient` and must preserve the Convex `tickets` table as the source of truth.
-- Payment proof API routes must keep R2 objects private and return only short-lived signed URLs.
+- Payment proof and retail price screenshot API routes must keep R2 objects private and return only short-lived signed URLs.
+- Retail price screenshot upload URLs are protected by Convex Auth or `N8N_API_KEY`; public read URL requests must validate the requested key against the ticket before returning a signed URL.
 - Ticket API updates that leave a reservation in `PRICE SENT` must attempt the server-side Resend guest email path and return notification metadata without rolling back the ticket update when email delivery fails.
-- Price-sent notification API routes must send guest emails server-side through Resend and stamp tickets only after successful delivery.
+- Price-sent notification API routes must send guest emails server-side through Resend, attach the retail price screenshot from R2 when `retailPriceScreenshotKey` is present, and stamp tickets only after successful delivery.
 - Ticket API updates that change price or stay-date inputs must recalculate derived pricing fields with `lib/calc.js` and Convex-backed settings.
 - Quote webhook forwarding must read `webhookUrl` and `webhookEnabled` from Convex-backed settings before calling any external URL.
 - Preserve App Router route group semantics; `(public)` and `(staff)` folders are URL-invisible boundaries.

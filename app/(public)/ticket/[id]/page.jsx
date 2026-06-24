@@ -152,6 +152,7 @@ export default function TicketPage() {
   const { updateTicket } = useTicketActions();
   const [payOpen, setPayOpen] = useState(false);
   const [paymentProofUrl, setPaymentProofUrl] = useState(null);
+  const [retailScreenshotUrl, setRetailScreenshotUrl] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -184,6 +185,38 @@ export default function TicketPage() {
       cancelled = true;
     };
   }, [ticket?.id, ticket?.paymentScreenshotKey]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadRetailScreenshotUrl() {
+      if (!ticket?.retailPriceScreenshotKey) {
+        setRetailScreenshotUrl(null);
+        return;
+      }
+
+      const response = await fetch("/api/retail-price-screenshot/view-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ticketId: ticket.id, key: ticket.retailPriceScreenshotKey }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to load retail price screenshot");
+      }
+
+      const data = await response.json();
+      if (!cancelled) setRetailScreenshotUrl(data.viewUrl);
+    }
+
+    loadRetailScreenshotUrl().catch(() => {
+      if (!cancelled) setRetailScreenshotUrl(null);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [ticket?.id, ticket?.retailPriceScreenshotKey]);
 
   if (ticket === undefined) {
     return (
@@ -353,6 +386,15 @@ export default function TicketPage() {
               <div className="mt-4 rounded-2xl border border-[#ecd8b8] bg-[#fff4df] px-4 py-3 text-xs leading-relaxed text-[#7b5428]">
                 Cleaning fee is paid directly to the Ritz at check-in and is not included in the private rate above.
               </div>
+
+              {retailScreenshotUrl && (
+                <div className="mt-4 overflow-hidden rounded-2xl border border-[#e8dfd2] bg-white">
+                  <div className="border-b border-[#eee7dc] px-4 py-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#9a8f80]">Retail price from Ritz website</p>
+                  </div>
+                  <img src={retailScreenshotUrl} alt="Retail price from Ritz website" className="max-h-96 w-full object-contain bg-[#faf6ef]" />
+                </div>
+              )}
             </section>
 
             <Timeline status={ticket.status} />

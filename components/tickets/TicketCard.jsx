@@ -121,6 +121,11 @@ export default function TicketCard({ ticket, onDelete, onStatusChange }) {
                   <AlertDialogTitle className="text-xl font-semibold tracking-[-0.02em]">{pendingStatusAction?.title}</AlertDialogTitle>
                   <AlertDialogDescription className="text-sm leading-6 text-[#6c6a64]">
                     This will update {primary || "this reservation"} to <span className="font-medium text-[#252523]">{statusToConfirm}</span>.
+                    {statusToConfirm === "PRICE SENT" && !ticket.retailPriceScreenshotKey && (
+                      <span className="mt-2 block rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-amber-800">
+                        No retail price screenshot is attached. The PRICE SENT email will send without that attachment unless you edit the reservation first.
+                      </span>
+                    )}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
               </div>
