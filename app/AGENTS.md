@@ -21,6 +21,7 @@
 - Route files may use client components where Convex hooks, auth context, browser navigation, or interactive state is required.
 - API route handlers may call Convex backend functions through `ConvexHttpClient` and must preserve the Convex `tickets` table as the source of truth.
 - Payment proof API routes must keep R2 objects private and return only short-lived signed URLs.
+- Ticket API updates that leave a reservation in `PRICE SENT` must attempt the server-side Resend guest email path and return notification metadata without rolling back the ticket update when email delivery fails.
 - Price-sent notification API routes must send guest emails server-side through Resend and stamp tickets only after successful delivery.
 - Ticket API updates that change price or stay-date inputs must recalculate derived pricing fields with `lib/calc.js` and Convex-backed settings.
 - Quote webhook forwarding must read `webhookUrl` and `webhookEnabled` from Convex-backed settings before calling any external URL.

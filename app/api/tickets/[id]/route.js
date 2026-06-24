@@ -3,6 +3,7 @@ import { api } from "@/convex/_generated/api";
 import { computeTicket } from "@/lib/calc";
 import { getConvexClient, jsonError } from "@/lib/convex-server";
 import { DEFAULT_SETTINGS } from "@/lib/defaults";
+import { sendPriceSentEmail } from "@/lib/price-sent-email-server";
 
 const pricingInputFields = new Set(["retailPrice", "adjustment", "checkIn", "checkOut"]);
 
@@ -71,8 +72,26 @@ export async function PATCH(request, { params }) {
       Object.assign(updateData, computeTicket(mergedTicket, { ...DEFAULT_SETTINGS, ...(settings || {}) }));
     }
 
-    const ticket = await client.mutation(api.tickets.update, { id, data: updateData });
-    return NextResponse.json({ ticket });
+    let ticket = await client.mutation(api.tickets.update, { id, data: updateData });
+    let priceSentEmail = null;
+
+    if (ticket.status === "PRICE SENT") {
+      try {
+        priceSentEmail = await sendPriceSentEmail({
+          client,
+          ticket,
+          origin: request.nextUrl.origin,
+        });
+        if (priceSentEmail.ticket) ticket = priceSentEmail.ticket;
+      } catch (error) {
+        priceSentEmail = {
+          sent: false,
+          error: error.message || "Failed to send price sent email",
+        };
+      }
+    }
+
+    return NextResponse.json({ ticket, priceSentEmail });
   } catch (error) {
     const message = error.message || "Failed to update ticket";
     if (message === "Invalid JSON body" || message.includes("must be a number")) {
