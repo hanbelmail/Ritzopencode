@@ -416,18 +416,41 @@ function HomePageNew({ settings }) {
           </div>
         </section>
 
-        <section id="quote" className="scroll-mt-8 bg-[#fbf7ef] py-24">
+        <section id="quote" className="scroll-mt-8 bg-[#181715] py-24 text-[#faf9f5]">
           <div className="mx-auto grid max-w-[1200px] gap-10 px-5 md:grid-cols-[0.82fr_1fr] md:px-8">
             <div className="flex flex-col justify-between gap-8">
               <div>
-                <p className="mb-4 inline-flex rounded-full bg-[#161411] px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-white">Private quote</p>
+                <p className="mb-4 inline-flex rounded-full bg-[#cc785c] px-3 py-1 text-xs font-medium uppercase tracking-[0.14em] text-white">Private quote</p>
                 <h2 className={`${serif} text-4xl font-medium leading-[1.08] tracking-[-0.035em] md:text-5xl`}>Tell us your dates. We will prepare the ticket.</h2>
               </div>
-              <div className="rounded-[16px] border border-[#eadfd1] bg-white p-5 text-sm leading-[1.65] text-[#756d64]">
-                Want every detail first? Review the <Link href="/faq" target="_blank" rel="noopener noreferrer" className="font-semibold text-[#b86547] underline-offset-4 hover:underline">guest FAQ</Link> or the <Link href="/ritz-info" target="_blank" rel="noopener noreferrer" className="font-semibold text-[#b86547] underline-offset-4 hover:underline">room info page</Link> before submitting.
+              <div className="rounded-[16px] border border-[#3a3630] bg-[#252320] p-5 text-sm leading-[1.65] text-[#a09d96]">
+                Want every detail first? Review the <Link href="/faq" target="_blank" rel="noopener noreferrer" className="font-semibold text-[#d89578] underline-offset-4 hover:underline">guest FAQ</Link> or the <Link href="/ritz-info" target="_blank" rel="noopener noreferrer" className="font-semibold text-[#d89578] underline-offset-4 hover:underline">room info page</Link> before submitting.
               </div>
             </div>
-            <QuoteForm />
+            <div className="space-y-5">
+              <QuoteForm />
+            </div>
+          </div>
+        </section>
+
+        <section className="bg-[#faf9f5] py-24">
+          <div className="mx-auto max-w-[1200px] px-5 md:px-8">
+            <div className="rounded-[12px] bg-[#cc785c] p-8 text-white md:p-16">
+              <div className="grid gap-8 md:grid-cols-[1fr_auto] md:items-end">
+                <div>
+                  <h2 className={`${serif} text-4xl font-medium leading-[1.1] tracking-[-0.035em] md:text-5xl`}>Need the full room guide first?</h2>
+                  <p className="mt-4 max-w-2xl text-sm leading-[1.65] text-white/85">Review the residence details, guest terms, and frequently asked questions before requesting your private quote.</p>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  <Button asChild className="h-10 rounded-[8px] bg-[#faf9f5] px-5 text-sm font-medium text-[#141413] shadow-none hover:bg-[#efe9de]">
+                    <Link href="/ritz-info" target="_blank" rel="noopener noreferrer"><Info className="mr-1.5 h-4 w-4" /> Room Info</Link>
+                  </Button>
+                  <Button asChild className="h-10 rounded-[8px] bg-[#a9583e] px-5 text-sm font-medium text-white shadow-none hover:bg-[#a9583e]">
+                    <Link href="/faq" target="_blank" rel="noopener noreferrer"><BookOpen className="mr-1.5 h-4 w-4" /> FAQ</Link>
+                  </Button>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
       </main>
