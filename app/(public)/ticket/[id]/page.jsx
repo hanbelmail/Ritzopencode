@@ -324,7 +324,7 @@ export default function TicketPage() {
                   <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-medium text-white/75">Ticket {ticket.id}</span>
                 </div>
                 <p className="text-sm font-medium text-[#d7c2a3]">{settings.hotelName}</p>
-                <h1 className="mt-2 text-3xl font-semibold tracking-tight md:text-5xl">Aloha, {primaryGuest}</h1>
+                <h1 className="mt-2 text-3xl font-semibold tracking-tight md:text-5xl">Welcome, {primaryGuest}</h1>
                 <p className="mt-3 max-w-2xl text-sm leading-relaxed text-white/70 md:text-base">
                   Your private room quote, payment status, and reservation details are organized here for a smoother mobile booking experience.
                 </p>

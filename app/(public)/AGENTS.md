@@ -22,6 +22,7 @@
 
 - Preserve mobile-friendly public layouts and direct paths to quote and ticket lookup flows.
 - Avoid duplicating staff-only reservation management controls in public routes.
+- Use `Welcome, {primaryGuest}` for public ticket guest greetings.
 
 ## Verification
 
