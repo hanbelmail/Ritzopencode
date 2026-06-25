@@ -194,6 +194,7 @@ export default function NewReservation() {
           toast({
             title: result.sent ? "Price email sent" : "Price email skipped",
             description: result.sent ? "The guest received the ticket link and quote details." : result.reason,
+            variant: result.sent ? "success" : "destructive",
           });
         } catch (error) {
           toast({

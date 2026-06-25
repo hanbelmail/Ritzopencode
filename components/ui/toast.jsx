@@ -28,8 +28,10 @@ const toastVariants = cva(
     variants: {
       variant: {
         default: "border bg-background text-foreground",
+        success:
+          "success group border-green-200 bg-green-50 text-green-950 dark:border-green-900/60 dark:bg-green-950 dark:text-green-50",
         destructive:
-          "destructive group border-destructive bg-destructive text-destructive-foreground",
+          "destructive group border-red-200 bg-red-50 text-red-950 dark:border-red-900/60 dark:bg-red-950 dark:text-red-50",
       },
     },
     defaultVariants: {
@@ -65,7 +67,7 @@ const ToastClose = React.forwardRef(({ className, ...props }, ref) => (
   <button
     ref={ref}
     className={cn(
-      "absolute right-2 top-2 rounded-md p-1 text-foreground/50 opacity-0 transition-opacity hover:text-foreground focus:opacity-100 focus:outline-none focus:ring-2 group-hover:opacity-100 group-[.destructive]:text-red-300 group-[.destructive]:hover:text-red-50 group-[.destructive]:focus:ring-red-400 group-[.destructive]:focus:ring-offset-red-600",
+      "absolute right-2 top-2 rounded-md p-1 text-foreground/50 opacity-0 transition-opacity hover:text-foreground focus:opacity-100 focus:outline-none focus:ring-2 group-hover:opacity-100 group-[.success]:text-green-700 group-[.success]:hover:text-green-950 group-[.success]:focus:ring-green-500 group-[.destructive]:text-red-700 group-[.destructive]:hover:text-red-950 group-[.destructive]:focus:ring-red-500 dark:group-[.success]:text-green-300 dark:group-[.success]:hover:text-green-50 dark:group-[.destructive]:text-red-300 dark:group-[.destructive]:hover:text-red-50",
       className
     )}
     toast-close=""
@@ -102,4 +104,4 @@ export {
   ToastDescription,
   ToastClose,
   ToastAction,
-}; 
+};
