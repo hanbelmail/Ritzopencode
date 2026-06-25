@@ -424,15 +424,6 @@ function HomePageNew({ settings }) {
                 <h2 className={`${serif} text-4xl font-medium leading-[1.08] tracking-[-0.035em] md:text-5xl`}>Tell us your dates. We will prepare the ticket.</h2>
               </div>
               <div className="rounded-[16px] border border-[#eadfd1] bg-white p-5 text-sm leading-[1.65] text-[#756d64]">
-                <h3 className="flex items-center gap-2 font-medium text-[#26211c]">
-                  <Users className="h-4 w-4 text-[#b86547]" /> Guest registration required
-                </h3>
-                <ul className="mt-3 space-y-2">
-                  <li>Provide the full names of every guest staying in the unit.</li>
-                  <li>Unregistered guests will not be allowed in the room or on the property.</li>
-                </ul>
-              </div>
-              <div className="rounded-[16px] border border-[#eadfd1] bg-white p-5 text-sm leading-[1.65] text-[#756d64]">
                 Want every detail first? Review the <Link href="/faq" target="_blank" rel="noopener noreferrer" className="font-semibold text-[#b86547] underline-offset-4 hover:underline">guest FAQ</Link> or the <Link href="/ritz-info" target="_blank" rel="noopener noreferrer" className="font-semibold text-[#b86547] underline-offset-4 hover:underline">room info page</Link> before submitting.
               </div>
             </div>
