@@ -65,6 +65,8 @@ function PortalLink({ href, icon: Icon, title, description }) {
   return (
     <Link
       href={href}
+      target="_blank"
+      rel="noopener noreferrer"
       className="group flex items-center gap-3 rounded-2xl border border-[#e8dfd2] bg-white px-4 py-3 shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#d5b98c] hover:shadow-md"
     >
       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#f8f2e8] text-[#8a5c2e]">

@@ -23,6 +23,7 @@
 - Preserve mobile-friendly public layouts and direct paths to quote and ticket lookup flows.
 - Avoid duplicating staff-only reservation management controls in public routes.
 - Use `Welcome, {primaryGuest}` for public ticket guest greetings.
+- Public ticket links to `/ritz-info` and `/faq` should open in a new browser tab.
 
 ## Verification
 
