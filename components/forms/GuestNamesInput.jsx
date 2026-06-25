@@ -4,8 +4,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Plus, X } from "lucide-react";
 
-export default function GuestNamesInput({ guests, onChange }) {
+export default function GuestNamesInput({ guests, onChange, maxGuests }) {
   const update = (i, v) => onChange(guests.map((g, idx) => (idx === i ? v : g)));
+  const canAddGuest = !maxGuests || guests.length < maxGuests;
+
   return (
     <div className="space-y-2">
       {guests.map((g, i) => (
@@ -23,9 +25,13 @@ export default function GuestNamesInput({ guests, onChange }) {
           )}
         </div>
       ))}
-      <Button type="button" variant="outline" size="sm" className="rounded-[8px] border-[#e6dfd8] bg-[#faf9f5] text-[#141413] shadow-none hover:bg-[#efe9de]" onClick={() => onChange([...guests, ""])}>
-        <Plus className="w-3.5 h-3.5 mr-1" /> Add guest
-      </Button>
+      {canAddGuest ? (
+        <Button type="button" variant="outline" size="sm" className="rounded-[8px] border-[#e6dfd8] bg-[#faf9f5] text-[#141413] shadow-none hover:bg-[#efe9de]" onClick={() => onChange([...guests, ""])}>
+          <Plus className="w-3.5 h-3.5 mr-1" /> Add guest
+        </Button>
+      ) : (
+        <p className="text-xs leading-relaxed text-[#6c6a64]">Maximum {maxGuests} guests total, including children.</p>
+      )}
     </div>
   );
 }

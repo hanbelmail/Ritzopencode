@@ -43,8 +43,8 @@ function HomePageClassic({ settings }) {
             <span>{settings.hotelName}</span>
           </Link>
           <nav className="hidden items-center gap-7 text-sm font-medium text-[#6c6a64] md:flex">
-            <Link href="/ritz-info" className="transition-colors hover:text-[#141413]">Room Info</Link>
-            <Link href="/faq" className="transition-colors hover:text-[#141413]">Guest Guide</Link>
+            <Link href="/ritz-info" target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-[#141413]">Room Info</Link>
+            <Link href="/faq" target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-[#141413]">Guest Guide</Link>
             <a href="#find" className="transition-colors hover:text-[#141413]">Find Ticket</a>
             <Link href="/dashboard" className="transition-colors hover:text-[#141413]">Staff</Link>
           </nav>
@@ -193,10 +193,10 @@ function HomePageClassic({ settings }) {
                 </div>
                 <div className="flex flex-wrap gap-3">
                   <Button asChild className="h-10 rounded-[8px] bg-[#faf9f5] px-5 text-sm font-medium text-[#141413] shadow-none hover:bg-[#efe9de]">
-                    <Link href="/ritz-info"><Info className="mr-1.5 h-4 w-4" /> Room Info</Link>
+                    <Link href="/ritz-info" target="_blank" rel="noopener noreferrer"><Info className="mr-1.5 h-4 w-4" /> Room Info</Link>
                   </Button>
                   <Button asChild className="h-10 rounded-[8px] bg-[#a9583e] px-5 text-sm font-medium text-white shadow-none hover:bg-[#a9583e]">
-                    <Link href="/faq"><BookOpen className="mr-1.5 h-4 w-4" /> FAQ</Link>
+                    <Link href="/faq" target="_blank" rel="noopener noreferrer"><BookOpen className="mr-1.5 h-4 w-4" /> FAQ</Link>
                   </Button>
                 </div>
               </div>
@@ -215,8 +215,8 @@ function HomePageClassic({ settings }) {
             <p className="mt-4 max-w-md leading-relaxed">Private reservations for the Deluxe Ocean View residence in Waikiki.</p>
           </div>
           <div className="flex flex-wrap gap-5 md:justify-end">
-            <Link href="/ritz-info" className="hover:text-[#faf9f5]">Room Info</Link>
-            <Link href="/faq" className="hover:text-[#faf9f5]">Guest Guide</Link>
+            <Link href="/ritz-info" target="_blank" rel="noopener noreferrer" className="hover:text-[#faf9f5]">Room Info</Link>
+            <Link href="/faq" target="_blank" rel="noopener noreferrer" className="hover:text-[#faf9f5]">Guest Guide</Link>
             <Link href="/dashboard" className="hover:text-[#faf9f5]">Staff</Link>
           </div>
         </div>
@@ -250,8 +250,8 @@ function HomePageNew({ settings }) {
             <span>{settings.hotelName}</span>
           </Link>
           <nav className="hidden items-center gap-7 text-sm font-medium text-[#6e665d] md:flex">
-            <Link href="/ritz-info" className="transition-colors hover:text-[#161411]">Room Info</Link>
-            <Link href="/faq" className="transition-colors hover:text-[#161411]">FAQ</Link>
+            <Link href="/ritz-info" target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-[#161411]">Room Info</Link>
+            <Link href="/faq" target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-[#161411]">FAQ</Link>
             <a href="#find" className="transition-colors hover:text-[#161411]">Find Ticket</a>
             <Link href="/dashboard" className="transition-colors hover:text-[#161411]">Staff</Link>
           </nav>
@@ -278,7 +278,7 @@ function HomePageNew({ settings }) {
                 <a href="#quote">Check my dates <ArrowRight className="ml-1.5 h-4 w-4" /></a>
               </Button>
               <Button asChild variant="outline" className={outlineButton}>
-                <Link href="/ritz-info">See room details</Link>
+                <Link href="/ritz-info" target="_blank" rel="noopener noreferrer">See room details</Link>
               </Button>
             </div>
             <div className="mt-8 grid max-w-xl grid-cols-3 gap-3 text-sm">
@@ -422,10 +422,18 @@ function HomePageNew({ settings }) {
               <div>
                 <p className="mb-4 inline-flex rounded-full bg-[#161411] px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-white">Private quote</p>
                 <h2 className={`${serif} text-4xl font-medium leading-[1.08] tracking-[-0.035em] md:text-5xl`}>Tell us your dates. We will prepare the ticket.</h2>
-                <p className="mt-5 text-sm leading-[1.75] text-[#756d64]">The request form creates your quote ticket first, then staff can confirm availability, pricing, and the next payment step.</p>
               </div>
               <div className="rounded-[16px] border border-[#eadfd1] bg-white p-5 text-sm leading-[1.65] text-[#756d64]">
-                Want every detail first? Review the <Link href="/faq" className="font-semibold text-[#b86547] underline-offset-4 hover:underline">guest FAQ</Link> or the <Link href="/ritz-info" className="font-semibold text-[#b86547] underline-offset-4 hover:underline">room info page</Link> before submitting.
+                <h3 className="flex items-center gap-2 font-medium text-[#26211c]">
+                  <Users className="h-4 w-4 text-[#b86547]" /> Guest registration required
+                </h3>
+                <ul className="mt-3 space-y-2">
+                  <li>Provide the full names of every guest staying in the unit.</li>
+                  <li>Unregistered guests will not be allowed in the room or on the property.</li>
+                </ul>
+              </div>
+              <div className="rounded-[16px] border border-[#eadfd1] bg-white p-5 text-sm leading-[1.65] text-[#756d64]">
+                Want every detail first? Review the <Link href="/faq" target="_blank" rel="noopener noreferrer" className="font-semibold text-[#b86547] underline-offset-4 hover:underline">guest FAQ</Link> or the <Link href="/ritz-info" target="_blank" rel="noopener noreferrer" className="font-semibold text-[#b86547] underline-offset-4 hover:underline">room info page</Link> before submitting.
               </div>
             </div>
             <QuoteForm />
@@ -443,8 +451,8 @@ function HomePageNew({ settings }) {
             <p className="mt-4 max-w-md leading-relaxed">Private Deluxe Ocean View reservations at The Ritz-Carlton Residences, Waikiki Beach.</p>
           </div>
           <div className="flex flex-wrap gap-5 md:justify-end">
-            <Link href="/ritz-info" className="hover:text-white">Room Info</Link>
-            <Link href="/faq" className="hover:text-white">FAQ</Link>
+            <Link href="/ritz-info" target="_blank" rel="noopener noreferrer" className="hover:text-white">Room Info</Link>
+            <Link href="/faq" target="_blank" rel="noopener noreferrer" className="hover:text-white">FAQ</Link>
             <Link href="/dashboard" className="hover:text-white">Staff</Link>
           </div>
         </div>

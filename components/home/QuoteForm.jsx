@@ -13,6 +13,8 @@ import ReservationDatePicker from "@/components/forms/ReservationDatePicker";
 import { DEFAULT_SETTINGS, useSettings, useTicketActions } from "@/lib/store";
 import { computeTicket } from "@/lib/calc";
 
+const MAX_PUBLIC_GUESTS = 4;
+
 export default function QuoteForm() {
   const settings = useSettings() || DEFAULT_SETTINGS;
   const { createTicket } = useTicketActions();
@@ -22,15 +24,24 @@ export default function QuoteForm() {
   });
   const [created, setCreated] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [guestError, setGuestError] = useState("");
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
   const submit = async (e) => {
     e.preventDefault();
+    const guestNames = guests.map((g) => g.trim()).filter(Boolean);
+
+    if (guestNames.length > MAX_PUBLIC_GUESTS) {
+      setGuestError(`Maximum ${MAX_PUBLIC_GUESTS} guests total, including children.`);
+      return;
+    }
+
+    setGuestError("");
     const computed = computeTicket({ ...form, retailPrice: null, adjustment: 0 }, settings);
     const ticket = await createTicket({
       ...form,
-      guests: guests.filter((g) => g.trim()),
+      guests: guestNames,
       retailPrice: null,
       adjustment: 0,
       status: "QUOTE REQUESTED",
@@ -83,7 +94,9 @@ export default function QuoteForm() {
     <form onSubmit={submit} className="rounded-[12px] bg-[#faf9f5] p-6 text-[#141413] md:p-8 space-y-5">
       <div className="space-y-2">
         <Label className="text-sm font-medium text-[#252523]">Guest names</Label>
-        <GuestNamesInput guests={guests} onChange={setGuests} />
+        <GuestNamesInput guests={guests} onChange={setGuests} maxGuests={MAX_PUBLIC_GUESTS} />
+        <p className="text-xs leading-relaxed text-red-600">Provide the full names of every guest. Maximum {MAX_PUBLIC_GUESTS} guests total, including children.</p>
+        {guestError && <p className="text-xs font-medium text-red-600">{guestError}</p>}
       </div>
       <ReservationDatePicker
         checkIn={form.checkIn}
