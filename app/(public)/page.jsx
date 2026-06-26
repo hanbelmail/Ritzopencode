@@ -302,7 +302,7 @@ function HomePageNew({ settings }) {
 
           <div className="rounded-[24px] bg-[#161411] p-4 text-white shadow-2xl shadow-[#b86547]/10">
             <img
-              src="https://media.db.com/images/public/6a2946fed79e2bf06847f28f/bc01270aa_b11591_7d17baaf5bb44f15bf24584a918fb6a6mv2.png"
+              src="https://pub-46763366adb74701bd1eb4bb75356e6b.r2.dev/waikikisecret/Suite/b11591_e3c1ea9727e848f99f55cc1c89e77407~mv2.jpg"
               alt="Deluxe Ocean View room at The Ritz-Carlton Residences Waikiki"
               className="h-80 w-full rounded-[18px] object-cover md:h-[430px]"
             />
