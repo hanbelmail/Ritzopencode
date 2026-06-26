@@ -275,7 +275,10 @@ function HomePageNew({ settings }) {
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Button asChild className={creamButton}>
-                <a href="#quote">Check my dates <ArrowRight className="ml-1.5 h-4 w-4" /></a>
+                <a href="#quote">Secure Your Experience <ArrowRight className="ml-1.5 h-4 w-4" /></a>
+              </Button>
+              <Button asChild variant="outline" className={outlineButton}>
+                <a href="#find">I have a ticket</a>
               </Button>
               <Button asChild variant="outline" className={outlineButton}>
                 <Link href="/ritz-info" target="_blank" rel="noopener noreferrer">See room details</Link>
