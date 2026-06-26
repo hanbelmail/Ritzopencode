@@ -14,6 +14,14 @@ const serif = "font-['Cormorant_Garamond',_'EB_Garamond',_'Times_New_Roman',_ser
 const creamButton = "h-10 rounded-[8px] bg-[#cc785c] px-5 text-sm font-medium text-white shadow-none hover:bg-[#a9583e]";
 const outlineButton = "h-10 rounded-[8px] border-[#e6dfd8] bg-[#faf9f5] px-5 text-sm font-medium text-[#141413] shadow-none hover:bg-[#efe9de]";
 
+const homeNavLinks = [
+  { href: "/ritz-info", label: "Room Info", external: true },
+  { href: "/gallery", label: "Gallery" },
+  { href: "/faq", label: "Guest Guide", external: true },
+  { href: "#find", label: "Find Ticket" },
+  { href: "/dashboard", label: "Staff" },
+];
+
 function SpikeMark({ className = "" }) {
   return (
     <span className={`relative inline-flex h-5 w-5 items-center justify-center ${className}`} aria-hidden="true">
@@ -22,6 +30,49 @@ function SpikeMark({ className = "" }) {
       <span className="absolute h-5 w-[2px] rotate-90 rounded-full bg-current" />
       <span className="absolute h-5 w-[2px] -rotate-45 rounded-full bg-current" />
     </span>
+  );
+}
+
+function HomeHeader({ settings, variant = "classic" }) {
+  const isNew = variant === "new";
+  const bgClass = isNew ? "bg-[#fbf7ef]/95 border-[#eadfd1]" : "bg-[#faf9f5]/95 border-[#e6dfd8]";
+  const textClass = isNew ? "text-[#161411]" : "text-[#141413]";
+  const navClass = isNew ? "text-[#6e665d] hover:text-[#161411]" : "text-[#6c6a64] hover:text-[#141413]";
+  const markClass = isNew ? "text-[#b86547]" : "";
+
+  return (
+    <header className={`fixed left-0 right-0 top-0 z-50 border-b ${bgClass} backdrop-blur-xl`}>
+      <div className="mx-auto max-w-[1200px] px-5 md:px-8">
+        <div className="flex h-16 items-center justify-between gap-4">
+          <Link href="/" className={`flex min-w-0 items-center gap-3 text-sm font-semibold ${textClass}`}>
+            <SpikeMark className={markClass} />
+            <span className="truncate">{settings.hotelName}</span>
+          </Link>
+          <Button asChild className={`${creamButton} shrink-0 px-4 sm:px-5`}>
+            <a href="#quote">{isNew ? "Request quote" : "Get a quote"}</a>
+          </Button>
+        </div>
+        <nav className={`hidden h-12 items-center gap-5 overflow-x-auto border-t text-sm font-medium ${isNew ? "border-[#eadfd1]" : "border-[#e6dfd8]"} md:flex md:justify-center md:gap-7`}>
+          {homeNavLinks.map(({ href, label, external }) => (
+            href.startsWith("#") ? (
+              <a key={href} href={href} className={`shrink-0 transition-colors ${navClass}`}>
+                {label}
+              </a>
+            ) : (
+              <Link
+                key={href}
+                href={href}
+                target={external ? "_blank" : undefined}
+                rel={external ? "noopener noreferrer" : undefined}
+                className={`shrink-0 transition-colors ${navClass}`}
+              >
+                {label}
+              </Link>
+            )
+          ))}
+        </nav>
+      </div>
+    </header>
   );
 }
 
@@ -35,25 +86,8 @@ function HomePageClassic({ settings }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#faf9f5] text-[#141413] antialiased">
-      <header className="border-b border-[#e6dfd8] bg-[#faf9f5]/95">
-        <div className="mx-auto flex h-16 max-w-[1200px] items-center justify-between px-5 md:px-8">
-          <Link href="/" className="flex items-center gap-3 text-sm font-medium text-[#141413]">
-            <SpikeMark />
-            <span>{settings.hotelName}</span>
-          </Link>
-          <nav className="hidden items-center gap-7 text-sm font-medium text-[#6c6a64] md:flex">
-            <Link href="/ritz-info" target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-[#141413]">Room Info</Link>
-            <Link href="/gallery" className="transition-colors hover:text-[#141413]">Gallery</Link>
-            <Link href="/faq" target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-[#141413]">Guest Guide</Link>
-            <a href="#find" className="transition-colors hover:text-[#141413]">Find Ticket</a>
-            <Link href="/dashboard" className="transition-colors hover:text-[#141413]">Staff</Link>
-          </nav>
-          <Button asChild className={creamButton}>
-            <a href="#quote">Get a quote</a>
-          </Button>
-        </div>
-      </header>
+    <div className="min-h-screen bg-[#faf9f5] pt-16 text-[#141413] antialiased md:pt-28">
+      <HomeHeader settings={settings} />
 
       <main>
         <section className="mx-auto grid max-w-[1200px] gap-12 px-5 py-16 md:grid-cols-[1fr_0.9fr] md:px-8 md:py-24 lg:py-28">
@@ -147,7 +181,7 @@ function HomePageClassic({ settings }) {
           </div>
         </section>
 
-        <section id="find" className="scroll-mt-8 bg-[#faf9f5] py-24">
+        <section id="find" className="scroll-mt-32 bg-[#faf9f5] py-24">
           <div className="mx-auto grid max-w-[1200px] gap-8 px-5 md:grid-cols-[0.8fr_1fr] md:px-8">
             <div>
               <p className="mb-3 text-xs font-medium uppercase tracking-[0.16em] text-[#6c6a64]">Ticket lookup</p>
@@ -171,7 +205,7 @@ function HomePageClassic({ settings }) {
           </div>
         </section>
 
-        <section id="quote" className="scroll-mt-8 bg-[#181715] py-24 text-[#faf9f5]">
+        <section id="quote" className="scroll-mt-32 bg-[#181715] py-24 text-[#faf9f5]">
           <div className="mx-auto grid max-w-[1200px] gap-10 px-5 md:grid-cols-[0.82fr_1fr] md:px-8">
             <div className="flex flex-col justify-between gap-10">
               <div>
@@ -247,25 +281,8 @@ function HomePageNew({ settings }) {
   ];
 
   return (
-    <div className="min-h-screen bg-[#fbf7ef] text-[#161411] antialiased">
-      <header className="border-b border-[#eadfd1] bg-[#fbf7ef]/95">
-        <div className="mx-auto flex h-16 max-w-[1200px] items-center justify-between px-5 md:px-8">
-          <Link href="/" className="flex items-center gap-3 text-sm font-semibold text-[#161411]">
-            <SpikeMark className="text-[#b86547]" />
-            <span>{settings.hotelName}</span>
-          </Link>
-          <nav className="hidden items-center gap-7 text-sm font-medium text-[#6e665d] md:flex">
-            <Link href="/ritz-info" target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-[#161411]">Room Info</Link>
-            <Link href="/gallery" className="transition-colors hover:text-[#161411]">Gallery</Link>
-            <Link href="/faq" target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-[#161411]">FAQ</Link>
-            <a href="#find" className="transition-colors hover:text-[#161411]">Find Ticket</a>
-            <Link href="/dashboard" className="transition-colors hover:text-[#161411]">Staff</Link>
-          </nav>
-          <Button asChild className={creamButton}>
-            <a href="#quote">Request quote</a>
-          </Button>
-        </div>
-      </header>
+    <div className="min-h-screen bg-[#fbf7ef] pt-16 text-[#161411] antialiased md:pt-28">
+      <HomeHeader settings={settings} variant="new" />
 
       <main>
         <section className="mx-auto grid max-w-[1200px] gap-10 px-5 py-14 md:grid-cols-[1fr_0.82fr] md:px-8 md:py-24">
@@ -409,7 +426,7 @@ function HomePageNew({ settings }) {
           </div>
         </section>
 
-        <section id="find" className="scroll-mt-8 bg-white py-20">
+        <section id="find" className="scroll-mt-32 bg-white py-20">
           <div className="mx-auto grid max-w-[1200px] gap-8 px-5 md:grid-cols-[0.8fr_1fr] md:px-8">
             <div>
               <p className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-[#756d64]">Ticket lookup</p>
@@ -428,7 +445,7 @@ function HomePageNew({ settings }) {
           </div>
         </section>
 
-        <section id="quote" className="scroll-mt-8 bg-[#181715] py-24 text-[#faf9f5]">
+        <section id="quote" className="scroll-mt-32 bg-[#181715] py-24 text-[#faf9f5]">
           <div className="mx-auto grid max-w-[1200px] gap-10 px-5 md:grid-cols-[0.82fr_1fr] md:px-8">
             <div className="flex flex-col justify-between gap-8">
               <div>
