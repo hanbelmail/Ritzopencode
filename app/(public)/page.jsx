@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { BedDouble, Waves, Sofa, Sparkles, Search, ArrowRight, Info, BookOpen, MapPin, Star, ConciergeBell, BadgeDollarSign, CalendarCheck, CreditCard, Users, Car, KeyRound } from "lucide-react";
+import { BedDouble, Waves, Sofa, Sparkles, Search, ArrowRight, Info, BookOpen, MapPin, Star, ConciergeBell, BadgeDollarSign, CalendarCheck, CreditCard, Users, Car, KeyRound, Camera } from "lucide-react";
 import QuoteForm from "@/components/home/QuoteForm";
 import { DEFAULT_SETTINGS, useSettings } from "@/lib/store";
 import { fmtMoney } from "@/lib/calc";
@@ -44,6 +44,7 @@ function HomePageClassic({ settings }) {
           </Link>
           <nav className="hidden items-center gap-7 text-sm font-medium text-[#6c6a64] md:flex">
             <Link href="/ritz-info" target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-[#141413]">Room Info</Link>
+            <Link href="/gallery" className="transition-colors hover:text-[#141413]">Gallery</Link>
             <Link href="/faq" target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-[#141413]">Guest Guide</Link>
             <a href="#find" className="transition-colors hover:text-[#141413]">Find Ticket</a>
             <Link href="/dashboard" className="transition-colors hover:text-[#141413]">Staff</Link>
@@ -195,6 +196,9 @@ function HomePageClassic({ settings }) {
                   <Button asChild className="h-10 rounded-[8px] bg-[#faf9f5] px-5 text-sm font-medium text-[#141413] shadow-none hover:bg-[#efe9de]">
                     <Link href="/ritz-info" target="_blank" rel="noopener noreferrer"><Info className="mr-1.5 h-4 w-4" /> Room Info</Link>
                   </Button>
+                  <Button asChild className="h-10 rounded-[8px] bg-[#faf9f5] px-5 text-sm font-medium text-[#141413] shadow-none hover:bg-[#efe9de]">
+                    <Link href="/gallery"><Camera className="mr-1.5 h-4 w-4" /> Gallery</Link>
+                  </Button>
                   <Button asChild className="h-10 rounded-[8px] bg-[#a9583e] px-5 text-sm font-medium text-white shadow-none hover:bg-[#a9583e]">
                     <Link href="/faq" target="_blank" rel="noopener noreferrer"><BookOpen className="mr-1.5 h-4 w-4" /> FAQ</Link>
                   </Button>
@@ -216,6 +220,7 @@ function HomePageClassic({ settings }) {
           </div>
           <div className="flex flex-wrap gap-5 md:justify-end">
             <Link href="/ritz-info" target="_blank" rel="noopener noreferrer" className="hover:text-[#faf9f5]">Room Info</Link>
+            <Link href="/gallery" className="hover:text-[#faf9f5]">Gallery</Link>
             <Link href="/faq" target="_blank" rel="noopener noreferrer" className="hover:text-[#faf9f5]">Guest Guide</Link>
             <Link href="/dashboard" className="hover:text-[#faf9f5]">Staff</Link>
           </div>
@@ -251,6 +256,7 @@ function HomePageNew({ settings }) {
           </Link>
           <nav className="hidden items-center gap-7 text-sm font-medium text-[#6e665d] md:flex">
             <Link href="/ritz-info" target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-[#161411]">Room Info</Link>
+            <Link href="/gallery" className="transition-colors hover:text-[#161411]">Gallery</Link>
             <Link href="/faq" target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-[#161411]">FAQ</Link>
             <a href="#find" className="transition-colors hover:text-[#161411]">Find Ticket</a>
             <Link href="/dashboard" className="transition-colors hover:text-[#161411]">Staff</Link>
@@ -282,6 +288,9 @@ function HomePageNew({ settings }) {
               </Button>
               <Button asChild variant="outline" className={outlineButton}>
                 <Link href="/ritz-info" target="_blank" rel="noopener noreferrer">See room details</Link>
+              </Button>
+              <Button asChild variant="outline" className={outlineButton}>
+                <Link href="/gallery">View gallery</Link>
               </Button>
             </div>
             <div className="mt-8 grid max-w-xl grid-cols-3 gap-3 text-sm">
@@ -448,6 +457,9 @@ function HomePageNew({ settings }) {
                   <Button asChild className="h-10 rounded-[8px] bg-[#faf9f5] px-5 text-sm font-medium text-[#141413] shadow-none hover:bg-[#efe9de]">
                     <Link href="/ritz-info" target="_blank" rel="noopener noreferrer"><Info className="mr-1.5 h-4 w-4" /> Room Info</Link>
                   </Button>
+                  <Button asChild className="h-10 rounded-[8px] bg-[#faf9f5] px-5 text-sm font-medium text-[#141413] shadow-none hover:bg-[#efe9de]">
+                    <Link href="/gallery"><Camera className="mr-1.5 h-4 w-4" /> Gallery</Link>
+                  </Button>
                   <Button asChild className="h-10 rounded-[8px] bg-[#a9583e] px-5 text-sm font-medium text-white shadow-none hover:bg-[#a9583e]">
                     <Link href="/faq" target="_blank" rel="noopener noreferrer"><BookOpen className="mr-1.5 h-4 w-4" /> FAQ</Link>
                   </Button>
@@ -469,6 +481,7 @@ function HomePageNew({ settings }) {
           </div>
           <div className="flex flex-wrap gap-5 md:justify-end">
             <Link href="/ritz-info" target="_blank" rel="noopener noreferrer" className="hover:text-white">Room Info</Link>
+            <Link href="/gallery" className="hover:text-white">Gallery</Link>
             <Link href="/faq" target="_blank" rel="noopener noreferrer" className="hover:text-white">FAQ</Link>
             <Link href="/dashboard" className="hover:text-white">Staff</Link>
           </div>

@@ -2,12 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, BookOpen, Info, MessageSquarePlus, Ticket } from "lucide-react";
+import { Home, Camera, Info, MessageSquarePlus, Ticket } from "lucide-react";
 
 const mobileNav = [
   { to: "/", label: "Home", icon: Home, exact: true },
   { to: "/ritz-info", label: "Room Info", icon: Info },
-  { to: "/faq", label: "Guide & FAQ", icon: BookOpen },
+  { to: "/gallery", label: "Gallery", icon: Camera },
   { to: "/#quote", label: "Quote", icon: MessageSquarePlus, isAnchor: true },
   { to: "/#find", label: "Ticket", icon: Ticket, isAnchor: true },
 ];

@@ -42,5 +42,5 @@
 
 ## Child DOX Index
 
-- `(public)/AGENTS.md` owns guest-facing marketing, quote, FAQ, room info, and ticket lookup pages.
+- `(public)/AGENTS.md` owns guest-facing marketing, quote, gallery, FAQ, room info, and ticket lookup pages.
 - `(staff)/AGENTS.md` owns authenticated reservation management pages and staff layout routing.

@@ -2,12 +2,13 @@
 
 ## Purpose
 
-- Owns guest-facing pages for property marketing, quote requests, information pages, FAQ, and public ticket lookup.
+- Owns guest-facing pages for property marketing, quote requests, photo gallery, information pages, FAQ, and public ticket lookup.
 
 ## Ownership
 
 - `layout.jsx` wraps public pages with `components/PublicLayout.jsx`.
 - `page.jsx` owns the public home page variants, room marketing content, ticket lookup entry point, and quote form placement.
+- `gallery/` owns the public property photo gallery for suite, spa, recreation, fitness, and dining imagery.
 - `faq/` and `ritz-info/` own guest information content.
 - `ticket/[id]/` owns public reservation ticket display by ticket ID, including signed-read display of the retail price screenshot when attached.
 
