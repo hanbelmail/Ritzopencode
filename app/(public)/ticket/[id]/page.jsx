@@ -29,6 +29,7 @@ import TicketPreview from "@/components/ticket/TicketPreview";
 import PayDialog from "@/components/ticket/PayDialog";
 import { DEFAULT_SETTINGS, useSettings, useTicket, useTicketActions } from "@/lib/store";
 import { fmtDate, fmtMoney } from "@/lib/calc";
+import { notifyPaymentSubmitted } from "@/lib/payment-submitted-alert";
 
 const FLOW_STEPS = [
   { status: "QUOTE REQUESTED", label: "Quote requested", description: "We received your dates." },
@@ -288,6 +289,10 @@ export default function TicketPage() {
       paymentScreenshot: null,
       paymentScreenshotKey,
       paymentDate: new Date().toISOString().slice(0, 10),
+    });
+
+    notifyPaymentSubmitted(ticket.id).catch((error) => {
+      console.error("Failed to send payment submitted alert", error);
     });
   };
 

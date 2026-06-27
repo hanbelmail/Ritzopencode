@@ -13,6 +13,7 @@ import ReservationDatePicker from "@/components/forms/ReservationDatePicker";
 import { DEFAULT_SETTINGS, useSettings, useTicket, useTicketActions, STATUSES } from "@/lib/store";
 import { computeTicket, fmtMoney } from "@/lib/calc";
 import { notifyPriceSent } from "@/lib/price-sent-email";
+import { notifyPaymentSubmitted } from "@/lib/payment-submitted-alert";
 import { useToast } from "@/components/ui/use-toast";
 import { Upload, X } from "lucide-react";
 
@@ -200,6 +201,22 @@ export default function NewReservation() {
           toast({
             title: "Price email failed",
             description: error.message || "The reservation was saved, but the email was not sent.",
+            variant: "destructive",
+          });
+        }
+      }
+      if (ticket.status === "PAYMENT SUBMITTED") {
+        try {
+          const result = await notifyPaymentSubmitted(ticket.id);
+          toast({
+            title: result.sent ? "Payment alert sent" : "Payment alert skipped",
+            description: result.sent ? "Active staff recipients received the payment proof alert." : result.reason,
+            variant: result.sent ? "success" : "destructive",
+          });
+        } catch (error) {
+          toast({
+            title: "Payment alert failed",
+            description: error.message || "The reservation was saved, but the staff alert was not sent.",
             variant: "destructive",
           });
         }

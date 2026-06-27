@@ -11,7 +11,7 @@
 - `http.ts` owns Convex HTTP routes, including auth endpoints.
 - `schema.ts` owns Convex database schema tables, including Auth, `tickets`, and `settings`.
 - `tickets.ts` owns reservation ticket queries, mutations, persisted status normalization, and legacy ticket import.
-- `settings.ts` owns shared app settings query and mutation.
+- `settings.ts` owns shared app settings query and mutation, including email alert settings stored in the main settings document.
 - `tsconfig.json` owns TypeScript settings for Convex backend files.
 
 ## Local Contracts

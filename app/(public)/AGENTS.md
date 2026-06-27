@@ -15,8 +15,9 @@
 ## Local Contracts
 
 - Public pages must not require staff authentication.
-- Ticket lookup and quote flows use Convex-backed reservation data through `lib/store.js`.
+- Ticket lookup, quote, and payment submission flows use Convex-backed reservation data through `lib/store.js`.
 - Quote requests may trigger the configured server-side quote webhook after the Convex ticket is created.
+- Guest payment submissions upload payment proof screenshots to private R2 storage, update tickets to `PAYMENT SUBMITTED`, and may trigger the server-side staff payment-submitted alert after Convex persistence.
 - Keep guest-facing money, cleaning fee, room type, discount, and retail price screenshot displays consistent with Convex-backed settings from `lib/store.js`, R2 object keys on tickets, and `lib/calc.js` formatting/calculations.
 - Public `/` must render the Convex-backed `homePageVariant`, defaulting to the classic home page for existing settings.
 

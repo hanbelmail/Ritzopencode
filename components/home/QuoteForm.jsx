@@ -57,6 +57,13 @@ export default function QuoteForm() {
     }).catch((error) => {
       console.error("Failed to send quote webhook", error);
     });
+    fetch("/api/quote-alerts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ticketId: ticket.id }),
+    }).catch((error) => {
+      console.error("Failed to send quote alert", error);
+    });
     setCreated(ticket);
   };
 

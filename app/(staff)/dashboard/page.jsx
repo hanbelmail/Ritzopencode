@@ -21,6 +21,7 @@ import TicketCard from "@/components/tickets/TicketCard";
 import TicketTable from "@/components/tickets/TicketTable";
 import { useTickets, useTicketActions, STATUSES } from "@/lib/store";
 import { notifyPriceSent } from "@/lib/price-sent-email";
+import { notifyPaymentSubmitted } from "@/lib/payment-submitted-alert";
 import { useToast } from "@/components/ui/use-toast";
 
 const primaryButton = "h-10 rounded-[8px] bg-[#cc785c] px-5 text-sm font-medium text-white shadow-none hover:bg-[#a9583e]";
@@ -103,21 +104,38 @@ export default function Dashboard() {
 
   const handleStatusChange = async (id, status) => {
     await updateTicket(id, { status });
-    if (status !== "PRICE SENT") return;
+    if (status === "PRICE SENT") {
+      try {
+        const result = await notifyPriceSent(id);
+        toast({
+          title: result.sent ? "Price email sent" : "Price email skipped",
+          description: result.sent ? "The guest received the ticket link and quote details." : result.reason,
+          variant: result.sent ? "success" : "destructive",
+        });
+      } catch (error) {
+        toast({
+          title: "Price email failed",
+          description: error.message || "The reservation was updated, but the email was not sent.",
+          variant: "destructive",
+        });
+      }
+    }
 
-    try {
-      const result = await notifyPriceSent(id);
-      toast({
-        title: result.sent ? "Price email sent" : "Price email skipped",
-        description: result.sent ? "The guest received the ticket link and quote details." : result.reason,
-        variant: result.sent ? "success" : "destructive",
-      });
-    } catch (error) {
-      toast({
-        title: "Price email failed",
-        description: error.message || "The reservation was updated, but the email was not sent.",
-        variant: "destructive",
-      });
+    if (status === "PAYMENT SUBMITTED") {
+      try {
+        const result = await notifyPaymentSubmitted(id);
+        toast({
+          title: result.sent ? "Payment alert sent" : "Payment alert skipped",
+          description: result.sent ? "Active staff recipients received the payment proof alert." : result.reason,
+          variant: result.sent ? "success" : "destructive",
+        });
+      } catch (error) {
+        toast({
+          title: "Payment alert failed",
+          description: error.message || "The reservation was updated, but the staff alert was not sent.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
