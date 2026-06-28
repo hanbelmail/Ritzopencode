@@ -1,7 +1,7 @@
 "use client";
 
-import { useDeferredValue, useMemo, useState } from "react";
-import { Download, Mail, Phone, Search, SlidersHorizontal, Star } from "lucide-react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight, Download, Mail, Phone, Search, SlidersHorizontal, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +29,7 @@ const sortOptions = [
   { value: "reservations", label: "Reservations" },
   { value: "name", label: "Name" },
 ];
+const pageSizeOptions = [25, 50, 100];
 
 function dateValue(value) {
   if (!value) return 0;
@@ -91,6 +92,8 @@ export default function Clients() {
   const [segment, setSegment] = useState("all");
   const [sortBy, setSortBy] = useState("lastCheckIn");
   const [selectedClientKey, setSelectedClientKey] = useState(null);
+  const [pageSize, setPageSize] = useState(25);
+  const [pageIndex, setPageIndex] = useState(0);
   const tickets = useTickets();
 
   const clients = useMemo(() => {
@@ -166,6 +169,46 @@ export default function Clients() {
   }, [clients, deferredSearch, segment, sortBy]);
 
   const selectedClient = clients.find((client) => client.key === selectedClientKey) || null;
+
+  useEffect(() => {
+    setPageIndex(0);
+  }, [deferredSearch, segment, sortBy, pageSize]);
+
+  const paginatedClients = useMemo(() => {
+    const start = pageIndex * pageSize;
+    return filtered.slice(start, start + pageSize);
+  }, [filtered, pageIndex, pageSize]);
+
+  const pageStart = paginatedClients.length ? pageIndex * pageSize + 1 : 0;
+  const pageEnd = paginatedClients.length ? pageIndex * pageSize + paginatedClients.length : 0;
+  const hasPreviousPage = pageIndex > 0;
+  const hasNextPage = pageEnd < filtered.length;
+
+  const paginationControls = (
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-[14px] border border-[#e6dfd8] bg-white px-4 py-3 text-sm text-[#6f6a60]">
+      <div className="flex flex-wrap items-center gap-2">
+        <SlidersHorizontal className="h-4 w-4 text-[#cc785c]" />
+        <span>{paginatedClients.length ? `Showing ${pageStart}-${pageEnd}` : "No clients to show"}</span>
+        <span className="text-[#aaa399]">Page {pageIndex + 1}</span>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <Select value={String(pageSize)} onValueChange={(value) => setPageSize(Number(value))}>
+          <SelectTrigger className="h-9 w-28 rounded-[8px] border-[#d8d0c7] bg-[#faf9f5] text-[#252523] shadow-none focus:ring-[#cc785c]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="rounded-[12px] border-[#e6dfd8] bg-[#faf9f5] text-[#141413]">
+            {pageSizeOptions.map((size) => <SelectItem key={size} value={String(size)}>{size} / page</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Button type="button" variant="outline" onClick={() => setPageIndex((current) => Math.max(0, current - 1))} disabled={!hasPreviousPage} className="h-9 rounded-[8px] border-[#d8d0c7] bg-[#faf9f5] text-[#252523] hover:bg-[#efe9de]">
+          <ChevronLeft className="mr-1 h-4 w-4" /> Previous
+        </Button>
+        <Button type="button" variant="outline" onClick={() => setPageIndex((current) => current + 1)} disabled={!hasNextPage} className="h-9 rounded-[8px] border-[#d8d0c7] bg-[#faf9f5] text-[#252523] hover:bg-[#efe9de]">
+          Next <ChevronRight className="ml-1 h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
 
   const stats = useMemo(() => {
     const repeatClients = clients.filter((client) => client.reservations > 1).length;
@@ -252,13 +295,7 @@ export default function Clients() {
           ))}
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-[14px] border border-[#e6dfd8] bg-white px-4 py-3 text-sm text-[#6f6a60]">
-          <div className="flex items-center gap-2">
-            <SlidersHorizontal className="h-4 w-4 text-[#cc785c]" />
-            Showing <span className="font-semibold text-[#181715]">{filtered.length}</span> of <span className="font-semibold text-[#181715]">{clients.length}</span> clients
-          </div>
-          <p className="text-xs">Clients are grouped by email first, then phone, then name.</p>
-        </div>
+        {paginationControls}
 
         <div className="hidden overflow-hidden rounded-[16px] border border-[#e6dfd8] bg-white shadow-sm lg:block">
           <table className="w-full text-sm">
@@ -273,7 +310,7 @@ export default function Clients() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((client) => (
+              {paginatedClients.map((client) => (
                 <tr key={client.key} onClick={() => setSelectedClientKey(client.key)} className="cursor-pointer border-b border-[#eee7dd] transition-colors last:border-0 hover:bg-[#faf6ef]">
                   <td className="px-4 py-4">
                     <div className="flex items-center gap-3">
@@ -299,7 +336,7 @@ export default function Clients() {
                   <td className="px-4 py-4 font-semibold text-[#181715]">{fmtMoney(client.totalValue)}</td>
                 </tr>
               ))}
-              {filtered.length === 0 && (
+              {paginatedClients.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-4 py-14 text-center text-sm text-[#8a8277]">No clients match the current search or segment.</td>
                 </tr>
@@ -309,7 +346,7 @@ export default function Clients() {
         </div>
 
         <div className="grid gap-3 lg:hidden">
-          {filtered.map((client) => (
+          {paginatedClients.map((client) => (
             <button key={client.key} type="button" onClick={() => setSelectedClientKey(client.key)} className="rounded-[16px] border border-[#e6dfd8] bg-white p-4 text-left shadow-sm transition-colors hover:bg-[#faf6ef]">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
@@ -328,8 +365,10 @@ export default function Clients() {
               <div className="mt-3"><ClientBadges client={client} /></div>
             </button>
           ))}
-          {filtered.length === 0 && <div className="rounded-[16px] border border-[#e6dfd8] bg-white px-4 py-14 text-center text-sm text-[#8a8277]">No clients match the current search or segment.</div>}
+          {paginatedClients.length === 0 && <div className="rounded-[16px] border border-[#e6dfd8] bg-white px-4 py-14 text-center text-sm text-[#8a8277]">No clients match the current search or segment.</div>}
         </div>
+
+        {paginationControls}
       </div>
 
       <Sheet open={Boolean(selectedClient)} onOpenChange={(open) => !open && setSelectedClientKey(null)}>

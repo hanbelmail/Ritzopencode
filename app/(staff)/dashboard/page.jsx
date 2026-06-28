@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
+import { useConvex } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,10 +18,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Download, Search, Plus, ListTodo, Table2, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, Search, Plus, ListTodo, Table2, Trash2 } from "lucide-react";
 import TicketCard from "@/components/tickets/TicketCard";
 import TicketTable from "@/components/tickets/TicketTable";
-import { useTickets, useTicketActions, STATUSES } from "@/lib/store";
+import { useTicketActions, useTicketPage, STATUSES } from "@/lib/store";
 import { notifyPriceSent } from "@/lib/price-sent-email";
 import { notifyPaymentSubmitted } from "@/lib/payment-submitted-alert";
 import { notifyBookingConfirmedHotel } from "@/lib/booking-confirmed-hotel-alert";
@@ -33,6 +35,7 @@ const dateFieldOptions = [
   { value: "checkOut", label: "Check-out" },
   { value: "createdAt", label: "Quote-created" },
 ];
+const pageSizeOptions = [25, 50, 100];
 
 const csvColumns = [
   { key: "id", label: "Ticket ID" },
@@ -66,20 +69,13 @@ function dateStamp(value) {
   return Number.isNaN(date.getTime()) ? "" : date.toISOString().slice(0, 10);
 }
 
-function inDateRange(value, from, to) {
-  if (!from && !to) return true;
-  const stamp = dateStamp(value);
-  if (!stamp) return false;
-  return (!from || stamp >= from) && (!to || stamp <= to);
-}
-
 function csvCell(value) {
   const text = value === null || value === undefined ? "" : String(value);
   return `"${text.replace(/"/g, '""')}"`;
 }
 
 export default function Dashboard() {
-  const tickets = useTickets();
+  const convex = useConvex();
   const { deleteTicket, updateTicket } = useTicketActions();
   const { toast } = useToast();
   const [view, setView] = useState("board");
@@ -87,6 +83,15 @@ export default function Dashboard() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState({ field: "checkIn", from: "", to: "" });
   const [selectedIds, setSelectedIds] = useState([]);
+  const [pageSize, setPageSize] = useState(25);
+  const [pageIndex, setPageIndex] = useState(0);
+  const [pageCursors, setPageCursors] = useState([null]);
+  const [exporting, setExporting] = useState(false);
+
+  const cursor = pageCursors[pageIndex] || null;
+  const pageResult = useTicketPage({ search, status: statusFilter, dateFilter, pageSize, cursor });
+  const pageTickets = pageResult?.page || [];
+  const isLoadingPage = pageResult === undefined;
 
   const hasDateFilter = Boolean(dateFilter.from || dateFilter.to);
   const selectedDateField = dateFieldOptions.find((option) => option.value === dateFilter.field)?.label || "Date";
@@ -98,6 +103,71 @@ export default function Dashboard() {
   const clearDateFilters = () => {
     setDateFilter((current) => ({ ...current, from: "", to: "" }));
   };
+
+  const resetPagination = () => {
+    setPageIndex(0);
+    setPageCursors([null]);
+    setSelectedIds([]);
+  };
+
+  const pageStart = pageTickets.length ? pageIndex * pageSize + 1 : 0;
+  const pageEnd = pageTickets.length ? pageIndex * pageSize + pageTickets.length : 0;
+  const hasPreviousPage = pageIndex > 0;
+  const hasNextPage = Boolean(pageResult && !pageResult.isDone);
+
+  const exportFilters = {
+    search: search.trim() || undefined,
+    status: statusFilter === "all" ? undefined : statusFilter,
+    dateField: dateFilter.field,
+    from: dateFilter.from || undefined,
+    to: dateFilter.to || undefined,
+  };
+
+  const goToNextPage = () => {
+    if (!pageResult || pageResult.isDone) return;
+    setPageCursors((current) => {
+      const next = current.slice(0, pageIndex + 2);
+      next[pageIndex + 1] = pageResult.continueCursor;
+      return next;
+    });
+    setPageIndex((current) => current + 1);
+    setSelectedIds([]);
+  };
+
+  const goToPreviousPage = () => {
+    if (!hasPreviousPage) return;
+    setPageIndex((current) => current - 1);
+    setSelectedIds([]);
+  };
+
+  const paginationControls = (
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-[12px] border border-[#e6dfd8] bg-[#fffdf8] px-4 py-3 text-sm text-[#6c6a64]">
+      <div className="flex flex-wrap items-center gap-2">
+        <span>
+          {isLoadingPage ? "Loading reservations" : pageTickets.length ? `Showing ${pageStart}-${pageEnd}` : "No reservations to show"}
+        </span>
+        <span className="text-[#aaa399]">Page {pageIndex + 1}</span>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <Select value={String(pageSize)} onValueChange={(value) => setPageSize(Number(value))}>
+          <SelectTrigger className="h-9 w-28 rounded-[8px] border-[#d8d0c7] bg-[#faf9f5] text-[#252523] shadow-none focus:ring-[#cc785c]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="rounded-[12px] border-[#e6dfd8] bg-[#faf9f5] text-[#141413]">
+            {pageSizeOptions.map((size) => (
+              <SelectItem key={size} value={String(size)}>{size} / page</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button type="button" variant="outline" onClick={goToPreviousPage} disabled={!hasPreviousPage || isLoadingPage} className="h-9 rounded-[8px] border-[#d8d0c7] bg-[#faf9f5] text-[#252523] hover:bg-[#efe9de]">
+          <ChevronLeft className="mr-1 h-4 w-4" /> Previous
+        </Button>
+        <Button type="button" variant="outline" onClick={goToNextPage} disabled={!hasNextPage || isLoadingPage} className="h-9 rounded-[8px] border-[#d8d0c7] bg-[#faf9f5] text-[#252523] hover:bg-[#efe9de]">
+          Next <ChevronRight className="ml-1 h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
 
   const handleDelete = async (id) => {
     await deleteTicket(id);
@@ -163,9 +233,17 @@ export default function Dashboard() {
     setSelectedIds([]);
   };
 
-  const exportFilteredCsv = () => {
+  const exportFilteredCsv = async () => {
+    setExporting(true);
+    let exportTickets = [];
+    try {
+      exportTickets = await convex.query(api.tickets.listFilteredForExport, exportFilters);
+    } finally {
+      setExporting(false);
+    }
+
     const header = csvColumns.map((column) => csvCell(column.label)).join(",");
-    const rows = filtered.map((ticket) =>
+    const rows = exportTickets.map((ticket) =>
       csvColumns
         .map((column) => csvCell(column.value ? column.value(ticket) : ticket[column.key]))
         .join(",")
@@ -182,27 +260,20 @@ export default function Dashboard() {
     URL.revokeObjectURL(url);
   };
 
-  const filtered = useMemo(() => {
-    const q = search.toLowerCase();
-    return tickets.filter((t) => {
-      const matchSearch =
-        !q ||
-        [...(t.guests || []), t.id, t.email, t.phone, t.roomType, t.referredBy]
-          .filter(Boolean)
-          .some((v) => String(v).toLowerCase().includes(q));
-      const matchStatus = statusFilter === "all" || t.status === statusFilter;
-      const matchDate = inDateRange(t[dateFilter.field], dateFilter.from, dateFilter.to);
-      return matchSearch && matchStatus && matchDate;
-    });
-  }, [tickets, search, statusFilter, dateFilter]);
+  const filterKey = useMemo(
+    () => JSON.stringify({ search: search.trim(), statusFilter, dateFilter, pageSize }),
+    [search, statusFilter, dateFilter, pageSize]
+  );
+
+  useEffect(resetPagination, [filterKey]);
 
   useEffect(() => {
-    const filteredIds = new Set(filtered.map((ticket) => ticket.id));
+    const filteredIds = new Set(pageTickets.map((ticket) => ticket.id));
     setSelectedIds((current) => {
       const next = current.filter((id) => filteredIds.has(id));
       return next.length === current.length ? current : next;
     });
-  }, [filtered]);
+  }, [pageTickets]);
 
   return (
     <div className="min-h-screen bg-[#faf9f5] px-5 py-8 text-[#141413] md:px-8 lg:px-10">
@@ -298,11 +369,11 @@ export default function Dashboard() {
         {view === "table" && (
           <div className="flex flex-col gap-3 rounded-[12px] border border-[#e6dfd8] bg-[#fffdf8] p-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="text-sm text-[#6c6a64]">
-              <span className="font-medium text-[#252523]">{selectedIds.length}</span> selected from <span className="font-medium text-[#252523]">{filtered.length}</span> filtered reservation{filtered.length === 1 ? "" : "s"}
+              <span className="font-medium text-[#252523]">{selectedIds.length}</span> selected from <span className="font-medium text-[#252523]">{pageTickets.length}</span> reservation{pageTickets.length === 1 ? "" : "s"} on this page
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button type="button" variant="outline" onClick={exportFilteredCsv} disabled={filtered.length === 0} className="rounded-[8px] border-[#d8d0c7] bg-[#faf9f5] text-[#252523] hover:bg-[#efe9de]">
-                <Download className="mr-2 h-4 w-4" /> Export CSV
+              <Button type="button" variant="outline" onClick={exportFilteredCsv} disabled={pageTickets.length === 0 || exporting} className="rounded-[8px] border-[#d8d0c7] bg-[#faf9f5] text-[#252523] hover:bg-[#efe9de]">
+                <Download className="mr-2 h-4 w-4" /> {exporting ? "Exporting..." : "Export CSV"}
               </Button>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
@@ -333,20 +404,23 @@ export default function Dashboard() {
           </div>
         )}
 
+      {paginationControls}
+
       {view === "board" ? (
         <div className="space-y-3">
-          {filtered.map((t) => (
+          {pageTickets.map((t) => (
             <TicketCard key={t.id} ticket={t} onDelete={handleDelete} onStatusChange={handleStatusChange} />
           ))}
-          {filtered.length === 0 && (
+          {!isLoadingPage && pageTickets.length === 0 && (
             <div className="border border-dashed border-[#e6dfd8] rounded-[12px] bg-[#faf9f5] py-16 text-center text-sm text-[#6c6a64]">
               No reservations found. <Link href="/new" className="text-[#cc785c] underline underline-offset-4">Create one</Link>.
             </div>
           )}
         </div>
       ) : (
-        <TicketTable tickets={filtered} selectedIds={selectedIds} onSelectedIdsChange={setSelectedIds} />
+        <TicketTable tickets={pageTickets} selectedIds={selectedIds} onSelectedIdsChange={setSelectedIds} />
       )}
+      {paginationControls}
       </div>
     </div>
   );

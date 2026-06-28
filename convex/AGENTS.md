@@ -10,7 +10,7 @@
 - `auth.config.ts` owns Convex Auth client trust configuration.
 - `http.ts` owns Convex HTTP routes, including auth endpoints.
 - `schema.ts` owns Convex database schema tables, including Auth, `tickets`, and `settings`.
-- `tickets.ts` owns reservation ticket queries, mutations, persisted status normalization, and legacy ticket import.
+- `tickets.ts` owns reservation ticket queries, paginated/filterable dashboard queries, export queries, mutations, persisted status normalization, searchable ticket index fields, index-field backfill, and legacy ticket import.
 - `settings.ts` owns shared app settings query and mutation, including email alert settings stored in the main settings document.
 - `tsconfig.json` owns TypeScript settings for Convex backend files.
 
@@ -25,6 +25,7 @@
 
 - Run `npx convex dev` to create/sync the deployment and generate Convex files when backend functions change.
 - Keep `tickets.ts` and `settings.ts` aligned with client hooks in `lib/store.js`.
+- Keep `tickets.ts` create/update/import paths syncing top-level ticket search/filter fields used by paginated dashboard queries.
 
 ## Verification
 
