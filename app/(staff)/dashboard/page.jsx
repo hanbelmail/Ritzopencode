@@ -18,7 +18,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronLeft, ChevronRight, Download, Search, Plus, ListTodo, Table2, Trash2 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { BadgeCheck, BadgeDollarSign, Check, CheckCircle2, ChevronLeft, ChevronRight, Clock, CreditCard, Download, Filter, Search, Plus, ListTodo, Table2, Trash2, XCircle } from "lucide-react";
 import TicketCard from "@/components/tickets/TicketCard";
 import TicketTable from "@/components/tickets/TicketTable";
 import { useTicketActions, useTicketPage, STATUSES } from "@/lib/store";
@@ -35,7 +36,15 @@ const dateFieldOptions = [
   { value: "checkOut", label: "Check-out" },
   { value: "createdAt", label: "Quote-created" },
 ];
-const pageSizeOptions = [25, 50, 100];
+const pageSizeOptions = [5, 10, 25, 50, 100];
+const statusIcons = {
+  "QUOTE REQUESTED": Clock,
+  "PRICE SENT": BadgeDollarSign,
+  "PAYMENT SUBMITTED": CreditCard,
+  "PAYMENT VERIFIED": CheckCircle2,
+  "BOOKING CONFIRMED": BadgeCheck,
+  CANCELLED: XCircle,
+};
 
 const csvColumns = [
   { key: "id", label: "Ticket ID" },
@@ -74,24 +83,45 @@ function csvCell(value) {
   return `"${text.replace(/"/g, '""')}"`;
 }
 
+function StatusIcon({ status, className = "h-4 w-4" }) {
+  const Icon = statusIcons[status] || Clock;
+  return <Icon className={className} />;
+}
+
+function uniqueSortedTickets(groups) {
+  const byId = new Map();
+  groups.flat().forEach((ticket) => {
+    if (ticket?.id) byId.set(ticket.id, ticket);
+  });
+
+  return Array.from(byId.values()).sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
+}
+
 export default function Dashboard() {
   const convex = useConvex();
   const { deleteTicket, updateTicket } = useTicketActions();
   const { toast } = useToast();
   const [view, setView] = useState("board");
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [selectedStatuses, setSelectedStatuses] = useState([]);
   const [dateFilter, setDateFilter] = useState({ field: "checkIn", from: "", to: "" });
   const [selectedIds, setSelectedIds] = useState([]);
   const [pageSize, setPageSize] = useState(25);
   const [pageIndex, setPageIndex] = useState(0);
   const [pageCursors, setPageCursors] = useState([null]);
   const [exporting, setExporting] = useState(false);
+  const [statusCounts, setStatusCounts] = useState({});
+  const [multiStatusTickets, setMultiStatusTickets] = useState([]);
+  const [loadingMultiStatus, setLoadingMultiStatus] = useState(false);
 
   const cursor = pageCursors[pageIndex] || null;
-  const pageResult = useTicketPage({ search, status: statusFilter, dateFilter, pageSize, cursor });
-  const pageTickets = pageResult?.page || [];
-  const isLoadingPage = pageResult === undefined;
+  const isMultiStatusFilter = selectedStatuses.length > 1;
+  const serverStatusFilter = selectedStatuses.length === 1 ? selectedStatuses[0] : "all";
+  const pageResult = useTicketPage({ search, status: serverStatusFilter, dateFilter, pageSize, cursor });
+  const pageTickets = isMultiStatusFilter
+    ? multiStatusTickets.slice(pageIndex * pageSize, pageIndex * pageSize + pageSize)
+    : pageResult?.page || [];
+  const isLoadingPage = isMultiStatusFilter ? loadingMultiStatus : pageResult === undefined;
 
   const hasDateFilter = Boolean(dateFilter.from || dateFilter.to);
   const selectedDateField = dateFieldOptions.find((option) => option.value === dateFilter.field)?.label || "Date";
@@ -113,17 +143,51 @@ export default function Dashboard() {
   const pageStart = pageTickets.length ? pageIndex * pageSize + 1 : 0;
   const pageEnd = pageTickets.length ? pageIndex * pageSize + pageTickets.length : 0;
   const hasPreviousPage = pageIndex > 0;
-  const hasNextPage = Boolean(pageResult && !pageResult.isDone);
+  const hasNextPage = isMultiStatusFilter
+    ? pageIndex * pageSize + pageTickets.length < multiStatusTickets.length
+    : Boolean(pageResult && !pageResult.isDone);
 
   const exportFilters = {
     search: search.trim() || undefined,
-    status: statusFilter === "all" ? undefined : statusFilter,
+    status: selectedStatuses.length === 1 ? selectedStatuses[0] : undefined,
     dateField: dateFilter.field,
     from: dateFilter.from || undefined,
     to: dateFilter.to || undefined,
   };
+  const statusCountFilters = useMemo(() => ({
+    search: search.trim() || undefined,
+    dateField: dateFilter.field,
+    from: dateFilter.from || undefined,
+    to: dateFilter.to || undefined,
+  }), [search, dateFilter]);
+
+  const toggleStatusFilter = (status) => {
+    setSelectedStatuses((current) => (
+      current.includes(status)
+        ? current.filter((item) => item !== status)
+        : [...current, status]
+    ));
+  };
+
+  const fetchTicketsForStatuses = async (statuses) => {
+    if (!statuses.length) {
+      return convex.query(api.tickets.listFilteredForExport, statusCountFilters);
+    }
+
+    const groups = await Promise.all(
+      statuses.map((status) => convex.query(api.tickets.listFilteredForExport, { ...statusCountFilters, status }))
+    );
+    return uniqueSortedTickets(groups);
+  };
 
   const goToNextPage = () => {
+    if (isMultiStatusFilter) {
+      if (!hasNextPage) return;
+      setPageIndex((current) => current + 1);
+      setSelectedIds([]);
+      return;
+    }
+
     if (!pageResult || pageResult.isDone) return;
     setPageCursors((current) => {
       const next = current.slice(0, pageIndex + 2);
@@ -237,7 +301,9 @@ export default function Dashboard() {
     setExporting(true);
     let exportTickets = [];
     try {
-      exportTickets = await convex.query(api.tickets.listFilteredForExport, exportFilters);
+      exportTickets = isMultiStatusFilter
+        ? await fetchTicketsForStatuses(selectedStatuses)
+        : await convex.query(api.tickets.listFilteredForExport, exportFilters);
     } finally {
       setExporting(false);
     }
@@ -261,11 +327,65 @@ export default function Dashboard() {
   };
 
   const filterKey = useMemo(
-    () => JSON.stringify({ search: search.trim(), statusFilter, dateFilter, pageSize }),
-    [search, statusFilter, dateFilter, pageSize]
+    () => JSON.stringify({ search: search.trim(), selectedStatuses, dateFilter, pageSize }),
+    [search, selectedStatuses, dateFilter, pageSize]
+  );
+  const statusCountKey = useMemo(
+    () => JSON.stringify(statusCountFilters),
+    [statusCountFilters]
   );
 
   useEffect(resetPagination, [filterKey]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    Promise.all(
+      STATUSES.map((status) => convex.query(api.tickets.listFilteredForExport, { ...statusCountFilters, status }))
+    )
+      .then((groups) => {
+        if (cancelled) return;
+        setStatusCounts(
+          groups.reduce((counts, tickets, index) => {
+            counts[STATUSES[index]] = tickets.length;
+            return counts;
+          }, {})
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setStatusCounts({});
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [convex, statusCountFilters, statusCountKey]);
+
+  useEffect(() => {
+    if (!isMultiStatusFilter) {
+      setMultiStatusTickets([]);
+      setLoadingMultiStatus(false);
+      return;
+    }
+
+    let cancelled = false;
+    setLoadingMultiStatus(true);
+
+    fetchTicketsForStatuses(selectedStatuses)
+      .then((tickets) => {
+        if (!cancelled) setMultiStatusTickets(tickets);
+      })
+      .catch(() => {
+        if (!cancelled) setMultiStatusTickets([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingMultiStatus(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isMultiStatusFilter, selectedStatuses, statusCountKey]);
 
   useEffect(() => {
     const filteredIds = new Set(pageTickets.map((ticket) => ticket.id));
@@ -295,17 +415,51 @@ export default function Dashboard() {
                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#8e8b82]" />
                 <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search reservations" className={`${darkInput} pl-9`} />
               </div>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="h-10 w-full rounded-[8px] border-[#252320] bg-[#1f1e1b] text-[#faf9f5] shadow-none focus:ring-[#cc785c] sm:w-44">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="rounded-[12px] border-[#e6dfd8] bg-[#faf9f5] text-[#141413]">
-                  <SelectItem value="all">All statuses</SelectItem>
-                  {STATUSES.map((s) => (
-                    <SelectItem key={s} value={s}>{s}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button type="button" variant="outline" className={`h-10 w-full justify-start rounded-[8px] border-[#252320] bg-[#1f1e1b] px-3 text-[#faf9f5] shadow-none hover:bg-[#252320] hover:text-[#faf9f5] sm:w-auto ${selectedStatuses.length ? "border-[#cc785c] bg-[#2a211d]" : ""}`}>
+                    <Filter className="mr-2 h-4 w-4 text-[#cc785c]" />
+                    Status
+                    {selectedStatuses.length > 0 && (
+                      <span className="ml-2 rounded-full bg-[#cc785c] px-2 py-0.5 text-[11px] font-semibold leading-none text-white">
+                        {selectedStatuses.length}
+                      </span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="start" className="w-[min(22rem,calc(100vw-2rem))] rounded-[14px] border-[#e6dfd8] bg-[#fffdf8] p-2 text-[#141413] shadow-xl">
+                  <div className="flex items-center justify-between border-b border-[#efe9de] px-3 py-2.5">
+                    <p className="text-sm font-semibold tracking-[-0.01em] text-[#252523]">Filter by Status</p>
+                    {selectedStatuses.length > 0 && (
+                      <button type="button" onClick={() => setSelectedStatuses([])} className="text-xs font-medium text-[#cc785c] hover:text-[#a9583e]">
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                  <div className="mt-1 space-y-1">
+                    {STATUSES.map((status) => {
+                      const active = selectedStatuses.includes(status);
+                      return (
+                        <button
+                          key={status}
+                          type="button"
+                          onClick={() => toggleStatusFilter(status)}
+                          className={`flex w-full items-center gap-3 rounded-[10px] px-3 py-2.5 text-left text-sm transition-colors ${active ? "bg-[#efe9de] text-[#141413]" : "text-[#252523] hover:bg-[#f4eee6]"}`}
+                        >
+                          <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${active ? "border-[#cc785c] bg-[#cc785c] text-white" : "border-transparent text-transparent"}`}>
+                            <Check className={`h-3.5 w-3.5 ${active ? "opacity-100" : "opacity-0"}`} />
+                          </span>
+                          <StatusIcon status={status} className={`h-4 w-4 ${active ? "text-[#cc785c]" : "text-[#8e8b82]"}`} />
+                          <span className="min-w-0 flex-1 truncate font-medium">{status}</span>
+                          <span className="rounded-full border border-[#e6dfd8] bg-[#faf9f5] px-2 py-0.5 text-xs font-semibold tabular-nums text-[#6c6a64]">
+                            {statusCounts[status] || 0}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
             <div className="flex overflow-hidden rounded-[8px] border border-[#252320] bg-[#1f1e1b]">
               <button

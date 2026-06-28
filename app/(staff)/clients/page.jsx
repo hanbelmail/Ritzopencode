@@ -29,7 +29,7 @@ const sortOptions = [
   { value: "reservations", label: "Reservations" },
   { value: "name", label: "Name" },
 ];
-const pageSizeOptions = [25, 50, 100];
+const pageSizeOptions = [5, 10, 25, 50, 100];
 
 function dateValue(value) {
   if (!value) return 0;
