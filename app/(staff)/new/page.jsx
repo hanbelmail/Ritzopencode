@@ -14,6 +14,7 @@ import { DEFAULT_SETTINGS, useSettings, useTicket, useTicketActions, STATUSES } 
 import { computeTicket, fmtMoney } from "@/lib/calc";
 import { notifyPriceSent } from "@/lib/price-sent-email";
 import { notifyPaymentSubmitted } from "@/lib/payment-submitted-alert";
+import { notifyBookingConfirmedHotel } from "@/lib/booking-confirmed-hotel-alert";
 import { useToast } from "@/components/ui/use-toast";
 import { Upload, X } from "lucide-react";
 
@@ -217,6 +218,22 @@ export default function NewReservation() {
           toast({
             title: "Payment alert failed",
             description: error.message || "The reservation was saved, but the staff alert was not sent.",
+            variant: "destructive",
+          });
+        }
+      }
+      if (ticket.status === "BOOKING CONFIRMED") {
+        try {
+          const result = await notifyBookingConfirmedHotel(ticket.id);
+          toast({
+            title: result.sent ? "Hotel alert sent" : "Hotel alert skipped",
+            description: result.sent ? "Active hotel inboxes received the booking request." : result.reason,
+            variant: result.sent ? "success" : "destructive",
+          });
+        } catch (error) {
+          toast({
+            title: "Hotel alert failed",
+            description: error.message || "The reservation was saved, but the hotel alert was not sent.",
             variant: "destructive",
           });
         }

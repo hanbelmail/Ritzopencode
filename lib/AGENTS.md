@@ -2,7 +2,7 @@
 
 ## Purpose
 
-- Owns shared providers, authentication context, Convex-backed reservation/settings store hooks, price-sent, quote-alert, and payment-submitted email helpers, UI preference/localStorage helpers, legacy localStorage migration helpers, calculations, query client setup, app params, not-found component, and utilities.
+- Owns shared providers, authentication context, Convex-backed reservation/settings store hooks, price-sent, quote-alert, payment-submitted, and booking-confirmed hotel email helpers, UI preference/localStorage helpers, legacy localStorage migration helpers, calculations, query client setup, app params, not-found component, and utilities.
 
 ## Ownership
 
@@ -15,6 +15,8 @@
 - `quote-alert-email-server.js` owns the server-side Resend template, active staff-recipient filtering, skip rules, and successful-delivery ticket stamp for new quote staff alerts.
 - `payment-submitted-alert.js` owns the client helper for calling the payment-submitted staff alert API after ticket payment updates.
 - `payment-submitted-alert-email-server.js` owns the server-side Resend template, active staff-recipient filtering, payment proof screenshot attachment, skip rules, and successful-delivery ticket stamp for payment-submitted staff alerts.
+- `booking-confirmed-hotel-alert.js` owns the client helper for calling the booking-confirmed hotel alert API after booking confirmation updates.
+- `booking-confirmed-hotel-alert-email-server.js` owns the server-side Resend template, active hotel-recipient filtering, fixed `1609E` subject, skip rules, and successful-delivery ticket stamp for booking-confirmed hotel alerts.
 - `StoreMigrator.jsx` owns one-time import of legacy browser-local reservation/settings data into Convex.
 - `ui-preferences.js` owns browser-local UI preference keys such as dashboard table column visibility.
 - `AuthContext.jsx` adapts Convex Auth state/actions to the app's existing `useAuth()` contract.
@@ -24,7 +26,7 @@
 
 ## Local Contracts
 
-- Treat Convex `tickets` and `settings` tables as the live persistence contract for reservation/settings data, including app name, public home page variant, quote webhook URL/enabled settings, email alert settings and recipients, `quoteAlertEmailSentAt`, `priceSentStaffEmailSentAt`, `paymentSubmittedStaffEmailSentAt`, and R2 object-key fields such as `paymentScreenshotKey` and `retailPriceScreenshotKey`.
+- Treat Convex `tickets` and `settings` tables as the live persistence contract for reservation/settings data, including app name, public home page variant, quote webhook URL/enabled settings, email alert settings and staff/hotel recipients, `quoteAlertEmailSentAt`, `priceSentStaffEmailSentAt`, `paymentSubmittedStaffEmailSentAt`, `bookingConfirmedHotelEmailSentAt`, and R2 object-key fields such as `paymentScreenshotKey` and `retailPriceScreenshotKey`.
 - Treat legacy `ritz_*` localStorage keys as import-only compatibility contracts for existing browser data.
 - Keep browser-only storage access guarded for server rendering where applicable.
 - Keep R2 credentials server-only; client components must use API routes for signed payment proof and retail price screenshot upload/view URLs.

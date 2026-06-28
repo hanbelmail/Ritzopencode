@@ -22,6 +22,7 @@ import TicketTable from "@/components/tickets/TicketTable";
 import { useTickets, useTicketActions, STATUSES } from "@/lib/store";
 import { notifyPriceSent } from "@/lib/price-sent-email";
 import { notifyPaymentSubmitted } from "@/lib/payment-submitted-alert";
+import { notifyBookingConfirmedHotel } from "@/lib/booking-confirmed-hotel-alert";
 import { useToast } from "@/components/ui/use-toast";
 
 const primaryButton = "h-10 rounded-[8px] bg-[#cc785c] px-5 text-sm font-medium text-white shadow-none hover:bg-[#a9583e]";
@@ -133,6 +134,23 @@ export default function Dashboard() {
         toast({
           title: "Payment alert failed",
           description: error.message || "The reservation was updated, but the staff alert was not sent.",
+          variant: "destructive",
+        });
+      }
+    }
+
+    if (status === "BOOKING CONFIRMED") {
+      try {
+        const result = await notifyBookingConfirmedHotel(id);
+        toast({
+          title: result.sent ? "Hotel alert sent" : "Hotel alert skipped",
+          description: result.sent ? "Active hotel inboxes received the booking request." : result.reason,
+          variant: result.sent ? "success" : "destructive",
+        });
+      } catch (error) {
+        toast({
+          title: "Hotel alert failed",
+          description: error.message || "The reservation was updated, but the hotel alert was not sent.",
           variant: "destructive",
         });
       }

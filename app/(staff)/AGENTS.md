@@ -2,7 +2,7 @@
 
 ## Purpose
 
-- Owns authenticated staff reservation management pages, analytics, staff-only quote webhook settings, staff email alert settings, and public home page design selection.
+- Owns authenticated staff reservation management pages, analytics, staff-only quote webhook settings, staff/hotel email alert settings, and public home page design selection.
 
 ## Ownership
 
@@ -10,8 +10,8 @@
 - `dashboard/` owns reservation list, board/table switching, table column controls, filtering, CSV export, deletion, status updates, price-sent email triggering, and summary stats.
 - `analytics/` owns staff-only reservation analytics computed from Convex tickets, including KPI cards, charts, grouped tables, date range filtering, and analytics CSV export.
 - `api-dashboard/` owns the staff-only quote webhook URL/enabled setting and the public home page variant setting.
-- `email-dashboard/` owns staff email alert controls, active/inactive staff email recipients, the new quote alert setting, the disabled-by-default price-sent staff copy setting, and the disabled-by-default payment-submitted staff alert setting.
-- `new/` owns reservation creation and edit saves, optional retail price screenshot upload to R2, warning before `PRICE SENT` saves without that screenshot, and price-sent email triggering after a `PRICE SENT` save.
+- `email-dashboard/` owns staff email alert controls, active/inactive staff email recipients, active/inactive hotel email recipients, the new quote alert setting, the disabled-by-default price-sent staff copy setting, the disabled-by-default payment-submitted staff alert setting, and the disabled-by-default booking-confirmed hotel alert setting.
+- `new/` owns reservation creation and edit saves, optional retail price screenshot upload to R2, warning before `PRICE SENT` saves without that screenshot, and status-driven email alert triggering after saves.
 - `calendar/`, `clients/`, and `settings/` own their respective staff management views; `settings/` includes hotel info and the persisted app name used for the browser/tab title.
 
 ## Local Contracts
@@ -22,6 +22,7 @@
 - Saving or changing a reservation to `PRICE SENT` should call the protected notification API after Convex persistence so guests receive the ticket link and quote details once; if a retail price screenshot is selected, upload it and persist `retailPriceScreenshotKey` before calling the notification API.
 - `PRICE SENT` notification delivery may also send the same guest email and retail screenshot attachment to active staff recipients when email alerts and `priceSentStaffAlertEnabled` are enabled; staff copy delivery is stamped with `priceSentStaffEmailSentAt`.
 - `PAYMENT SUBMITTED` changes should trigger the payment-submitted staff alert API after Convex persistence; the alert attaches the payment proof screenshot when `paymentScreenshotKey` is present and stamps `paymentSubmittedStaffEmailSentAt`.
+- `BOOKING CONFIRMED` changes should trigger the booking-confirmed hotel alert API after Convex persistence; the alert sends to active hotel recipients with subject `1609E` and stamps `bookingConfirmedHotelEmailSentAt`.
 - Public quote creation triggers the new quote staff alert API after Convex persistence; delivery is skipped unless email alerts, the new quote alert, and at least one active staff recipient are configured.
 
 ## Work Guidance
