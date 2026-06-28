@@ -558,7 +558,9 @@ export default function Dashboard() {
           </div>
         )}
 
-      {paginationControls}
+      <div className="hidden md:block">
+        {paginationControls}
+      </div>
 
       {view === "board" ? (
         <div className="space-y-3">

@@ -90,27 +90,6 @@ export default function TicketTable({ tickets, selectedIds, onSelectedIdsChange 
     <div className="rounded-[12px] border border-[#e6dfd8] bg-[#faf9f5]">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e6dfd8] px-4 py-3">
         <p className="text-xs font-medium uppercase tracking-[0.14em] text-[#8e8b82]">Table view</p>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button type="button" variant="outline" className="h-9 rounded-[8px] border-[#d8d0c7] bg-[#fffdf8] text-xs text-[#252523] hover:bg-[#efe9de]">
-              <Columns3 className="mr-2 h-4 w-4" /> Columns
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="max-h-[360px] w-56 overflow-y-auto rounded-[12px] border-[#e6dfd8] bg-[#faf9f5] p-1 text-[#141413]">
-            {columns.map((column) => (
-              <DropdownMenuCheckboxItem
-                key={column.key}
-                checked={visibleColumnSet.has(column.key)}
-                disabled={visibleColumns.length === 1 && visibleColumnSet.has(column.key)}
-                onCheckedChange={(checked) => toggleColumn(column.key, checked === true)}
-                onSelect={(event) => event.preventDefault()}
-                className="rounded-[8px] focus:bg-[#efe9de]"
-              >
-                {column.label}
-              </DropdownMenuCheckboxItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
       <div className="overflow-x-auto">
         <Table>
@@ -163,6 +142,29 @@ export default function TicketTable({ tickets, selectedIds, onSelectedIdsChange 
             )}
           </TableBody>
         </Table>
+      </div>
+      <div className="flex justify-end border-t border-[#e6dfd8] px-4 py-3">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button type="button" variant="outline" className="h-9 rounded-[8px] border-[#d8d0c7] bg-[#fffdf8] text-xs text-[#252523] hover:bg-[#efe9de]">
+              <Columns3 className="mr-2 h-4 w-4" /> Columns
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="max-h-[360px] w-56 overflow-y-auto rounded-[12px] border-[#e6dfd8] bg-[#faf9f5] p-1 text-[#141413]">
+            {columns.map((column) => (
+              <DropdownMenuCheckboxItem
+                key={column.key}
+                checked={visibleColumnSet.has(column.key)}
+                disabled={visibleColumns.length === 1 && visibleColumnSet.has(column.key)}
+                onCheckedChange={(checked) => toggleColumn(column.key, checked === true)}
+                onSelect={(event) => event.preventDefault()}
+                className="rounded-[8px] focus:bg-[#efe9de]"
+              >
+                {column.label}
+              </DropdownMenuCheckboxItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   );
