@@ -373,8 +373,16 @@ export default function NewReservation() {
               {errors.retailPrice && <p className="text-xs font-medium text-red-600">{errors.retailPrice}</p>}
             </div>
             <div className="space-y-2">
-              <Label>Adjustment <span className="text-muted-foreground font-normal">(optional $)</span></Label>
-              <Input type="number" step="0.01" value={form.adjustment} onChange={(e) => set("adjustment", e.target.value)} placeholder="0" />
+              <Label>Status</Label>
+              <Select value={form.status} onValueChange={(v) => set("status", v)}>
+                <SelectTrigger>
+                  <span className={form.status ? "" : "text-muted-foreground"}>{form.status || "Select status"}</span>
+                </SelectTrigger>
+                <SelectContent>
+                  {statusOptions.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              {errors.status && <p className="text-xs font-medium text-red-600">{errors.status}</p>}
             </div>
           </div>
           <div className="space-y-2">
@@ -416,16 +424,8 @@ export default function NewReservation() {
             )}
           </div>
           <div className="space-y-2">
-            <Label>Status</Label>
-            <Select value={form.status} onValueChange={(v) => set("status", v)}>
-              <SelectTrigger>
-                <span className={form.status ? "" : "text-muted-foreground"}>{form.status || "Select status"}</span>
-              </SelectTrigger>
-              <SelectContent>
-                {statusOptions.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            {errors.status && <p className="text-xs font-medium text-red-600">{errors.status}</p>}
+            <Label>Adjustment <span className="text-muted-foreground font-normal">(optional $)</span></Label>
+            <Input type="number" step="0.01" value={form.adjustment} onChange={(e) => set("adjustment", e.target.value)} placeholder="0" />
           </div>
           <div className="space-y-2">
             <Label>Notes / special requests</Label>
