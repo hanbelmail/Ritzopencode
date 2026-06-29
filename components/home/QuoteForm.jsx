@@ -180,7 +180,7 @@ export default function QuoteForm() {
         </div>
       </div>
       <div className="space-y-2">
-        <Label className="text-sm font-medium text-[#252523]">Notes / special requests</Label>
+        <Label className="text-sm font-medium text-[#252523]">Notes / special requests <span className="text-[#6c6a64] font-normal">(optional)</span></Label>
         <Textarea value={form.notes} onChange={(e) => set("notes", e.target.value)} className="h-20 rounded-[8px] border-[#e6dfd8] bg-[#faf9f5] shadow-none focus-visible:ring-[#cc785c]" />
       </div>
       <Button type="submit" className="h-10 w-full rounded-[8px] bg-[#cc785c] text-sm font-medium text-white shadow-none hover:bg-[#a9583e]">Request my quote</Button>
