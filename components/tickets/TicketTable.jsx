@@ -29,7 +29,6 @@ const columns = [
   { key: "rateOffered", label: "Rate Offered", render: (t) => <span className="font-medium">{fmtMoney(t.rateOffered)}</span> },
   { key: "costPerNight", label: "Per Night", render: (t) => fmtMoney(t.costPerNight) },
   { key: "paymentMethod", label: "Method", render: (t) => t.paymentMethod || "—" },
-  { key: "informedHotel", label: "Informed", render: (t) => (t.informedHotel ? "Yes" : "No") },
   { key: "notes", label: "Notes/special request", render: (t) => <span className="block max-w-64 truncate" title={t.notes || ""}>{t.notes || "—"}</span> },
   { key: "referredBy", label: "Referred By", render: (t) => t.referredBy || "—" },
 ];

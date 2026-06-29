@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 import GuestNamesInput from "@/components/forms/GuestNamesInput";
 import ReservationDatePicker from "@/components/forms/ReservationDatePicker";
@@ -61,7 +60,6 @@ export default function NewReservation() {
     adjustment: "",
     notes: "",
     status: "PRICE SENT",
-    informedHotel: false,
   });
   const visibleRoomOptions = getVisibleRoomNames(settings);
   const singleVisibleRoom = visibleRoomOptions.length === 1 ? visibleRoomOptions[0] : "";
@@ -84,7 +82,6 @@ export default function NewReservation() {
       adjustment: existing?.adjustment ?? "",
       notes: existing?.notes || "",
       status: existing?.status?.trim() || (existing ? "QUOTE REQUESTED" : "PRICE SENT"),
-      informedHotel: existing?.informedHotel || false,
     });
     setInitialized(true);
   }, [editId, existing, initialized, settings.defaultRetailPrice]);
@@ -418,23 +415,17 @@ export default function NewReservation() {
               </label>
             )}
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
-            <div className="space-y-2">
-              <Label>Status</Label>
-              <Select value={form.status} onValueChange={(v) => set("status", v)}>
-                <SelectTrigger>
-                  <span className={form.status ? "" : "text-muted-foreground"}>{form.status || "Select status"}</span>
-                </SelectTrigger>
-                <SelectContent>
-                  {statusOptions.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              {errors.status && <p className="text-xs font-medium text-red-600">{errors.status}</p>}
-            </div>
-            <div className="flex items-center justify-between border rounded-lg px-3 py-2.5">
-              <Label className="font-normal">Informed hotel</Label>
-              <Switch checked={form.informedHotel} onCheckedChange={(v) => set("informedHotel", v)} />
-            </div>
+          <div className="space-y-2">
+            <Label>Status</Label>
+            <Select value={form.status} onValueChange={(v) => set("status", v)}>
+              <SelectTrigger>
+                <span className={form.status ? "" : "text-muted-foreground"}>{form.status || "Select status"}</span>
+              </SelectTrigger>
+              <SelectContent>
+                {statusOptions.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            {errors.status && <p className="text-xs font-medium text-red-600">{errors.status}</p>}
           </div>
           <div className="space-y-2">
             <Label>Notes / special requests</Label>

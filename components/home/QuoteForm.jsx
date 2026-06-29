@@ -79,7 +79,6 @@ export default function QuoteForm() {
       retailPrice: null,
       adjustment: 0,
       status: "QUOTE REQUESTED",
-      informedHotel: false,
       ...computed,
       rateOffered: null,
       costPerNight: null,

@@ -62,7 +62,6 @@ const csvColumns = [
   { key: "rateOffered", label: "Rate Offered" },
   { key: "costPerNight", label: "Cost Per Night" },
   { key: "paymentMethod", label: "Payment Method" },
-  { key: "informedHotel", label: "Informed Hotel", value: (t) => (t.informedHotel ? "Yes" : "No") },
   { key: "notes", label: "Notes" },
   { key: "referredBy", label: "Referred By" },
 ];
