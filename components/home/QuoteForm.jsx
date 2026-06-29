@@ -107,7 +107,10 @@ export default function QuoteForm() {
         <div>
           <h3 className="font-medium text-lg">Quote request received</h3>
           <p className="text-sm text-[#6c6a64] mt-1">
-            Our team will review your dates and add your price shortly. Save your Ticket ID to check back:
+            Your request has been sent successfully. We&apos;ll email your private price shortly, usually in less than 5 minutes.
+          </p>
+          <p className="text-sm text-[#6c6a64] mt-2">
+            Save your Ticket ID to return anytime and view your quote status:
           </p>
         </div>
         <div className="flex items-center justify-center gap-2">
