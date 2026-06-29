@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 import GuestNamesInput from "@/components/forms/GuestNamesInput";
 import ReservationDatePicker from "@/components/forms/ReservationDatePicker";
 import { DEFAULT_SETTINGS, useSettings, useTicket, useTicketActions, STATUSES } from "@/lib/store";
@@ -17,6 +17,21 @@ import { notifyPaymentSubmitted } from "@/lib/payment-submitted-alert";
 import { notifyBookingConfirmedHotel } from "@/lib/booking-confirmed-hotel-alert";
 import { useToast } from "@/components/ui/use-toast";
 import { Upload, X } from "lucide-react";
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function uniqueNames(names) {
+  return Array.from(new Set(names.map((name) => String(name || "").trim()).filter(Boolean)));
+}
+
+function getVisibleRoomNames(settings) {
+  return uniqueNames((settings.roomTypes || []).filter((room) => !room.hidden).map((room) => room.name));
+}
+
+function includeCurrentOption(options, current) {
+  const value = String(current || "").trim();
+  return value && !options.includes(value) ? [value, ...options] : options;
+}
 
 export default function NewReservation() {
   const router = useRouter();
@@ -32,6 +47,7 @@ export default function NewReservation() {
   const [retailScreenshotPreview, setRetailScreenshotPreview] = useState(null);
   const [retailScreenshotUrl, setRetailScreenshotUrl] = useState(null);
   const [retailScreenshotError, setRetailScreenshotError] = useState("");
+  const [errors, setErrors] = useState({});
 
   const [guests, setGuests] = useState([""]);
   const [form, setForm] = useState({
@@ -47,6 +63,10 @@ export default function NewReservation() {
     status: "PRICE SENT",
     informedHotel: false,
   });
+  const visibleRoomOptions = getVisibleRoomNames(settings);
+  const singleVisibleRoom = visibleRoomOptions.length === 1 ? visibleRoomOptions[0] : "";
+  const roomOptions = includeCurrentOption(visibleRoomOptions, form.roomType);
+  const statusOptions = includeCurrentOption(STATUSES, form.status);
 
   useEffect(() => {
     if (initialized) return;
@@ -59,15 +79,20 @@ export default function NewReservation() {
       email: existing?.email || "",
       phone: existing?.phone || "",
       referredBy: existing?.referredBy || "",
-      roomType: existing?.roomType || "",
+      roomType: existing?.roomType?.trim() || "",
       retailPrice: existing ? (existing.retailPrice ?? "") : settings.defaultRetailPrice,
       adjustment: existing?.adjustment ?? "",
       notes: existing?.notes || "",
-      status: existing?.status || "PRICE SENT",
+      status: existing?.status?.trim() || (existing ? "QUOTE REQUESTED" : "PRICE SENT"),
       informedHotel: existing?.informedHotel || false,
     });
     setInitialized(true);
   }, [editId, existing, initialized, settings.defaultRetailPrice]);
+
+  useEffect(() => {
+    if (!initialized || form.roomType || !singleVisibleRoom) return;
+    setForm((current) => current.roomType ? current : { ...current, roomType: singleVisibleRoom });
+  }, [form.roomType, initialized, singleVisibleRoom]);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
   const computed = computeTicket(form, settings);
@@ -161,6 +186,31 @@ export default function NewReservation() {
 
   const submit = async (e) => {
     e.preventDefault();
+    const guestNames = guests.map((g) => g.trim()).filter(Boolean);
+    const email = form.email.trim();
+    const retailPrice = form.retailPrice === "" || form.retailPrice == null ? null : Number(form.retailPrice);
+    const nextErrors = {};
+
+    if (!guestNames.length) nextErrors.guests = "Add at least one guest name.";
+    if (!form.checkIn) nextErrors.checkIn = "Select a check-in date.";
+    if (!form.checkOut) nextErrors.checkOut = "Select a check-out date.";
+    if (!form.roomType) nextErrors.roomType = "Select a room type.";
+    if (!form.status || !STATUSES.includes(form.status)) nextErrors.status = "Select a valid status.";
+    if (!email) {
+      nextErrors.email = "Enter an email address.";
+    } else if (!EMAIL_PATTERN.test(email)) {
+      nextErrors.email = "Enter a valid email address.";
+    }
+    if (form.status === "PRICE SENT" && (retailPrice === null || Number.isNaN(retailPrice) || retailPrice <= 0)) {
+      nextErrors.retailPrice = "Enter a valid retail price before saving PRICE SENT.";
+    }
+
+    if (Object.keys(nextErrors).length) {
+      setErrors(nextErrors);
+      return;
+    }
+
+    setErrors({});
     const hasRetailScreenshot = Boolean(retailScreenshotFile || existing?.retailPriceScreenshotKey);
     if (form.status === "PRICE SENT" && !hasRetailScreenshot) {
       const shouldContinue = window.confirm("No retail price screenshot is attached. Send the PRICE SENT email without the screenshot?");
@@ -170,8 +220,9 @@ export default function NewReservation() {
     setSaving(true);
     const data = {
       ...form,
-      guests: guests.filter((g) => g.trim()),
-      retailPrice: form.retailPrice === "" ? null : Number(form.retailPrice),
+      email,
+      guests: guestNames,
+      retailPrice,
       adjustment: form.adjustment === "" ? 0 : Number(form.adjustment),
       ...computeTicket(form, settings),
       confirmationDate:
@@ -272,6 +323,7 @@ export default function NewReservation() {
           <div className="space-y-2">
             <Label>Guest names</Label>
             <GuestNamesInput guests={guests} onChange={setGuests} />
+            {errors.guests && <p className="text-xs font-medium text-red-600">{errors.guests}</p>}
           </div>
           <ReservationDatePicker
             checkIn={form.checkIn}
@@ -280,10 +332,17 @@ export default function NewReservation() {
             onCheckOutChange={(v) => set("checkOut", v)}
             excludeId={editId}
           />
+          {(errors.checkIn || errors.checkOut) && (
+            <div className="grid grid-cols-1 gap-1 text-xs font-medium text-red-600 md:grid-cols-2">
+              <p>{errors.checkIn}</p>
+              <p>{errors.checkOut}</p>
+            </div>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Email</Label>
-              <Input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} />
+              <Input type="email" aria-invalid={Boolean(errors.email)} value={form.email} onChange={(e) => set("email", e.target.value)} />
+              {errors.email && <p className="text-xs font-medium text-red-600">{errors.email}</p>}
             </div>
             <div className="space-y-2">
               <Label>Phone</Label>
@@ -298,19 +357,23 @@ export default function NewReservation() {
             <div className="space-y-2">
               <Label>Room type</Label>
               <Select value={form.roomType} onValueChange={(v) => set("roomType", v)}>
-                <SelectTrigger><SelectValue placeholder="Select room type" /></SelectTrigger>
+                <SelectTrigger>
+                  <span className={form.roomType ? "" : "text-muted-foreground"}>{form.roomType || "Select room type"}</span>
+                </SelectTrigger>
                 <SelectContent>
-                  {(settings.roomTypes || []).filter((r) => !r.hidden).map((r) => (
-                    <SelectItem key={r.name} value={r.name}>{r.name}</SelectItem>
+                  {roomOptions.map((room) => (
+                    <SelectItem key={room} value={room}>{room}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {errors.roomType && <p className="text-xs font-medium text-red-600">{errors.roomType}</p>}
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Retail price (total)</Label>
-              <Input type="number" step="0.01" value={form.retailPrice} onChange={(e) => set("retailPrice", e.target.value)} />
+              <Input type="number" step="0.01" aria-invalid={Boolean(errors.retailPrice)} value={form.retailPrice} onChange={(e) => set("retailPrice", e.target.value)} />
+              {errors.retailPrice && <p className="text-xs font-medium text-red-600">{errors.retailPrice}</p>}
             </div>
             <div className="space-y-2">
               <Label>Adjustment <span className="text-muted-foreground font-normal">(optional $)</span></Label>
@@ -359,11 +422,14 @@ export default function NewReservation() {
             <div className="space-y-2">
               <Label>Status</Label>
               <Select value={form.status} onValueChange={(v) => set("status", v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <span className={form.status ? "" : "text-muted-foreground"}>{form.status || "Select status"}</span>
+                </SelectTrigger>
                 <SelectContent>
-                  {STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  {statusOptions.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                 </SelectContent>
               </Select>
+              {errors.status && <p className="text-xs font-medium text-red-600">{errors.status}</p>}
             </div>
             <div className="flex items-center justify-between border rounded-lg px-3 py-2.5">
               <Label className="font-normal">Informed hotel</Label>

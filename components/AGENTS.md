@@ -17,6 +17,8 @@
 
 - Components must not introduce new persistence contracts; route mutations and storage live in `lib/`.
 - `components/home/QuoteForm.jsx` creates Convex quote tickets through `lib/store.js` and may call the app-level quote webhook route after creation.
+- `components/home/QuoteForm.jsx` requires at least one guest name, check-in, check-out, room name, and a valid email before creating a public quote ticket.
+- `components/home/QuoteForm.jsx` auto-selects the only visible room type from settings for public quote requests.
 - `components/home/QuoteForm.jsx` limits public quote requests to 4 guest names, including children; `components/forms/GuestNamesInput.jsx` accepts optional `maxGuests` for callers that need a cap.
 - `components/forms/ReservationDatePicker.jsx` marks finalized reservations (`PAYMENT VERIFIED`, `BOOKING CONFIRMED`) and must preserve same-day checkout/check-in turnover behavior.
 - Keep shared components route-agnostic unless they are in a domain folder such as `home/`, `ticket/`, or `tickets/`.

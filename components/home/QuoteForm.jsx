@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,6 +14,16 @@ import { DEFAULT_SETTINGS, useSettings, useTicketActions } from "@/lib/store";
 import { computeTicket } from "@/lib/calc";
 
 const MAX_PUBLIC_GUESTS = 4;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function getVisibleRoomNames(settings) {
+  return Array.from(
+    new Set((settings.roomTypes || [])
+      .filter((room) => !room.hidden)
+      .map((room) => String(room.name || "").trim())
+      .filter(Boolean))
+  );
+}
 
 export default function QuoteForm() {
   const settings = useSettings() || DEFAULT_SETTINGS;
@@ -24,23 +34,47 @@ export default function QuoteForm() {
   });
   const [created, setCreated] = useState(null);
   const [copied, setCopied] = useState(false);
-  const [guestError, setGuestError] = useState("");
+  const [errors, setErrors] = useState({});
+  const visibleRoomOptions = getVisibleRoomNames(settings);
+  const singleVisibleRoom = visibleRoomOptions.length === 1 ? visibleRoomOptions[0] : "";
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+
+  useEffect(() => {
+    if (form.roomType || !singleVisibleRoom) return;
+    setForm((current) => current.roomType ? current : { ...current, roomType: singleVisibleRoom });
+  }, [form.roomType, singleVisibleRoom]);
 
   const submit = async (e) => {
     e.preventDefault();
     const guestNames = guests.map((g) => g.trim()).filter(Boolean);
+    const email = form.email.trim();
+    const nextErrors = {};
+
+    if (!guestNames.length) nextErrors.guests = "Add at least one guest name.";
+    if (!form.checkIn) nextErrors.checkIn = "Select a check-in date.";
+    if (!form.checkOut) nextErrors.checkOut = "Select a check-out date.";
+    if (!form.roomType) nextErrors.roomType = "Select a room name.";
+    if (!email) {
+      nextErrors.email = "Enter an email address.";
+    } else if (!EMAIL_PATTERN.test(email)) {
+      nextErrors.email = "Enter a valid email address.";
+    }
 
     if (guestNames.length > MAX_PUBLIC_GUESTS) {
-      setGuestError(`Maximum ${MAX_PUBLIC_GUESTS} guests total, including children.`);
+      nextErrors.guests = `Maximum ${MAX_PUBLIC_GUESTS} guests total, including children.`;
+    }
+
+    if (Object.keys(nextErrors).length) {
+      setErrors(nextErrors);
       return;
     }
 
-    setGuestError("");
-    const computed = computeTicket({ ...form, retailPrice: null, adjustment: 0 }, settings);
+    setErrors({});
+    const sanitizedForm = { ...form, email };
+    const computed = computeTicket({ ...sanitizedForm, retailPrice: null, adjustment: 0 }, settings);
     const ticket = await createTicket({
-      ...form,
+      ...sanitizedForm,
       guests: guestNames,
       retailPrice: null,
       adjustment: 0,
@@ -103,7 +137,7 @@ export default function QuoteForm() {
         <Label className="text-sm font-medium text-[#252523]">Guest names</Label>
         <GuestNamesInput guests={guests} onChange={setGuests} maxGuests={MAX_PUBLIC_GUESTS} />
         <p className="text-xs leading-relaxed text-red-600">Provide the full names of every guest. Maximum {MAX_PUBLIC_GUESTS} guests total, including children.</p>
-        {guestError && <p className="text-xs font-medium text-red-600">{guestError}</p>}
+        {errors.guests && <p className="text-xs font-medium text-red-600">{errors.guests}</p>}
       </div>
       <ReservationDatePicker
         checkIn={form.checkIn}
@@ -111,10 +145,17 @@ export default function QuoteForm() {
         onCheckInChange={(v) => set("checkIn", v)}
         onCheckOutChange={(v) => set("checkOut", v)}
       />
+      {(errors.checkIn || errors.checkOut) && (
+        <div className="grid grid-cols-1 gap-1 text-xs font-medium text-red-600 md:grid-cols-2">
+          <p>{errors.checkIn}</p>
+          <p>{errors.checkOut}</p>
+        </div>
+      )}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label className="text-sm font-medium text-[#252523]">Email</Label>
-          <Input className="h-10 rounded-[8px] border-[#e6dfd8] bg-[#faf9f5] shadow-none focus-visible:ring-[#cc785c]" type="email" required value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="you@email.com" />
+          <Input className="h-10 rounded-[8px] border-[#e6dfd8] bg-[#faf9f5] shadow-none focus-visible:ring-[#cc785c]" type="email" required aria-invalid={Boolean(errors.email)} value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="you@email.com" />
+          {errors.email && <p className="text-xs font-medium text-red-600">{errors.email}</p>}
         </div>
         <div className="space-y-2">
           <Label className="text-sm font-medium text-[#252523]">Phone</Label>
@@ -131,11 +172,12 @@ export default function QuoteForm() {
           <Select value={form.roomType} onValueChange={(v) => set("roomType", v)} required>
             <SelectTrigger className="h-10 rounded-[8px] border-[#e6dfd8] bg-[#faf9f5] shadow-none focus:ring-[#cc785c]"><SelectValue placeholder="Select room type" /></SelectTrigger>
             <SelectContent>
-              {(settings.roomTypes || []).filter((r) => !r.hidden).map((r) => (
-                <SelectItem key={r.name} value={r.name}>{r.name}</SelectItem>
+              {visibleRoomOptions.map((room) => (
+                <SelectItem key={room} value={room}>{room}</SelectItem>
               ))}
             </SelectContent>
           </Select>
+          {errors.roomType && <p className="text-xs font-medium text-red-600">{errors.roomType}</p>}
         </div>
       </div>
       <div className="space-y-2">

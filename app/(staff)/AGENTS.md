@@ -21,6 +21,8 @@
 - Dashboard reservation filtering and paging use the paginated Convex ticket query through `lib/store.js`; avoid reintroducing full-list browser filtering for the main dashboard list.
 - Status labels must stay aligned with `STATUSES` from `lib/store.js`.
 - Saving or changing a reservation to `PRICE SENT` should call the protected notification API after Convex persistence so guests receive the ticket link and quote details once; if a retail price screenshot is selected, upload it and persist `retailPriceScreenshotKey` before calling the notification API.
+- `new/` must validate before saving that a reservation has at least one guest name, check-in, check-out, room type, valid email, valid status, and a positive retail price when status is `PRICE SENT`.
+- `new/` auto-selects the only visible room type for new reservations and edit-mode tickets without a saved room, and preserves saved edit-mode room/status values in selects even when settings changed.
 - `PRICE SENT` notification delivery may also send the same guest email and retail screenshot attachment to active staff recipients when email alerts and `priceSentStaffAlertEnabled` are enabled; staff copy delivery is stamped with `priceSentStaffEmailSentAt`.
 - `PAYMENT SUBMITTED` changes should trigger the payment-submitted staff alert API after Convex persistence; the alert attaches the payment proof screenshot when `paymentScreenshotKey` is present and stamps `paymentSubmittedStaffEmailSentAt`.
 - `BOOKING CONFIRMED` changes should trigger the booking-confirmed hotel alert API after Convex persistence; the alert sends to active hotel recipients with subject `1609E` and stamps `bookingConfirmedHotelEmailSentAt`.
