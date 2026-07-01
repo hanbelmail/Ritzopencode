@@ -25,4 +25,9 @@ export default defineSchema({
     data: v.any(),
     updatedAt: v.string(),
   }).index("by_key", ["key"]),
+  dashboardPreferences: defineTable({
+    userId: v.id("users"),
+    data: v.any(),
+    updatedAt: v.string(),
+  }).index("by_userId", ["userId"]),
 });

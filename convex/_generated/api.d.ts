@@ -9,6 +9,7 @@
  */
 
 import type * as auth from "../auth.js";
+import type * as dashboardPreferences from "../dashboardPreferences.js";
 import type * as http from "../http.js";
 import type * as settings from "../settings.js";
 import type * as tickets from "../tickets.js";
@@ -21,6 +22,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
+  dashboardPreferences: typeof dashboardPreferences;
   http: typeof http;
   settings: typeof settings;
   tickets: typeof tickets;

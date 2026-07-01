@@ -204,6 +204,40 @@
     .status-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
     .status-list code { border-radius: 999px; background: #f4eadf; padding: 5px 9px; color: #4c4339; }
 
+    .workflow { display: grid; gap: 14px; margin-top: 18px; }
+
+    .workflow-step {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 14px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--panel);
+      padding: 18px;
+    }
+
+    .step-number {
+      display: inline-grid;
+      width: 34px;
+      height: 34px;
+      place-items: center;
+      border-radius: 999px;
+      background: var(--brand-dark);
+      color: #fffaf4;
+      font-weight: 800;
+    }
+
+    .email-example {
+      border: 1px solid #dccfbe;
+      border-radius: 16px;
+      background: #fffdf9;
+      padding: 18px;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 0.95rem;
+    }
+
+    .email-example strong { color: var(--ink); }
+
     footer { border-top: 1px solid var(--line); margin-top: 56px; padding-top: 20px; color: var(--muted); font-size: 0.9rem; }
   </style>
 </head>
@@ -215,6 +249,7 @@
     <nav class="toc" aria-label="Documentation sections">
       <a href="#overview">Overview</a>
       <a href="#auth">Authentication</a>
+      <a href="#workflow">Workflow</a>
       <a href="#tickets">Tickets</a>
       <a href="#payment-proof">Payment Proof</a>
       <a href="#quote-webhook">Quote Webhook</a>
@@ -259,6 +294,116 @@
       </table>
 
       <div class="note">The <code class="inline">N8N_API_KEY</code> value lives in server environment variables. Do not expose it in browser code.</div>
+    </section>
+
+    <section id="workflow">
+      <h2>Ticket Workflow Tutorial</h2>
+      <p>This tutorial follows one reservation from a newly submitted <code class="inline">QUOTE REQUESTED</code> ticket to a finalized <code class="inline">BOOKING CONFIRMED</code> ticket.</p>
+
+      <div class="workflow">
+        <div class="workflow-step">
+          <span class="step-number">1</span>
+          <div>
+            <h3>Create or receive the quote request</h3>
+            <p>The guest submits the public quote form. The app stores a Convex ticket with <code class="inline">status: "QUOTE REQUESTED"</code>, guest contact details, stay dates, room choice, and any notes.</p>
+            <p>If quote alerts are enabled, staff can also trigger the new quote email alert for an existing ticket:</p>
+            <pre>curl -X POST "https://your-domain.com/api/quote-alerts" \
+  -H "Content-Type: application/json" \
+  -d '{ "ticketId": "8d4b6b3e-4a66-48b0-8a0d-fd8f28a07000" }'</pre>
+          </div>
+        </div>
+
+        <div class="workflow-step">
+          <span class="step-number">2</span>
+          <div>
+            <h3>Review and price the quote</h3>
+            <p>Staff opens the ticket, confirms dates and room type, enters the retail price, applies any adjustment, and changes the status to <code class="inline">PRICE SENT</code>. Pricing fields are recalculated when price or stay-date inputs change.</p>
+            <pre>curl -X PATCH "https://your-domain.com/api/tickets/8d4b6b3e-4a66-48b0-8a0d-fd8f28a07000" \
+  -H "Authorization: Bearer $N8N_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status": "PRICE SENT",
+    "retailPrice": 2800,
+    "adjustment": 0,
+    "checkIn": "2026-08-10",
+    "checkOut": "2026-08-14"
+  }'</pre>
+            <div class="note">When the saved ticket is in <code class="inline">PRICE SENT</code>, the API attempts the guest price email. Delivery metadata is returned with the updated ticket.</div>
+          </div>
+        </div>
+
+        <div class="workflow-step">
+          <span class="step-number">3</span>
+          <div>
+            <h3>Guest submits payment proof</h3>
+            <p>The guest uploads the payment screenshot through the private R2 signed URL flow. After upload, save the returned object key on the ticket and set the status to <code class="inline">PAYMENT SUBMITTED</code>.</p>
+            <pre>curl -X PATCH "https://your-domain.com/api/tickets/8d4b6b3e-4a66-48b0-8a0d-fd8f28a07000" \
+  -H "Authorization: Bearer $N8N_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status": "PAYMENT SUBMITTED",
+    "paymentScreenshotKey": "payment-proofs/8d4b6b3e-4a66-48b0-8a0d-fd8f28a07000/payment.png"
+  }'</pre>
+            <p>If payment-submitted alerts are enabled, active staff recipients receive the staff alert with the payment screenshot attached when available.</p>
+          </div>
+        </div>
+
+        <div class="workflow-step">
+          <span class="step-number">4</span>
+          <div>
+            <h3>Verify the payment</h3>
+            <p>Staff reviews the payment proof and changes the ticket to <code class="inline">PAYMENT VERIFIED</code>. This marks the payment as accepted but does not yet send the hotel booking request.</p>
+            <pre>curl -X PATCH "https://your-domain.com/api/tickets/8d4b6b3e-4a66-48b0-8a0d-fd8f28a07000" \
+  -H "Authorization: Bearer $N8N_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "status": "PAYMENT VERIFIED" }'</pre>
+          </div>
+        </div>
+
+        <div class="workflow-step">
+          <span class="step-number">5</span>
+          <div>
+            <h3>Confirm the booking</h3>
+            <p>After the reservation is ready to send to the hotel, set the final status to <code class="inline">BOOKING CONFIRMED</code>.</p>
+            <pre>curl -X PATCH "https://your-domain.com/api/tickets/8d4b6b3e-4a66-48b0-8a0d-fd8f28a07000" \
+  -H "Authorization: Bearer $N8N_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "status": "BOOKING CONFIRMED" }'</pre>
+            <p>If booking-confirmed hotel alerts are enabled, active hotel recipients receive the hotel booking email with subject <code class="inline">1609E</code>. The ticket is stamped after successful delivery so duplicate sends are skipped.</p>
+          </div>
+        </div>
+      </div>
+
+      <h3>Expected Status Path</h3>
+      <div class="status-list">
+        <code>QUOTE REQUESTED</code><code>PRICE SENT</code><code>PAYMENT SUBMITTED</code><code>PAYMENT VERIFIED</code><code>BOOKING CONFIRMED</code>
+      </div>
+
+      <h3>Notification Email Examples</h3>
+      <div class="grid cards">
+        <div class="card">
+          <h3>Staff Quote Alert</h3>
+          <p>Sent to active staff recipients when quote alerts are enabled.</p>
+          <div class="email-example">
+            <p><strong>Subject:</strong> New quote request: Ava Taylor</p>
+            <p><strong>Headline:</strong> Ava Taylor requested a quote</p>
+            <p><strong>Body:</strong> A public quote request was submitted and is waiting for staff review.</p>
+            <p><strong>Details:</strong> Ticket ID, guest names, email, phone, check-in, check-out, nights, room, referred by, notes.</p>
+            <p><strong>Actions:</strong> Open Staff Ticket and view Guest Ticket.</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Hotel Booking Alert</h3>
+          <p>Sent to active hotel recipients when the ticket reaches <code class="inline">BOOKING CONFIRMED</code>.</p>
+          <div class="email-example">
+            <p><strong>Subject:</strong> 1609E</p>
+            <p>May we please reserve for Ava Taylor</p>
+            <p>Aug 10, 2026 - Aug 14, 2026</p>
+            <p>Guest will pay cleaning fee, normal check in and check out.</p>
+          </div>
+        </div>
+      </div>
     </section>
 
     <section id="tickets">
@@ -566,7 +711,7 @@
     </section>
 
     <footer>
-      Source routes: <code>app/api/tickets</code>, <code>app/api/payment-proof</code>, and <code>app/api/quote-webhook</code>. Convex Auth HTTP routes are managed by Convex Auth and are not custom app API endpoints.
+      Source routes: <code>app/api/tickets</code>, <code>app/api/payment-proof</code>, <code>app/api/quote-alerts</code>, <code>app/api/payment-submitted-alerts</code>, <code>app/api/booking-confirmed-hotel-alerts</code>, and <code>app/api/quote-webhook</code>. Convex Auth HTTP routes are managed by Convex Auth and are not custom app API endpoints.
     </footer>
   </main>
 </body>

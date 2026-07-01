@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useConvex } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -21,22 +21,25 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { BadgeCheck, BadgeDollarSign, Check, CheckCircle2, ChevronLeft, ChevronRight, Clock, CreditCard, Download, Filter, Search, Plus, ListTodo, Table2, Trash2, XCircle } from "lucide-react";
 import TicketCard from "@/components/tickets/TicketCard";
-import TicketTable from "@/components/tickets/TicketTable";
-import { useTicketActions, useTicketPage, STATUSES } from "@/lib/store";
+import TicketTable, { ticketTableColumnKeys } from "@/components/tickets/TicketTable";
+import {
+  DASHBOARD_DATE_FIELD_OPTIONS,
+  DASHBOARD_PAGE_SIZE_OPTIONS,
+  STATUSES,
+  useDashboardPreferenceActions,
+  useDashboardPreferences,
+  useTicketActions,
+  useTicketPage,
+} from "@/lib/store";
 import { notifyPriceSent } from "@/lib/price-sent-email";
 import { notifyPaymentSubmitted } from "@/lib/payment-submitted-alert";
 import { notifyBookingConfirmedHotel } from "@/lib/booking-confirmed-hotel-alert";
 import { useToast } from "@/components/ui/use-toast";
+import { readDashboardTableColumns, saveDashboardTableColumns } from "@/lib/ui-preferences";
 
 const primaryButton = "h-10 rounded-[8px] bg-[#cc785c] px-5 text-sm font-medium text-white shadow-none hover:bg-[#a9583e]";
 const darkInput = "h-10 rounded-[8px] border-[#252320] bg-[#1f1e1b] text-[#faf9f5] shadow-none placeholder:text-[#b8b3aa] focus-visible:ring-[#cc785c] [color-scheme:dark]";
 const activeInput = "border-[#cc785c] bg-[#2a211d]";
-const dateFieldOptions = [
-  { value: "checkIn", label: "Check-in" },
-  { value: "checkOut", label: "Check-out" },
-  { value: "createdAt", label: "Quote-created" },
-];
-const pageSizeOptions = [5, 10, 25, 50, 100];
 const statusIcons = {
   "QUOTE REQUESTED": Clock,
   "PRICE SENT": BadgeDollarSign,
@@ -104,10 +107,15 @@ export default function Dashboard() {
   const convex = useConvex();
   const { deleteTicket, updateTicket } = useTicketActions();
   const { toast } = useToast();
+  const savedDashboardPreferences = useDashboardPreferences(ticketTableColumnKeys);
+  const { saveDashboardPreferences } = useDashboardPreferenceActions(ticketTableColumnKeys);
+  const preferencesLoadedRef = useRef(false);
+  const [preferencesReady, setPreferencesReady] = useState(false);
   const [view, setView] = useState("board");
   const [search, setSearch] = useState("");
   const [selectedStatuses, setSelectedStatuses] = useState([]);
   const [dateFilter, setDateFilter] = useState({ field: "checkIn", from: "", to: "" });
+  const [visibleColumns, setVisibleColumns] = useState(() => readDashboardTableColumns(ticketTableColumnKeys));
   const [selectedIds, setSelectedIds] = useState([]);
   const [pageSize, setPageSize] = useState(25);
   const [pageIndex, setPageIndex] = useState(0);
@@ -127,7 +135,7 @@ export default function Dashboard() {
   const isLoadingPage = isMultiStatusFilter ? loadingMultiStatus : pageResult === undefined;
 
   const hasDateFilter = Boolean(dateFilter.from || dateFilter.to);
-  const selectedDateField = dateFieldOptions.find((option) => option.value === dateFilter.field)?.label || "Date";
+  const selectedDateField = DASHBOARD_DATE_FIELD_OPTIONS.find((option) => option.value === dateFilter.field)?.label || "Date";
   const allStatusCount = STATUSES.reduce((total, status) => total + (statusCounts[status] || 0), 0);
   const statusFilterLabel = selectedStatuses.length === 0
     ? "All statuses"
@@ -227,7 +235,7 @@ export default function Dashboard() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent className="rounded-[12px] border-[#e6dfd8] bg-[#faf9f5] text-[#141413]">
-            {pageSizeOptions.map((size) => (
+            {DASHBOARD_PAGE_SIZE_OPTIONS.map((size) => (
               <SelectItem key={size} value={String(size)}>{size} / page</SelectItem>
             ))}
           </SelectContent>
@@ -339,10 +347,43 @@ export default function Dashboard() {
     () => JSON.stringify({ search: search.trim(), selectedStatuses, dateFilter, pageSize }),
     [search, selectedStatuses, dateFilter, pageSize]
   );
+  const dashboardPreferenceSnapshot = useMemo(
+    () => ({ view, search, selectedStatuses, dateFilter, pageSize, visibleColumns }),
+    [view, search, selectedStatuses, dateFilter, pageSize, visibleColumns]
+  );
   const statusCountKey = useMemo(
     () => JSON.stringify(statusCountFilters),
     [statusCountFilters]
   );
+
+  useEffect(() => {
+    if (savedDashboardPreferences === undefined || preferencesLoadedRef.current) return;
+
+    if (savedDashboardPreferences) {
+      setView(savedDashboardPreferences.view);
+      setSearch(savedDashboardPreferences.search);
+      setSelectedStatuses(savedDashboardPreferences.selectedStatuses);
+      setDateFilter(savedDashboardPreferences.dateFilter);
+      setPageSize(savedDashboardPreferences.pageSize);
+      setVisibleColumns(savedDashboardPreferences.visibleColumns);
+    }
+
+    preferencesLoadedRef.current = true;
+    setPreferencesReady(true);
+  }, [savedDashboardPreferences]);
+
+  useEffect(() => {
+    if (!preferencesReady) return;
+
+    const timeout = setTimeout(() => {
+      saveDashboardTableColumns(dashboardPreferenceSnapshot.visibleColumns);
+      saveDashboardPreferences(dashboardPreferenceSnapshot).catch(() => {
+        // Keep dashboard controls responsive if preference persistence is temporarily unavailable.
+      });
+    }, 300);
+
+    return () => clearTimeout(timeout);
+  }, [dashboardPreferenceSnapshot, preferencesReady, saveDashboardPreferences]);
 
   useEffect(resetPagination, [filterKey]);
 
@@ -518,7 +559,7 @@ export default function Dashboard() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="rounded-[12px] border-[#e6dfd8] bg-[#faf9f5] text-[#141413]">
-                    {dateFieldOptions.map((option) => (
+                    {DASHBOARD_DATE_FIELD_OPTIONS.map((option) => (
                       <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
                     ))}
                   </SelectContent>
@@ -592,7 +633,7 @@ export default function Dashboard() {
           )}
         </div>
       ) : (
-        <TicketTable tickets={pageTickets} selectedIds={selectedIds} onSelectedIdsChange={setSelectedIds} />
+        <TicketTable tickets={pageTickets} selectedIds={selectedIds} onSelectedIdsChange={setSelectedIds} visibleColumns={visibleColumns} onVisibleColumnsChange={setVisibleColumns} />
       )}
       {paginationControls}
       </div>

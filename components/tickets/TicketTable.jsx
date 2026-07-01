@@ -14,7 +14,6 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import StatusBadge from "./StatusBadge";
 import { fmtDate, fmtMoney, shortId } from "@/lib/calc";
-import { readDashboardTableColumns, saveDashboardTableColumns } from "@/lib/ui-preferences";
 
 const columns = [
   { key: "id", label: "Ticket", render: (t) => <span className="font-mono text-xs">{shortId(t.id)}</span> },
@@ -33,14 +32,18 @@ const columns = [
   { key: "referredBy", label: "Referred By", render: (t) => t.referredBy || "—" },
 ];
 
-const defaultColumnKeys = columns.map((column) => column.key);
+export const ticketTableColumnKeys = columns.map((column) => column.key);
 
-export default function TicketTable({ tickets, selectedIds, onSelectedIdsChange }) {
+export default function TicketTable({ tickets, selectedIds, onSelectedIdsChange, visibleColumns = ticketTableColumnKeys, onVisibleColumnsChange }) {
   const router = useRouter();
   const [sort, setSort] = useState({ key: "createdAt", dir: -1 });
-  const [visibleColumns, setVisibleColumns] = useState(() => readDashboardTableColumns(defaultColumnKeys));
   const selectable = Array.isArray(selectedIds) && typeof onSelectedIdsChange === "function";
-  const visibleColumnSet = useMemo(() => new Set(visibleColumns), [visibleColumns]);
+  const safeVisibleColumns = useMemo(() => {
+    const allowed = new Set(ticketTableColumnKeys);
+    const valid = Array.isArray(visibleColumns) ? visibleColumns.filter((key) => allowed.has(key)) : [];
+    return valid.length > 0 ? valid : ticketTableColumnKeys;
+  }, [visibleColumns]);
+  const visibleColumnSet = useMemo(() => new Set(safeVisibleColumns), [safeVisibleColumns]);
   const activeColumns = useMemo(() => columns.filter((column) => visibleColumnSet.has(column.key)), [visibleColumnSet]);
 
   const sorted = useMemo(() => {
@@ -75,14 +78,13 @@ export default function TicketTable({ tickets, selectedIds, onSelectedIdsChange 
   };
 
   const toggleColumn = (key, checked) => {
-    setVisibleColumns((current) => {
-      let next = current;
-      if (checked) next = [...new Set([...current, key])];
-      else if (current.length > 1) next = current.filter((columnKey) => columnKey !== key);
+    if (!onVisibleColumnsChange) return;
 
-      if (next !== current) saveDashboardTableColumns(next);
-      return next;
-    });
+    let next = safeVisibleColumns;
+    if (checked) next = [...new Set([...safeVisibleColumns, key])];
+    else if (safeVisibleColumns.length > 1) next = safeVisibleColumns.filter((columnKey) => columnKey !== key);
+
+    if (next !== safeVisibleColumns) onVisibleColumnsChange(next);
   };
 
   return (
@@ -154,7 +156,7 @@ export default function TicketTable({ tickets, selectedIds, onSelectedIdsChange 
               <DropdownMenuCheckboxItem
                 key={column.key}
                 checked={visibleColumnSet.has(column.key)}
-                disabled={visibleColumns.length === 1 && visibleColumnSet.has(column.key)}
+                disabled={safeVisibleColumns.length === 1 && visibleColumnSet.has(column.key)}
                 onCheckedChange={(checked) => toggleColumn(column.key, checked === true)}
                 onSelect={(event) => event.preventDefault()}
                 className="rounded-[8px] focus:bg-[#efe9de]"
