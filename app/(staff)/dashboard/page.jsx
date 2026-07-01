@@ -87,6 +87,10 @@ function StatusIcon({ status, className = "h-4 w-4" }) {
   return <Icon className={className} />;
 }
 
+function formatStatusLabel(status) {
+  return status.toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
 function uniqueSortedTickets(groups) {
   const byId = new Map();
   groups.flat().forEach((ticket) => {
@@ -124,6 +128,12 @@ export default function Dashboard() {
 
   const hasDateFilter = Boolean(dateFilter.from || dateFilter.to);
   const selectedDateField = dateFieldOptions.find((option) => option.value === dateFilter.field)?.label || "Date";
+  const allStatusCount = STATUSES.reduce((total, status) => total + (statusCounts[status] || 0), 0);
+  const statusFilterLabel = selectedStatuses.length === 0
+    ? "All statuses"
+    : selectedStatuses.length === 1
+      ? formatStatusLabel(selectedStatuses[0])
+      : `${selectedStatuses.length} statuses`;
 
   const updateDateFilter = (key, value) => {
     setDateFilter((current) => ({ ...current, [key]: value }));
@@ -418,12 +428,7 @@ export default function Dashboard() {
                 <PopoverTrigger asChild>
                   <Button type="button" variant="outline" className={`h-10 w-full justify-start rounded-[8px] border-[#252320] bg-[#1f1e1b] px-3 text-[#faf9f5] shadow-none hover:bg-[#252320] hover:text-[#faf9f5] sm:w-auto ${selectedStatuses.length ? "border-[#cc785c] bg-[#2a211d]" : ""}`}>
                     <Filter className="mr-2 h-4 w-4 text-[#cc785c]" />
-                    Status
-                    {selectedStatuses.length > 0 && (
-                      <span className="ml-2 rounded-full bg-[#cc785c] px-2 py-0.5 text-[11px] font-semibold leading-none text-white">
-                        {selectedStatuses.length}
-                      </span>
-                    )}
+                    <span className="truncate">{statusFilterLabel}</span>
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent align="start" className="w-[min(22rem,calc(100vw-2rem))] rounded-[14px] border-[#e6dfd8] bg-[#fffdf8] p-2 text-[#141413] shadow-xl">
@@ -436,6 +441,20 @@ export default function Dashboard() {
                     )}
                   </div>
                   <div className="mt-1 space-y-1">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedStatuses([])}
+                      className={`flex w-full items-center gap-3 rounded-[10px] px-3 py-2.5 text-left text-sm transition-colors ${selectedStatuses.length === 0 ? "bg-[#efe9de] text-[#141413]" : "text-[#252523] hover:bg-[#f4eee6]"}`}
+                    >
+                      <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${selectedStatuses.length === 0 ? "border-[#cc785c] bg-[#cc785c] text-white" : "border-transparent text-transparent"}`}>
+                        <Check className={`h-3.5 w-3.5 ${selectedStatuses.length === 0 ? "opacity-100" : "opacity-0"}`} />
+                      </span>
+                      <Filter className={`h-4 w-4 ${selectedStatuses.length === 0 ? "text-[#cc785c]" : "text-[#8e8b82]"}`} />
+                      <span className="min-w-0 flex-1 truncate font-medium">All statuses</span>
+                      <span className="rounded-full border border-[#e6dfd8] bg-[#faf9f5] px-2 py-0.5 text-xs font-semibold tabular-nums text-[#6c6a64]">
+                        {allStatusCount}
+                      </span>
+                    </button>
                     {STATUSES.map((status) => {
                       const active = selectedStatuses.includes(status);
                       return (
