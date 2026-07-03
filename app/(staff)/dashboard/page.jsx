@@ -111,7 +111,7 @@ export default function Dashboard() {
   const { saveDashboardPreferences } = useDashboardPreferenceActions(ticketTableColumnKeys);
   const preferencesLoadedRef = useRef(false);
   const [preferencesReady, setPreferencesReady] = useState(false);
-  const [view, setView] = useState("board");
+  const [view, setView] = useState("table");
   const [search, setSearch] = useState("");
   const [selectedStatuses, setSelectedStatuses] = useState([]);
   const [dateFilter, setDateFilter] = useState({ field: "checkIn", from: "", to: "" });
