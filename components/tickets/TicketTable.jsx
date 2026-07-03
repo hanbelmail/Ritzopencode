@@ -1,10 +1,27 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
-import { ArrowUpDown, Columns3 } from "lucide-react";
+import Link from "next/link";
+import { ArrowUpDown, CheckCircle, CircleDot, Columns3, Eye, Pencil, XCircle } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -32,11 +49,21 @@ const columns = [
   { key: "referredBy", label: "Referred By", render: (t) => t.referredBy || "—" },
 ];
 
+const statusActions = {
+  "PRICE SENT": { label: "Mark Price Sent", title: "Mark price sent?", icon: CircleDot },
+  "PAYMENT VERIFIED": { label: "Mark Payment Verified", title: "Mark payment verified?", icon: CheckCircle },
+  "BOOKING CONFIRMED": { label: "Mark Booking Confirmed", title: "Mark booking confirmed?", icon: CheckCircle },
+  CANCELLED: { label: "Cancel Reservation", title: "Cancel this reservation?", icon: XCircle, destructive: true },
+};
+
+const quickStatusActions = ["PRICE SENT", "PAYMENT VERIFIED", "BOOKING CONFIRMED", "CANCELLED"];
+
 export const ticketTableColumnKeys = columns.map((column) => column.key);
 
-export default function TicketTable({ tickets, selectedIds, onSelectedIdsChange, visibleColumns = ticketTableColumnKeys, onVisibleColumnsChange }) {
-  const router = useRouter();
+export default function TicketTable({ tickets, selectedIds, onSelectedIdsChange, visibleColumns = ticketTableColumnKeys, onVisibleColumnsChange, onStatusChange }) {
   const [sort, setSort] = useState({ key: "createdAt", dir: -1 });
+  const [selectedTicketId, setSelectedTicketId] = useState(null);
+  const [statusToConfirm, setStatusToConfirm] = useState(null);
   const selectable = Array.isArray(selectedIds) && typeof onSelectedIdsChange === "function";
   const safeVisibleColumns = useMemo(() => {
     const allowed = new Set(ticketTableColumnKeys);
@@ -55,6 +82,11 @@ export default function TicketTable({ tickets, selectedIds, onSelectedIdsChange,
       return (va > vb ? 1 : -1) * sort.dir;
     });
   }, [tickets, sort]);
+
+  const selectedTicket = useMemo(() => sorted.find((ticket) => ticket.id === selectedTicketId) || null, [sorted, selectedTicketId]);
+  const guests = (selectedTicket?.guests || []).filter(Boolean);
+  const primaryGuest = guests[0] || "Unnamed guest";
+  const pendingStatusAction = statusToConfirm ? statusActions[statusToConfirm] : null;
 
   const toggleSort = (key) =>
     setSort((s) => ({ key, dir: s.key === key ? -s.dir : 1 }));
@@ -85,6 +117,22 @@ export default function TicketTable({ tickets, selectedIds, onSelectedIdsChange,
     else if (safeVisibleColumns.length > 1) next = safeVisibleColumns.filter((columnKey) => columnKey !== key);
 
     if (next !== safeVisibleColumns) onVisibleColumnsChange(next);
+  };
+
+  const closeTicketDialog = () => {
+    setSelectedTicketId(null);
+    setStatusToConfirm(null);
+  };
+
+  const openStatusDialog = (status) => {
+    if (!selectedTicket || typeof onStatusChange !== "function") return;
+    setStatusToConfirm(status);
+  };
+
+  const confirmStatusChange = () => {
+    if (!selectedTicket || !statusToConfirm || typeof onStatusChange !== "function") return;
+    onStatusChange(selectedTicket.id, statusToConfirm);
+    closeTicketDialog();
   };
 
   return (
@@ -118,7 +166,7 @@ export default function TicketTable({ tickets, selectedIds, onSelectedIdsChange,
           </TableHeader>
           <TableBody>
             {sorted.map((t) => (
-              <TableRow key={t.id} className="cursor-pointer border-[#e6dfd8] hover:bg-[#f5f0e8]" onClick={() => router.push(`/ticket/${t.id}`)}>
+              <TableRow key={t.id} className="cursor-pointer border-[#e6dfd8] hover:bg-[#f5f0e8]" onClick={() => setSelectedTicketId(t.id)}>
                 {selectable && (
                   <TableCell className="w-12" onClick={(event) => event.stopPropagation()}>
                     <Checkbox
@@ -167,6 +215,105 @@ export default function TicketTable({ tickets, selectedIds, onSelectedIdsChange,
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+      <Dialog open={Boolean(selectedTicket)} onOpenChange={(open) => { if (!open && !statusToConfirm) closeTicketDialog(); }}>
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-lg rounded-[18px] border-[#e6dfd8] bg-[#fffdf8] p-0 text-[#141413] shadow-2xl sm:w-full">
+          {selectedTicket && (
+            <>
+              <div className="border-b border-[#efe9de] px-5 py-5 sm:px-6">
+                <DialogHeader className="space-y-2 text-left">
+                  <div className="flex items-start justify-between gap-4 pr-8">
+                    <div className="min-w-0">
+                      <DialogTitle className="truncate text-xl font-semibold tracking-[-0.02em]">{primaryGuest}</DialogTitle>
+                      <DialogDescription className="mt-1 font-mono text-xs text-[#6c6a64]">
+                        Ticket {shortId(selectedTicket.id)}
+                      </DialogDescription>
+                    </div>
+                    <StatusBadge status={selectedTicket.status} />
+                  </div>
+                </DialogHeader>
+              </div>
+              <div className="space-y-4 px-5 py-5 sm:px-6">
+                <div className="grid gap-2 rounded-[12px] border border-[#efe9de] bg-[#faf9f5] p-3 text-sm text-[#252523] sm:grid-cols-2">
+                  <div>
+                    <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-[#8e8b82]">Check-in</p>
+                    <p className="mt-1 font-medium">{fmtDate(selectedTicket.checkIn)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-[#8e8b82]">Check-out</p>
+                    <p className="mt-1 font-medium">{fmtDate(selectedTicket.checkOut)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-[#8e8b82]">Room</p>
+                    <p className="mt-1 truncate font-medium">{selectedTicket.roomType || "—"}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-[#8e8b82]">Rate Offered</p>
+                    <p className="mt-1 font-medium">{fmtMoney(selectedTicket.rateOffered)}</p>
+                  </div>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <Button asChild variant="outline" className="h-11 justify-start rounded-[10px] border-[#d8d0c7] bg-[#faf9f5] text-[#252523] hover:bg-[#efe9de]">
+                    <Link href={`/ticket/${selectedTicket.id}`}>
+                      <Eye className="mr-2 h-4 w-4" /> View Details
+                    </Link>
+                  </Button>
+                  <Button asChild variant="outline" className="h-11 justify-start rounded-[10px] border-[#d8d0c7] bg-[#faf9f5] text-[#252523] hover:bg-[#efe9de]">
+                    <Link href={`/new?id=${selectedTicket.id}`}>
+                      <Pencil className="mr-2 h-4 w-4" /> Edit
+                    </Link>
+                  </Button>
+                </div>
+                <div className="rounded-[12px] border border-[#efe9de] bg-[#faf9f5] p-3">
+                  <p className="mb-2 text-xs font-medium uppercase tracking-[0.14em] text-[#8e8b82]">Quick actions</p>
+                  <div className="grid gap-2">
+                    {quickStatusActions.map((status) => {
+                      const action = statusActions[status];
+                      const Icon = action.icon;
+                      return (
+                        <button
+                          key={status}
+                          type="button"
+                          onClick={() => openStatusDialog(status)}
+                          disabled={typeof onStatusChange !== "function"}
+                          className={`flex min-h-11 w-full items-center gap-3 rounded-[10px] border px-3 py-2 text-left text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${action.destructive ? "border-[#e4b5a7] bg-[#fff7f4] text-[#a9583e] hover:bg-[#f7e4dd]" : "border-[#e6dfd8] bg-[#fffdf8] text-[#252523] hover:bg-[#efe9de]"}`}
+                        >
+                          <Icon className="h-4 w-4 shrink-0" />
+                          <span className="min-w-0 flex-1">{action.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+      <AlertDialog open={Boolean(statusToConfirm)} onOpenChange={(open) => { if (!open) setStatusToConfirm(null); }}>
+        <AlertDialogContent className="w-[calc(100vw-1rem)] max-w-md rounded-[18px] border-[#e6dfd8] bg-[#fffdf8] p-0 text-[#141413] shadow-2xl sm:w-full">
+          <div className="border-b border-[#efe9de] px-6 py-5">
+            <AlertDialogHeader className="space-y-2 text-left">
+              <AlertDialogTitle className="text-xl font-semibold tracking-[-0.02em]">{pendingStatusAction?.title}</AlertDialogTitle>
+              <AlertDialogDescription className="text-sm leading-6 text-[#6c6a64]">
+                This will update {primaryGuest} to <span className="font-medium text-[#252523]">{statusToConfirm}</span>.
+                {statusToConfirm === "PRICE SENT" && selectedTicket && !selectedTicket.retailPriceScreenshotKey && (
+                  <span className="mt-2 block rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-amber-800">
+                    No retail price screenshot is attached. The PRICE SENT email will send without that attachment unless you edit the reservation first.
+                  </span>
+                )}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+          </div>
+          <AlertDialogFooter className="gap-2 px-6 py-4 sm:space-x-0">
+            <AlertDialogCancel className="mt-0 rounded-[8px] border-[#d8d0c7] bg-[#faf9f5] text-[#252523] hover:bg-[#efe9de]">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={confirmStatusChange} className={`rounded-[8px] text-white ${statusToConfirm === "CANCELLED" ? "bg-[#b84f34] hover:bg-[#963f2a]" : "bg-[#cc785c] hover:bg-[#a9583e]"}`}>
+              {pendingStatusAction?.label}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -1,0 +1,754 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ritz Reservations CRM Staff Guide</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #181512;
+      --soft-ink: #3e352d;
+      --muted: #756b60;
+      --line: #e8ded1;
+      --paper: #fffaf3;
+      --panel: #ffffff;
+      --sand: #f4eadc;
+      --sand-strong: #ead8c0;
+      --brand: #b86043;
+      --brand-dark: #7f3e2a;
+      --gold: #b48a4f;
+      --green: #2f7f71;
+      --red: #a33d32;
+      --amber: #9a681f;
+      --shadow: 0 24px 70px rgb(50 36 20 / 0.1);
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at top left, rgb(180 138 79 / 0.22), transparent 34rem),
+        linear-gradient(180deg, #fbf5ed 0%, #f7efe4 42%, #fbf7f1 100%);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.55;
+    }
+
+    a { color: inherit; }
+
+    header {
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(135deg, #191411 0%, #2c211b 50%, #8a4a33 100%);
+      color: #fff8ee;
+      padding: 56px 20px 42px;
+    }
+
+    header::after {
+      content: "";
+      position: absolute;
+      right: -10rem;
+      top: -11rem;
+      width: 28rem;
+      height: 28rem;
+      border-radius: 999px;
+      background: rgb(244 216 166 / 0.18);
+      filter: blur(3px);
+    }
+
+    .wrap {
+      position: relative;
+      z-index: 1;
+      width: min(1160px, calc(100% - 32px));
+      margin: 0 auto;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 18px;
+      border: 1px solid rgb(255 250 244 / 0.28);
+      border-radius: 999px;
+      padding: 7px 12px;
+      color: #efd9c9;
+      font-size: 0.76rem;
+      font-weight: 800;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+    }
+
+    h1, h2, h3 { margin: 0; line-height: 1.08; }
+
+    h1 {
+      max-width: 900px;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(2.5rem, 8vw, 5.6rem);
+      font-weight: 500;
+      letter-spacing: -0.06em;
+    }
+
+    h2 {
+      margin-top: 54px;
+      font-size: clamp(1.7rem, 4vw, 2.75rem);
+      letter-spacing: -0.04em;
+    }
+
+    h3 { margin-top: 22px; font-size: 1.15rem; letter-spacing: -0.02em; }
+
+    p { margin: 12px 0 0; color: var(--muted); }
+
+    .hero-text {
+      max-width: 790px;
+      color: #ead8c7;
+      font-size: 1.05rem;
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 28px;
+    }
+
+    .hero-actions a, .pill-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      padding: 10px 14px;
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 750;
+    }
+
+    .hero-actions a {
+      border: 1px solid rgb(255 250 244 / 0.32);
+      color: #fffaf4;
+      background: rgb(255 250 244 / 0.08);
+      backdrop-filter: blur(12px);
+    }
+
+    main {
+      width: min(1160px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0 80px;
+    }
+
+    .notice {
+      display: grid;
+      gap: 6px;
+      margin-top: -16px;
+      border: 1px solid #e8c79a;
+      border-radius: 22px;
+      background: linear-gradient(135deg, #fff7e8, #fffdf8);
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+
+    .notice strong { color: #6f401f; }
+
+    .grid { display: grid; gap: 18px; }
+
+    .cards { grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); margin-top: 20px; }
+
+    .card, .table-card, .email-card, .workflow-step, .suggestion {
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: rgb(255 250 243 / 0.88);
+      box-shadow: 0 16px 48px rgb(50 36 20 / 0.065);
+    }
+
+    .card { padding: 21px; }
+
+    .card h3 { margin-top: 0; }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .badge, .status {
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 5px 9px;
+      font-size: 0.75rem;
+      font-weight: 800;
+      letter-spacing: 0.035em;
+      white-space: nowrap;
+    }
+
+    .badge { background: #fff; color: var(--soft-ink); }
+    .s-quote { background: #efe9de; color: #6c6a64; border-color: #e6dfd8; }
+    .s-price { background: #fff4df; color: #9a681f; border-color: #ecd3a6; }
+    .s-submitted { background: #e9f5eb; color: #3f8b51; border-color: #c7e4ce; }
+    .s-verified { background: #e7f4f1; color: #2f7f71; border-color: #baded7; }
+    .s-confirmed { background: #cc785c; color: #fff; border-color: #cc785c; }
+    .s-cancelled { background: #f7e7e3; color: #a33d32; border-color: #e9c4bb; }
+
+    .workflow { display: grid; gap: 14px; margin-top: 20px; }
+
+    .workflow-step {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 15px;
+      padding: 18px;
+    }
+
+    .step-number {
+      display: grid;
+      place-items: center;
+      width: 42px;
+      height: 42px;
+      border-radius: 999px;
+      background: #211b17;
+      color: #f5d9a6;
+      font-weight: 850;
+    }
+
+    .step-content h3 { margin-top: 0; }
+
+    .actions {
+      display: grid;
+      gap: 8px;
+      margin-top: 12px;
+      padding: 0;
+      list-style: none;
+    }
+
+    .actions li {
+      position: relative;
+      padding-left: 24px;
+      color: var(--muted);
+    }
+
+    .actions li::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0.58rem;
+      width: 9px;
+      height: 9px;
+      border-radius: 999px;
+      background: var(--gold);
+    }
+
+    .table-card { margin-top: 18px; overflow: hidden; }
+
+    .table-scroll { overflow-x: auto; }
+
+    table {
+      width: 100%;
+      min-width: 760px;
+      border-collapse: collapse;
+      font-size: 0.92rem;
+    }
+
+    th, td {
+      border-bottom: 1px solid var(--line);
+      padding: 13px 14px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: #f1e5d7;
+      color: #46392e;
+      font-size: 0.78rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    tr:last-child td { border-bottom: 0; }
+
+    td { color: var(--muted); }
+    td strong { color: var(--ink); }
+
+    .email-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin-top: 20px;
+    }
+
+    .email-card { overflow: hidden; background: #fffdf8; }
+
+    .email-head {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 10px;
+      border-bottom: 1px solid var(--line);
+      background: #f5eadc;
+      padding: 14px 16px;
+    }
+
+    .email-head strong { color: var(--soft-ink); }
+
+    .email-body { padding: 16px; }
+
+    .email-line {
+      display: grid;
+      grid-template-columns: 72px 1fr;
+      gap: 10px;
+      border-bottom: 1px dashed #e9dcca;
+      padding: 8px 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .email-line:last-child { border-bottom: 0; }
+    .email-line span:first-child { color: #8c7c68; font-weight: 800; }
+
+    .checklist {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .checklist .card { background: #fffdf8; }
+
+    .checklist h3 { display: flex; align-items: center; gap: 8px; }
+
+    .dot {
+      display: inline-flex;
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: var(--brand);
+    }
+
+    .suggestions {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .suggestion { padding: 18px; }
+    .suggestion h3 { margin-top: 0; }
+
+    .quick-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .pill-link {
+      border: 1px solid var(--line);
+      background: #fffdf8;
+      color: var(--brand-dark);
+    }
+
+    .footer-note {
+      margin-top: 46px;
+      border-top: 1px solid var(--line);
+      padding-top: 22px;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    @media (max-width: 700px) {
+      header { padding-top: 36px; }
+      .wrap, main { width: min(100% - 24px, 1160px); }
+      .workflow-step { grid-template-columns: 1fr; }
+      .step-number { width: 36px; height: 36px; }
+      .email-line { grid-template-columns: 1fr; gap: 2px; }
+      table { min-width: 680px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <span class="eyebrow">Staff CRM Handbook</span>
+      <h1>Ritz Reservations CRM Staff Guide</h1>
+      <p class="hero-text">Use this guide to understand how quotes, payment proof, status changes, email alerts, and hotel confirmation work inside the Ritz Reservations CRM.</p>
+      <nav class="hero-actions" aria-label="Guide sections">
+        <a href="#workflow">Status Workflow</a>
+        <a href="#email-alerts">Email Alerts</a>
+        <a href="#daily-process">Daily Process</a>
+        <a href="#suggestions">Suggestions</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="notice" aria-label="Recommended setup note">
+      <strong>Recommended staff setup: keep all email alerts ON.</strong>
+      <p>This guide explains the operating process we want staff to follow. It does not change project source-code defaults. Check <a href="/email-dashboard">Email Dashboard</a> and turn on the master email alert switch plus each individual alert before using the CRM in production.</p>
+    </section>
+
+    <section id="overview">
+      <h2>How The CRM Works</h2>
+      <div class="grid cards">
+        <article class="card">
+          <h3>Guest Flow</h3>
+          <p>Guests request a quote from the public website, receive a Ticket ID, return to their ticket page, review pricing, upload payment proof, and track reservation progress.</p>
+          <div class="meta"><span class="badge">Public</span><span class="badge">Ticket ID</span><span class="badge">Payment Proof</span></div>
+        </article>
+        <article class="card">
+          <h3>Staff Flow</h3>
+          <p>Staff review quotes, add retail pricing, upload Ritz retail screenshots, update statuses, verify payment, confirm bookings, and monitor analytics.</p>
+          <div class="meta"><span class="badge">Dashboard</span><span class="badge">New/Edit</span><span class="badge">Analytics</span></div>
+        </article>
+        <article class="card">
+          <h3>Email Automation</h3>
+          <p>Email alerts are status-driven. They help staff know when a quote arrives, guests know when pricing is ready, and hotel recipients know when booking is confirmed.</p>
+          <div class="meta"><span class="badge">Resend</span><span class="badge">Staff</span><span class="badge">Hotel</span></div>
+        </article>
+      </div>
+    </section>
+
+    <section id="workflow">
+      <h2>Status Workflow</h2>
+      <p>Every reservation should move through these statuses in order unless it is cancelled.</p>
+      <div class="workflow">
+        <article class="workflow-step">
+          <div class="step-number">1</div>
+          <div class="step-content">
+            <span class="status s-quote">QUOTE REQUESTED</span>
+            <h3>Guest requested a quote</h3>
+            <p>The ticket exists, but staff has not sent the private rate yet. The guest can view the ticket but cannot submit payment.</p>
+            <ul class="actions">
+              <li>Staff reviews guest names, dates, room type, email, phone, and notes.</li>
+              <li>New quote staff alert should notify active staff recipients.</li>
+              <li>Next staff action is adding pricing and moving to PRICE SENT.</li>
+            </ul>
+          </div>
+        </article>
+
+        <article class="workflow-step">
+          <div class="step-number">2</div>
+          <div class="step-content">
+            <span class="status s-price">PRICE SENT</span>
+            <h3>Private rate is ready</h3>
+            <p>Staff added the retail price and private rate. The guest can now see pricing and submit payment proof.</p>
+            <ul class="actions">
+              <li>Attach the Ritz website retail price screenshot when available.</li>
+              <li>The price-sent guest email sends the ticket link and quote details once.</li>
+              <li>If staff copy is enabled, active staff recipients also receive a copy.</li>
+            </ul>
+          </div>
+        </article>
+
+        <article class="workflow-step">
+          <div class="step-number">3</div>
+          <div class="step-content">
+            <span class="status s-submitted">PAYMENT SUBMITTED</span>
+            <h3>Guest uploaded payment proof</h3>
+            <p>The guest selected a payment method and uploaded a screenshot. The ticket is waiting for staff verification.</p>
+            <ul class="actions">
+              <li>Staff should open the payment proof and confirm payment details.</li>
+              <li>Payment-submitted alert should notify active staff recipients.</li>
+              <li>After approval, staff moves the ticket to PAYMENT VERIFIED.</li>
+            </ul>
+          </div>
+        </article>
+
+        <article class="workflow-step">
+          <div class="step-number">4</div>
+          <div class="step-content">
+            <span class="status s-verified">PAYMENT VERIFIED</span>
+            <h3>Payment is approved</h3>
+            <p>Staff verified the payment. The guest sees that payment cleared and final booking confirmation is next.</p>
+            <ul class="actions">
+              <li>Dates become blocked in the reservation date picker.</li>
+              <li>Analytics counts the ticket as booked revenue.</li>
+              <li>Next staff action is finalizing the booking with the hotel.</li>
+            </ul>
+          </div>
+        </article>
+
+        <article class="workflow-step">
+          <div class="step-number">5</div>
+          <div class="step-content">
+            <span class="status s-confirmed">BOOKING CONFIRMED</span>
+            <h3>Reservation is finalized</h3>
+            <p>The booking is complete. The guest sees a finalized reservation message.</p>
+            <ul class="actions">
+              <li>Booking-confirmed hotel alert should send to active hotel recipients.</li>
+              <li>Dates remain blocked in the reservation date picker.</li>
+              <li>Analytics counts the ticket as booked revenue.</li>
+            </ul>
+          </div>
+        </article>
+
+        <article class="workflow-step">
+          <div class="step-number">!</div>
+          <div class="step-content">
+            <span class="status s-cancelled">CANCELLED</span>
+            <h3>Reservation is no longer active</h3>
+            <p>The ticket remains visible for history, but the guest cannot pay and should request a new quote if needed.</p>
+            <ul class="actions">
+              <li>Use Cancel when the reservation should remain in CRM history.</li>
+              <li>Use Delete only for duplicate, test, or incorrect tickets that should be removed.</li>
+              <li>Cancelled dates are not blocked as confirmed reservations.</li>
+            </ul>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section id="staff-actions">
+      <h2>Staff Action Table</h2>
+      <div class="table-card">
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Status</th>
+                <th>Staff Meaning</th>
+                <th>Guest Experience</th>
+                <th>Next Correct Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="status s-quote">QUOTE REQUESTED</span></td>
+                <td><strong>New quote lead.</strong> Needs staff review and pricing.</td>
+                <td>Guest sees quote is being reviewed and payment is locked.</td>
+                <td>Add retail price, upload screenshot if possible, then mark PRICE SENT.</td>
+              </tr>
+              <tr>
+                <td><span class="status s-price">PRICE SENT</span></td>
+                <td><strong>Quote has been sent.</strong> Waiting for guest payment proof.</td>
+                <td>Guest sees private rate and can upload proof.</td>
+                <td>Wait for payment proof or follow up with guest.</td>
+              </tr>
+              <tr>
+                <td><span class="status s-submitted">PAYMENT SUBMITTED</span></td>
+                <td><strong>Payment needs review.</strong> Screenshot is waiting for staff check.</td>
+                <td>Guest sees payment received and under review.</td>
+                <td>Verify payment, then mark PAYMENT VERIFIED.</td>
+              </tr>
+              <tr>
+                <td><span class="status s-verified">PAYMENT VERIFIED</span></td>
+                <td><strong>Payment cleared.</strong> Booking can be finalized.</td>
+                <td>Guest sees payment verified and confirmation pending.</td>
+                <td>Finalize with hotel, then mark BOOKING CONFIRMED.</td>
+              </tr>
+              <tr>
+                <td><span class="status s-confirmed">BOOKING CONFIRMED</span></td>
+                <td><strong>Finished reservation.</strong> Booking is complete.</td>
+                <td>Guest sees reservation finalized.</td>
+                <td>No next action except service follow-up if needed.</td>
+              </tr>
+              <tr>
+                <td><span class="status s-cancelled">CANCELLED</span></td>
+                <td><strong>Inactive ticket.</strong> Keep only for record/history.</td>
+                <td>Guest sees ticket cancelled and cannot pay.</td>
+                <td>Create a new quote if guest wants different dates.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="email-alerts">
+      <h2>Email Alerts</h2>
+      <p>Recommended setup: turn ON the master email alert switch and all individual alerts in the Email Dashboard.</p>
+
+      <div class="table-card">
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Email Event</th>
+                <th>Trigger</th>
+                <th>Who Receives It?</th>
+                <th>Purpose</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>New Quote Alert</strong></td>
+                <td>Ticket is created as <span class="status s-quote">QUOTE REQUESTED</span></td>
+                <td>Active staff email recipients</td>
+                <td>Tell staff a new quote needs review.</td>
+              </tr>
+              <tr>
+                <td><strong>Price Sent Email</strong></td>
+                <td>Ticket changes to <span class="status s-price">PRICE SENT</span></td>
+                <td>Guest email on the ticket</td>
+                <td>Send the private rate and ticket link to the guest.</td>
+              </tr>
+              <tr>
+                <td><strong>Price Sent Staff Copy</strong></td>
+                <td>Ticket changes to <span class="status s-price">PRICE SENT</span> and staff copy is enabled</td>
+                <td>Active staff email recipients</td>
+                <td>Give staff a record of the exact quote sent to the guest.</td>
+              </tr>
+              <tr>
+                <td><strong>Payment Submitted Alert</strong></td>
+                <td>Guest submits proof or staff saves as <span class="status s-submitted">PAYMENT SUBMITTED</span></td>
+                <td>Active staff email recipients</td>
+                <td>Notify staff to verify payment proof. The payment screenshot is attached when available.</td>
+              </tr>
+              <tr>
+                <td><strong>Booking Confirmed Hotel Alert</strong></td>
+                <td>Ticket changes to <span class="status s-confirmed">BOOKING CONFIRMED</span></td>
+                <td>Active hotel email recipients</td>
+                <td>Notify the hotel inbox that the booking request is confirmed.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="email-grid" aria-label="Email examples">
+        <article class="email-card">
+          <div class="email-head"><strong>New Quote Alert</strong><span class="badge">Staff</span></div>
+          <div class="email-body">
+            <div class="email-line"><span>To</span><span>Active staff recipients</span></div>
+            <div class="email-line"><span>When</span><span>A guest submits a public quote request</span></div>
+            <div class="email-line"><span>Example</span><span>New quote from Jane Guest for Deluxe Ocean View, Dec 12 to Dec 16.</span></div>
+          </div>
+        </article>
+
+        <article class="email-card">
+          <div class="email-head"><strong>Price Sent Email</strong><span class="badge">Guest</span></div>
+          <div class="email-body">
+            <div class="email-line"><span>To</span><span>Guest email on ticket</span></div>
+            <div class="email-line"><span>When</span><span>Staff marks ticket PRICE SENT</span></div>
+            <div class="email-line"><span>Example</span><span>Your Ritz-Carlton private rate is ready. Open your ticket to review pricing and payment instructions.</span></div>
+          </div>
+        </article>
+
+        <article class="email-card">
+          <div class="email-head"><strong>Payment Submitted Alert</strong><span class="badge">Staff</span></div>
+          <div class="email-body">
+            <div class="email-line"><span>To</span><span>Active staff recipients</span></div>
+            <div class="email-line"><span>When</span><span>Guest uploads payment proof</span></div>
+            <div class="email-line"><span>Example</span><span>Payment proof submitted via Zelle. Review screenshot and verify payment.</span></div>
+          </div>
+        </article>
+
+        <article class="email-card">
+          <div class="email-head"><strong>Booking Confirmed Alert</strong><span class="badge">Hotel</span></div>
+          <div class="email-body">
+            <div class="email-line"><span>To</span><span>Active hotel recipients</span></div>
+            <div class="email-line"><span>When</span><span>Staff marks ticket BOOKING CONFIRMED</span></div>
+            <div class="email-line"><span>Example</span><span>1609E booking confirmation request with guest names, dates, and room details.</span></div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section id="daily-process">
+      <h2>Daily Staff Process</h2>
+      <div class="checklist">
+        <article class="card">
+          <h3><span class="dot"></span> Morning Review</h3>
+          <ul class="actions">
+            <li>Open the Dashboard and filter by QUOTE REQUESTED.</li>
+            <li>Check guest details, dates, room type, and notes.</li>
+            <li>Prioritize urgent check-in dates first.</li>
+          </ul>
+        </article>
+        <article class="card">
+          <h3><span class="dot"></span> Quote Preparation</h3>
+          <ul class="actions">
+            <li>Confirm retail price and discount.</li>
+            <li>Attach the Ritz retail price screenshot.</li>
+            <li>Save as PRICE SENT and confirm email delivery toast.</li>
+          </ul>
+        </article>
+        <article class="card">
+          <h3><span class="dot"></span> Payment Review</h3>
+          <ul class="actions">
+            <li>Filter by PAYMENT SUBMITTED.</li>
+            <li>Open payment proof screenshot and verify funds.</li>
+            <li>Mark PAYMENT VERIFIED only after payment is confirmed.</li>
+          </ul>
+        </article>
+        <article class="card">
+          <h3><span class="dot"></span> Booking Closeout</h3>
+          <ul class="actions">
+            <li>Finalize the reservation with the hotel.</li>
+            <li>Mark BOOKING CONFIRMED after hotel confirmation.</li>
+            <li>Use Analytics to review booked revenue and pending value.</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section id="mistakes">
+      <h2>Common Mistakes To Avoid</h2>
+      <div class="grid cards">
+        <article class="card">
+          <h3>Sending Price Without Retail Price</h3>
+          <p>PRICE SENT requires a valid retail price. If pricing is not ready, keep the ticket in QUOTE REQUESTED.</p>
+        </article>
+        <article class="card">
+          <h3>Skipping Retail Screenshot</h3>
+          <p>The CRM allows sending without a screenshot after confirmation, but staff should attach the screenshot whenever possible for trust and clarity.</p>
+        </article>
+        <article class="card">
+          <h3>Confirming Too Early</h3>
+          <p>Do not mark BOOKING CONFIRMED before payment is verified and the hotel booking is finalized.</p>
+        </article>
+        <article class="card">
+          <h3>Deleting Instead Of Cancelling</h3>
+          <p>Use CANCELLED for real guest reservations that fell through. Delete only duplicate, test, or wrong tickets.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="suggestions">
+      <h2>Suggested Additions For Training</h2>
+      <p>These items can be added to future staff SOPs or CRM screens to make the workflow even clearer.</p>
+      <div class="suggestions">
+        <article class="suggestion">
+          <h3>Payment Proof Review Checklist</h3>
+          <p>Add a checklist for amount, sender name, date, method, and matching ticket ID before marking PAYMENT VERIFIED.</p>
+        </article>
+        <article class="suggestion">
+          <h3>Retail Screenshot Checklist</h3>
+          <p>Require staff to confirm the screenshot shows the same room, dates, retail total, and Ritz source.</p>
+        </article>
+        <article class="suggestion">
+          <h3>Email Failure SOP</h3>
+          <p>Explain what staff should do when an email alert fails, such as manually contacting the guest or checking Email Dashboard settings.</p>
+        </article>
+        <article class="suggestion">
+          <h3>Lead Priority Rules</h3>
+          <p>Define how staff should prioritize near check-in dates, high-value bookings, repeat guests, and payment-submitted tickets.</p>
+        </article>
+        <article class="suggestion">
+          <h3>Cancel vs Delete Policy</h3>
+          <p>Document that cancelled reservations stay in reports and guest history, while deleted tickets disappear from the CRM.</p>
+        </article>
+        <article class="suggestion">
+          <h3>Guest Follow-Up Templates</h3>
+          <p>Add message templates for quote reminders, payment reminders, missing screenshot requests, and booking confirmation follow-up.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="links">
+      <h2>Quick Links</h2>
+      <div class="quick-links">
+        <a class="pill-link" href="/dashboard">Dashboard</a>
+        <a class="pill-link" href="/new">New Reservation</a>
+        <a class="pill-link" href="/email-dashboard">Email Dashboard</a>
+        <a class="pill-link" href="/analytics">Analytics</a>
+        <a class="pill-link" href="/api-documentation.html">API Documentation</a>
+      </div>
+    </section>
+
+    <p class="footer-note">This guide is for staff training and CRM operations. The live source of truth for reservations is the Convex-backed ticket database inside the Ritz Reservations app.</p>
+  </main>
+</body>
+</html>

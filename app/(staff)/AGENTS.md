@@ -7,7 +7,7 @@
 ## Ownership
 
 - `layout.jsx` owns client-side staff route guarding and wraps pages with `components/StaffLayout.jsx`; `middleware.js` owns server-side staff route redirects.
-- `dashboard/` owns the server-paginated reservation list, board/table switching, account-scoped saved dashboard preferences, table column controls, multi-status filtering with status counts, CSV export, deletion, status updates, price-sent email triggering, and summary stats.
+- `dashboard/` owns the server-paginated reservation list, board/table switching, account-scoped saved dashboard preferences, table column controls, table row action dialogs, multi-status filtering with status counts, CSV export, deletion, status updates, price-sent email triggering, and summary stats.
 - `analytics/` owns staff-only reservation analytics computed from Convex tickets, including KPI cards, charts, grouped tables, date range filtering, and analytics CSV export.
 - `api-dashboard/` owns the staff-only quote webhook URL/enabled setting and the public home page variant setting.
 - `email-dashboard/` owns staff email alert controls, active/inactive staff email recipients, active/inactive hotel email recipients, the new quote alert setting, the disabled-by-default price-sent staff copy setting, the disabled-by-default payment-submitted staff alert setting, and the disabled-by-default booking-confirmed hotel alert setting.

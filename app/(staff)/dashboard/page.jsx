@@ -633,7 +633,7 @@ export default function Dashboard() {
           )}
         </div>
       ) : (
-        <TicketTable tickets={pageTickets} selectedIds={selectedIds} onSelectedIdsChange={setSelectedIds} visibleColumns={visibleColumns} onVisibleColumnsChange={setVisibleColumns} />
+        <TicketTable tickets={pageTickets} selectedIds={selectedIds} onSelectedIdsChange={setSelectedIds} visibleColumns={visibleColumns} onVisibleColumnsChange={setVisibleColumns} onStatusChange={handleStatusChange} />
       )}
       {paginationControls}
       </div>
