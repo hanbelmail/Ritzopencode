@@ -216,54 +216,56 @@ export default function TicketTable({ tickets, selectedIds, onSelectedIdsChange,
         </DropdownMenu>
       </div>
       <Dialog open={Boolean(selectedTicket)} onOpenChange={(open) => { if (!open && !statusToConfirm) closeTicketDialog(); }}>
-        <DialogContent className="w-[calc(100vw-1rem)] max-w-lg rounded-[18px] border-[#e6dfd8] bg-[#fffdf8] p-0 text-[#141413] shadow-2xl sm:w-full">
+        <DialogContent className="max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-lg overflow-hidden rounded-[18px] border-[#e6dfd8] bg-[#fffdf8] p-0 text-[#141413] shadow-2xl sm:w-full">
           {selectedTicket && (
             <>
-              <div className="border-b border-[#efe9de] px-5 py-5 sm:px-6">
+              <div className="border-b border-[#efe9de] px-5 py-5 pr-12 sm:px-6 sm:pr-12">
                 <DialogHeader className="space-y-2 text-left">
-                  <div className="flex items-start justify-between gap-4 pr-8">
+                  <div className="flex min-w-0 flex-col items-start gap-3 sm:flex-row sm:justify-between">
                     <div className="min-w-0">
                       <DialogTitle className="truncate text-xl font-semibold tracking-[-0.02em]">{primaryGuest}</DialogTitle>
                       <DialogDescription className="mt-1 font-mono text-xs text-[#6c6a64]">
                         Ticket {shortId(selectedTicket.id)}
                       </DialogDescription>
                     </div>
-                    <StatusBadge status={selectedTicket.status} />
+                    <div className="max-w-full shrink-0 overflow-hidden">
+                      <StatusBadge status={selectedTicket.status} />
+                    </div>
                   </div>
                 </DialogHeader>
               </div>
-              <div className="space-y-4 px-5 py-5 sm:px-6">
-                <div className="grid gap-2 rounded-[12px] border border-[#efe9de] bg-[#faf9f5] p-3 text-sm text-[#252523] sm:grid-cols-2">
-                  <div>
+              <div className="max-h-[calc(100dvh-9rem)] space-y-4 overflow-y-auto overflow-x-hidden px-5 py-5 sm:px-6">
+                <div className="grid min-w-0 gap-3 rounded-[12px] border border-[#efe9de] bg-[#faf9f5] p-3 text-sm text-[#252523] sm:grid-cols-2">
+                  <div className="min-w-0">
                     <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-[#8e8b82]">Check-in</p>
                     <p className="mt-1 font-medium">{fmtDate(selectedTicket.checkIn)}</p>
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-[#8e8b82]">Check-out</p>
                     <p className="mt-1 font-medium">{fmtDate(selectedTicket.checkOut)}</p>
                   </div>
-                  <div>
+                  <div className="min-w-0 sm:col-span-2">
                     <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-[#8e8b82]">Room</p>
-                    <p className="mt-1 truncate font-medium">{selectedTicket.roomType || "—"}</p>
+                    <p className="mt-1 break-words font-medium leading-5">{selectedTicket.roomType || "—"}</p>
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-[#8e8b82]">Rate Offered</p>
                     <p className="mt-1 font-medium">{fmtMoney(selectedTicket.rateOffered)}</p>
                   </div>
                 </div>
                 <div className="grid gap-2 sm:grid-cols-2">
-                  <Button asChild variant="outline" className="h-11 justify-start rounded-[10px] border-[#d8d0c7] bg-[#faf9f5] text-[#252523] hover:bg-[#efe9de]">
+                  <Button asChild variant="outline" className="h-11 w-full min-w-0 justify-start rounded-[10px] border-[#d8d0c7] bg-[#faf9f5] text-[#252523] hover:bg-[#efe9de]">
                     <Link href={`/ticket/${selectedTicket.id}`}>
                       <Eye className="mr-2 h-4 w-4" /> View Details
                     </Link>
                   </Button>
-                  <Button asChild variant="outline" className="h-11 justify-start rounded-[10px] border-[#d8d0c7] bg-[#faf9f5] text-[#252523] hover:bg-[#efe9de]">
+                  <Button asChild variant="outline" className="h-11 w-full min-w-0 justify-start rounded-[10px] border-[#d8d0c7] bg-[#faf9f5] text-[#252523] hover:bg-[#efe9de]">
                     <Link href={`/new?id=${selectedTicket.id}`}>
                       <Pencil className="mr-2 h-4 w-4" /> Edit
                     </Link>
                   </Button>
                 </div>
-                <div className="rounded-[12px] border border-[#efe9de] bg-[#faf9f5] p-3">
+                <div className="min-w-0 rounded-[12px] border border-[#efe9de] bg-[#faf9f5] p-3">
                   <p className="mb-2 text-xs font-medium uppercase tracking-[0.14em] text-[#8e8b82]">Quick actions</p>
                   <div className="grid gap-2">
                     {quickStatusActions.map((status) => {
