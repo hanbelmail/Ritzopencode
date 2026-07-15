@@ -5,7 +5,8 @@ import { getConvexClient, jsonError } from "@/lib/convex-server";
 import { DEFAULT_SETTINGS } from "@/lib/defaults";
 import { sendPriceSentEmail } from "@/lib/price-sent-email-server";
 import { sendPaymentSubmittedAlertEmail } from "@/lib/payment-submitted-alert-email-server";
-import { sendBookingRequestHotelAlertEmail } from "@/lib/booking-confirmed-hotel-alert-email-server";
+import { sendBookingRequestHotelAlertEmail } from "@/lib/booking-request-hotel-alert-email-server";
+import { sendBookingConfirmedHotelAlertEmail } from "@/lib/booking-confirmed-hotel-alert-email-server";
 
 const pricingInputFields = new Set(["retailPrice", "adjustment", "checkIn", "checkOut"]);
 
@@ -78,6 +79,7 @@ export async function PATCH(request, { params }) {
     let priceSentEmail = null;
     let paymentSubmittedAlert = null;
     let bookingRequestHotelAlert = null;
+    let bookingConfirmedHotelAlert = null;
 
     if (ticket.status === "PRICE SENT") {
       try {
@@ -113,10 +115,7 @@ export async function PATCH(request, { params }) {
 
     if (ticket.status === "PAYMENT VERIFIED") {
       try {
-        bookingRequestHotelAlert = await sendBookingRequestHotelAlertEmail({
-          client,
-          ticket,
-        });
+        bookingRequestHotelAlert = await sendBookingRequestHotelAlertEmail({ client, ticket });
         if (bookingRequestHotelAlert.ticket) ticket = bookingRequestHotelAlert.ticket;
       } catch (error) {
         bookingRequestHotelAlert = {
@@ -126,7 +125,22 @@ export async function PATCH(request, { params }) {
       }
     }
 
-    return NextResponse.json({ ticket, priceSentEmail, paymentSubmittedAlert, bookingRequestHotelAlert });
+    if (ticket.status === "BOOKING CONFIRMED") {
+      try {
+        bookingConfirmedHotelAlert = await sendBookingConfirmedHotelAlertEmail({
+          client,
+          ticket,
+        });
+        if (bookingConfirmedHotelAlert.ticket) ticket = bookingConfirmedHotelAlert.ticket;
+      } catch (error) {
+        bookingConfirmedHotelAlert = {
+          sent: false,
+          error: error.message || "Failed to send booking confirmed hotel alert",
+        };
+      }
+    }
+
+    return NextResponse.json({ ticket, priceSentEmail, paymentSubmittedAlert, bookingRequestHotelAlert, bookingConfirmedHotelAlert });
   } catch (error) {
     const message = error.message || "Failed to update ticket";
     if (message === "Invalid JSON body" || message.includes("must be a number")) {

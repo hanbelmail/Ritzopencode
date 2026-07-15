@@ -10,7 +10,7 @@
 - `dashboard/` owns the server-paginated reservation list, board/table switching, account-scoped saved dashboard preferences, table column controls, table row action dialogs, multi-status filtering with status counts, CSV export, deletion, status updates, price-sent email triggering, and summary stats.
 - `analytics/` owns staff-only reservation analytics computed from Convex tickets, including KPI cards, charts, grouped tables, date range filtering, and analytics CSV export.
 - `api-dashboard/` owns the staff-only quote webhook URL/enabled setting and the public home page variant setting.
-- `email-dashboard/` owns guest, staff, and hotel email alert controls, active/inactive staff email recipients, active/inactive hotel email recipients, the new quote alert setting, the active-by-default guest price-sent email setting, the disabled-by-default price-sent staff copy setting, the disabled-by-default payment-submitted staff alert setting, and the disabled-by-default Booking Requests Hotel Alert setting.
+- `email-dashboard/` owns guest, staff, and hotel email alert controls, active/inactive staff email recipients, active/inactive hotel email recipients, the new quote alert setting, the active-by-default guest price-sent email setting, the disabled-by-default price-sent staff copy setting, the disabled-by-default payment-submitted staff alert setting, and the disabled-by-default Booking Requests and Booking Confirmed Hotel Alert settings.
 - `new/` owns reservation creation and edit saves, the optional staff-entered `reservationConfirmationNumber`, optional retail price screenshot upload to R2, warning before `PRICE SENT` saves without that screenshot, and status-driven email alert triggering after saves.
 - `calendar/`, `clients/`, and `settings/` own their respective staff management views; `settings/` includes hotel info and the persisted app name used for the browser/tab title.
 
@@ -26,7 +26,8 @@
 - `new/` auto-selects the only visible room type for new reservations and edit-mode tickets without a saved room, and preserves saved edit-mode room/status values in selects even when settings changed.
 - `PRICE SENT` notification delivery may also send the same guest email and retail screenshot attachment to active staff recipients when email alerts and `priceSentStaffAlertEnabled` are enabled; staff copy delivery is stamped with `priceSentStaffEmailSentAt`.
 - `PAYMENT SUBMITTED` changes should trigger the payment-submitted staff alert API after Convex persistence; the alert attaches the payment proof screenshot when `paymentScreenshotKey` is present and stamps `paymentSubmittedStaffEmailSentAt`.
-- `PAYMENT VERIFIED` changes should trigger the booking request hotel alert API after Convex persistence; the alert sends to active hotel recipients with subject `1609E` and stamps `bookingRequestHotelEmailSentAt`.
+- `PAYMENT VERIFIED` saves or updates should trigger the booking requests hotel alert API after Convex persistence; the alert sends active hotel recipients the fixed-subject `1609E` booking request template and stamps `bookingRequestHotelEmailSentAt`.
+- `BOOKING CONFIRMED` saves or updates should trigger the booking confirmed hotel alert API after Convex persistence; the alert sends the hotel confirmation template to active hotel recipients with subject `Ritz Confirmation #: <reservation confirmation number>` and stamps `bookingConfirmedHotelEmailSentAt`.
 - Public quote creation triggers the new quote staff alert API after Convex persistence; delivery is skipped unless email alerts, the new quote alert, and at least one active staff recipient are configured.
 
 ## Work Guidance

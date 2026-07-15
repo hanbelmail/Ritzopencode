@@ -2,7 +2,7 @@
 
 ## Purpose
 
-- Owns shared providers, authentication context, Convex-backed reservation/settings/dashboard preference store hooks, price-sent, quote-alert, payment-submitted, and booking-confirmed hotel email helpers, UI preference/localStorage fallback helpers, legacy localStorage migration helpers, calculations, query client setup, app params, not-found component, and utilities.
+- Owns shared providers, authentication context, Convex-backed reservation/settings/dashboard preference store hooks, price-sent, quote-alert, payment-submitted, booking-request hotel, and booking-confirmed hotel email helpers, UI preference/localStorage fallback helpers, legacy localStorage migration helpers, calculations, query client setup, app params, not-found component, and utilities.
 
 ## Ownership
 
@@ -15,8 +15,10 @@
 - `quote-alert-email-server.js` owns the server-side Resend template, active staff-recipient filtering, skip rules, and successful-delivery ticket stamp for new quote staff alerts.
 - `payment-submitted-alert.js` owns the client helper for calling the payment-submitted staff alert API after ticket payment updates.
 - `payment-submitted-alert-email-server.js` owns the server-side Resend template, active staff-recipient filtering, payment proof screenshot attachment, skip rules, and successful-delivery ticket stamp for payment-submitted staff alerts.
-- `booking-confirmed-hotel-alert.js` owns the client helper for calling the Booking Requests Hotel Alert API after payment verification updates.
-- `booking-confirmed-hotel-alert-email-server.js` owns the server-side Resend template, active hotel-recipient filtering, fixed `1609E` subject, skip rules, and successful-delivery ticket stamp for Booking Requests Hotel Alerts.
+- `booking-request-hotel-alert.js` owns the client helper for calling the Booking Requests Hotel Alert API after payment-verification saves or updates.
+- `booking-request-hotel-alert-email-server.js` owns the server-side Resend booking-request template, active hotel-recipient filtering, fixed `1609E` subject, skip rules, and successful-delivery ticket stamp for Booking Requests Hotel Alerts.
+- `booking-confirmed-hotel-alert.js` owns the client helper for calling the Booking Confirmed Hotel Alert API after booking-confirmation saves or updates.
+- `booking-confirmed-hotel-alert-email-server.js` owns the server-side Resend confirmation template, active hotel-recipient filtering, confirmation-number subject, skip rules, and successful-delivery ticket stamp for Booking Confirmed Hotel Alerts.
 - `StoreMigrator.jsx` owns one-time import of legacy browser-local reservation/settings data into Convex.
 - `ui-preferences.js` owns browser-local UI preference fallback keys such as dashboard table column visibility before Convex dashboard preferences are available.
 - `AuthContext.jsx` adapts Convex Auth state/actions to the app's existing `useAuth()` contract.
@@ -26,7 +28,7 @@
 
 ## Local Contracts
 
-- Treat Convex `tickets` and `settings` tables as the live persistence contract for reservation/settings data, including app name, public home page variant, quote webhook URL/enabled settings, email alert settings and staff/hotel recipients, `reservationConfirmationNumber`, `priceSentGuestEmailEnabled`, `quoteAlertEmailSentAt`, `priceSentStaffEmailSentAt`, `paymentSubmittedStaffEmailSentAt`, `bookingRequestHotelEmailSentAt`, and R2 object-key fields such as `paymentScreenshotKey` and `retailPriceScreenshotKey`.
+- Treat Convex `tickets` and `settings` tables as the live persistence contract for reservation/settings data, including app name, public home page variant, quote webhook URL/enabled settings, email alert settings and staff/hotel recipients, `reservationConfirmationNumber`, `priceSentGuestEmailEnabled`, `quoteAlertEmailSentAt`, `priceSentStaffEmailSentAt`, `paymentSubmittedStaffEmailSentAt`, `bookingRequestHotelEmailSentAt`, `bookingConfirmedHotelEmailSentAt`, and R2 object-key fields such as `paymentScreenshotKey` and `retailPriceScreenshotKey`.
 - Treat legacy `ritz_*` localStorage keys as import-only compatibility contracts for existing browser data.
 - Keep dashboard paginated ticket hook arguments aligned with `convex/tickets.ts` pagination and filter query args.
 - Keep dashboard preference hooks aligned with `convex/dashboardPreferences.ts`; validate saved view mode, status filters, date filters, page size, and visible columns before writing them.
