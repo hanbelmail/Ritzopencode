@@ -33,7 +33,7 @@ import {
 } from "@/lib/store";
 import { notifyPriceSent } from "@/lib/price-sent-email";
 import { notifyPaymentSubmitted } from "@/lib/payment-submitted-alert";
-import { notifyBookingConfirmedHotel } from "@/lib/booking-confirmed-hotel-alert";
+import { notifyBookingRequestHotel } from "@/lib/booking-confirmed-hotel-alert";
 import { useToast } from "@/components/ui/use-toast";
 import { readDashboardTableColumns, saveDashboardTableColumns } from "@/lib/ui-preferences";
 
@@ -290,17 +290,17 @@ export default function Dashboard() {
       }
     }
 
-    if (status === "BOOKING CONFIRMED") {
+    if (status === "PAYMENT VERIFIED") {
       try {
-        const result = await notifyBookingConfirmedHotel(id);
+        const result = await notifyBookingRequestHotel(id);
         toast({
-          title: result.sent ? "Hotel alert sent" : "Hotel alert skipped",
+          title: result.sent ? "Booking request sent" : "Booking request skipped",
           description: result.sent ? "Active hotel inboxes received the booking request." : result.reason,
           variant: result.sent ? "success" : "destructive",
         });
       } catch (error) {
         toast({
-          title: "Hotel alert failed",
+          title: "Booking request failed",
           description: error.message || "The reservation was updated, but the hotel alert was not sent.",
           variant: "destructive",
         });

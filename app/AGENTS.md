@@ -27,12 +27,12 @@
 - Payment proof and retail price screenshot API routes must keep R2 objects private and return only short-lived signed URLs.
 - Retail price screenshot upload URLs are protected by Convex Auth or `N8N_API_KEY`; public read URL requests must validate the requested key against the ticket before returning a signed URL.
 - Ticket API updates that leave a reservation in `PRICE SENT` must attempt the server-side Resend guest email path and return notification metadata without rolling back the ticket update when email delivery fails.
-- Price-sent notification API routes must send guest emails server-side through Resend, attach the retail price screenshot from R2 when `retailPriceScreenshotKey` is present, optionally send the same email and attachment to active staff recipients when the disabled-by-default staff copy setting is enabled, and stamp tickets only after each successful delivery.
+- Price-sent notification API routes must send guest emails server-side through Resend when `priceSentGuestEmailEnabled` is active, attach the retail price screenshot from R2 when `retailPriceScreenshotKey` is present, optionally send the same email and attachment to active staff recipients when the disabled-by-default staff copy setting is enabled, and stamp tickets only after each successful delivery.
 - Ticket API updates that change price or stay-date inputs must recalculate derived pricing fields with `lib/calc.js` and Convex-backed settings.
 - Quote webhook forwarding must read `webhookUrl` and `webhookEnabled` from Convex-backed settings before calling any external URL.
 - Quote alert delivery must read email alert settings and active staff recipients from Convex-backed settings, send through server-side Resend credentials, and stamp `quoteAlertEmailSentAt` only after successful delivery.
 - Payment-submitted alert delivery must read email alert settings and active staff recipients from Convex-backed settings, attach the private payment proof screenshot from R2 when `paymentScreenshotKey` is present, and stamp `paymentSubmittedStaffEmailSentAt` only after successful delivery.
-- Booking-confirmed hotel alert delivery must read email alert settings and active hotel recipients from Convex-backed settings, use the fixed `1609E` subject, and stamp `bookingConfirmedHotelEmailSentAt` only after successful delivery.
+- Booking request hotel alert delivery must read email alert settings and active hotel recipients from Convex-backed settings after `PAYMENT VERIFIED`, use the fixed `1609E` subject, and stamp `bookingRequestHotelEmailSentAt` only after successful delivery.
 - Preserve App Router route group semantics; `(public)` and `(staff)` folders are URL-invisible boundaries.
 - Keep route-level reservation/settings data mutations delegated to Convex-backed hooks in `lib/store.js`.
 

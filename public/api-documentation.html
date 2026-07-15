@@ -328,7 +328,7 @@
     "checkIn": "2026-08-10",
     "checkOut": "2026-08-14"
   }'</pre>
-            <div class="note">When the saved ticket is in <code class="inline">PRICE SENT</code>, the API attempts the guest price email. Delivery metadata is returned with the updated ticket.</div>
+            <div class="note">When the saved ticket is in <code class="inline">PRICE SENT</code> and the Guest Price Sent Email setting is active, the API attempts the guest price email. Delivery metadata is returned with the updated ticket.</div>
           </div>
         </div>
 
@@ -352,7 +352,7 @@
           <span class="step-number">4</span>
           <div>
             <h3>Verify the payment</h3>
-            <p>Staff reviews the payment proof and changes the ticket to <code class="inline">PAYMENT VERIFIED</code>. This marks the payment as accepted but does not yet send the hotel booking request.</p>
+            <p>Staff reviews the payment proof and changes the ticket to <code class="inline">PAYMENT VERIFIED</code>. This marks the payment as accepted and sends the hotel booking request.</p>
             <pre>curl -X PATCH "https://your-domain.com/api/tickets/8d4b6b3e-4a66-48b0-8a0d-fd8f28a07000" \
   -H "Authorization: Bearer $N8N_API_KEY" \
   -H "Content-Type: application/json" \
@@ -364,12 +364,12 @@
           <span class="step-number">5</span>
           <div>
             <h3>Confirm the booking</h3>
-            <p>After the reservation is ready to send to the hotel, set the final status to <code class="inline">BOOKING CONFIRMED</code>.</p>
+            <p>After payment has been reviewed and accepted, set the ticket status to <code class="inline">PAYMENT VERIFIED</code>. This sends the booking request to the hotel.</p>
             <pre>curl -X PATCH "https://your-domain.com/api/tickets/8d4b6b3e-4a66-48b0-8a0d-fd8f28a07000" \
   -H "Authorization: Bearer $N8N_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{ "status": "BOOKING CONFIRMED" }'</pre>
-            <p>If booking-confirmed hotel alerts are enabled, active hotel recipients receive the hotel booking email with subject <code class="inline">1609E</code>. The ticket is stamped after successful delivery so duplicate sends are skipped.</p>
+  -d '{ "status": "PAYMENT VERIFIED" }'</pre>
+            <p>If Booking Requests Hotel Alert is enabled, active hotel recipients receive the hotel booking request email with subject <code class="inline">1609E</code>. The ticket is stamped after successful delivery so duplicate sends are skipped.</p>
           </div>
         </div>
       </div>
@@ -394,8 +394,8 @@
         </div>
 
         <div class="card">
-          <h3>Hotel Booking Alert</h3>
-          <p>Sent to active hotel recipients when the ticket reaches <code class="inline">BOOKING CONFIRMED</code>.</p>
+          <h3>Booking Requests Hotel Alert</h3>
+          <p>Sent to active hotel recipients when the ticket reaches <code class="inline">PAYMENT VERIFIED</code>.</p>
           <div class="email-example">
             <p><strong>Subject:</strong> 1609E</p>
             <p>May we please reserve for Ava Taylor</p>

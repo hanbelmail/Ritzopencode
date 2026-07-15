@@ -5,7 +5,7 @@ import { getConvexClient, jsonError } from "@/lib/convex-server";
 import { DEFAULT_SETTINGS } from "@/lib/defaults";
 import { sendPriceSentEmail } from "@/lib/price-sent-email-server";
 import { sendPaymentSubmittedAlertEmail } from "@/lib/payment-submitted-alert-email-server";
-import { sendBookingConfirmedHotelAlertEmail } from "@/lib/booking-confirmed-hotel-alert-email-server";
+import { sendBookingRequestHotelAlertEmail } from "@/lib/booking-confirmed-hotel-alert-email-server";
 
 const pricingInputFields = new Set(["retailPrice", "adjustment", "checkIn", "checkOut"]);
 
@@ -77,7 +77,7 @@ export async function PATCH(request, { params }) {
     let ticket = await client.mutation(api.tickets.update, { id, data: updateData });
     let priceSentEmail = null;
     let paymentSubmittedAlert = null;
-    let bookingConfirmedHotelAlert = null;
+    let bookingRequestHotelAlert = null;
 
     if (ticket.status === "PRICE SENT") {
       try {
@@ -111,22 +111,22 @@ export async function PATCH(request, { params }) {
       }
     }
 
-    if (ticket.status === "BOOKING CONFIRMED") {
+    if (ticket.status === "PAYMENT VERIFIED") {
       try {
-        bookingConfirmedHotelAlert = await sendBookingConfirmedHotelAlertEmail({
+        bookingRequestHotelAlert = await sendBookingRequestHotelAlertEmail({
           client,
           ticket,
         });
-        if (bookingConfirmedHotelAlert.ticket) ticket = bookingConfirmedHotelAlert.ticket;
+        if (bookingRequestHotelAlert.ticket) ticket = bookingRequestHotelAlert.ticket;
       } catch (error) {
-        bookingConfirmedHotelAlert = {
+        bookingRequestHotelAlert = {
           sent: false,
-          error: error.message || "Failed to send booking confirmed hotel alert",
+          error: error.message || "Failed to send booking request hotel alert",
         };
       }
     }
 
-    return NextResponse.json({ ticket, priceSentEmail, paymentSubmittedAlert, bookingConfirmedHotelAlert });
+    return NextResponse.json({ ticket, priceSentEmail, paymentSubmittedAlert, bookingRequestHotelAlert });
   } catch (error) {
     const message = error.message || "Failed to update ticket";
     if (message === "Invalid JSON body" || message.includes("must be a number")) {

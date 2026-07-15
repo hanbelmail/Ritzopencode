@@ -100,12 +100,13 @@ export default function EmailDashboardPage() {
   const hotelRecipients = settings.hotelEmailRecipients || [];
   const activeStaffRecipients = staffRecipients.filter((recipient) => recipient.active !== false && recipient.email.trim());
   const activeHotelRecipients = hotelRecipients.filter((recipient) => recipient.active !== false && recipient.email.trim());
+  const guestAlertCount = [settings.priceSentGuestEmailEnabled].filter(Boolean).length;
   const staffAlertCount = [settings.quoteAlertEnabled, settings.priceSentStaffAlertEnabled, settings.paymentSubmittedAlertEnabled].filter(Boolean).length;
-  const hotelAlertCount = [settings.bookingConfirmedHotelAlertEnabled].filter(Boolean).length;
-  const enabledAlertCount = staffAlertCount + hotelAlertCount;
+  const hotelAlertCount = [settings.bookingRequestHotelAlertEnabled].filter(Boolean).length;
+  const enabledAlertCount = guestAlertCount + staffAlertCount + hotelAlertCount;
   const staffAlertsReady = staffAlertCount > 0 && activeStaffRecipients.length > 0;
   const hotelAlertsReady = hotelAlertCount > 0 && activeHotelRecipients.length > 0;
-  const alertsReady = settings.emailAlertsEnabled && (staffAlertsReady || hotelAlertsReady);
+  const alertsReady = settings.emailAlertsEnabled && (guestAlertCount > 0 || staffAlertsReady || hotelAlertsReady);
 
   function setField(key, value) {
     setSettings((current) => ({ ...current, [key]: value }));
@@ -197,8 +198,16 @@ export default function EmailDashboardPage() {
               <div className="mt-5 space-y-3">
                 <div className="flex items-center justify-between rounded-[8px] border border-[#e6dfd8] bg-[#faf9f5] px-3 py-3">
                   <div>
+                    <Label htmlFor="price-sent-guest-email-enabled" className="text-sm font-medium text-[#252523]">Guest price sent email</Label>
+                    <p className="mt-0.5 text-xs text-[#6c6a64]">Send the quote and ticket link to the guest when the price is ready.</p>
+                  </div>
+                  <Switch id="price-sent-guest-email-enabled" checked={settings.priceSentGuestEmailEnabled} onCheckedChange={(value) => setField("priceSentGuestEmailEnabled", value)} />
+                </div>
+
+                <div className="flex items-center justify-between rounded-[8px] border border-[#e6dfd8] bg-[#faf9f5] px-3 py-3">
+                  <div>
                     <Label htmlFor="email-alerts-enabled" className="text-sm font-medium text-[#252523]">Email alerts active</Label>
-                    <p className="mt-0.5 text-xs text-[#6c6a64]">Master switch for staff and hotel email alerts.</p>
+                    <p className="mt-0.5 text-xs text-[#6c6a64]">Master switch for guest, staff, and hotel email alerts.</p>
                   </div>
                   <Switch id="email-alerts-enabled" checked={settings.emailAlertsEnabled} onCheckedChange={(value) => setField("emailAlertsEnabled", value)} />
                 </div>
@@ -229,10 +238,10 @@ export default function EmailDashboardPage() {
 
                 <div className="flex items-center justify-between rounded-[8px] border border-[#e6dfd8] bg-[#faf9f5] px-3 py-3">
                   <div>
-                    <Label htmlFor="booking-confirmed-hotel-alert-enabled" className="text-sm font-medium text-[#252523]">Booking confirmed hotel alert</Label>
-                    <p className="mt-0.5 text-xs text-[#6c6a64]">Email active hotel inboxes when a booking is confirmed.</p>
+                    <Label htmlFor="booking-request-hotel-alert-enabled" className="text-sm font-medium text-[#252523]">Booking requests hotel alert</Label>
+                    <p className="mt-0.5 text-xs text-[#6c6a64]">Email active hotel inboxes when payment is verified.</p>
                   </div>
-                  <Switch id="booking-confirmed-hotel-alert-enabled" checked={settings.bookingConfirmedHotelAlertEnabled} onCheckedChange={(value) => setField("bookingConfirmedHotelAlertEnabled", value)} />
+                  <Switch id="booking-request-hotel-alert-enabled" checked={settings.bookingRequestHotelAlertEnabled} onCheckedChange={(value) => setField("bookingRequestHotelAlertEnabled", value)} />
                 </div>
               </div>
 
@@ -243,7 +252,7 @@ export default function EmailDashboardPage() {
               )}
               {settings.emailAlertsEnabled && hotelAlertCount > 0 && activeHotelRecipients.length === 0 && (
                 <p className="mt-3 rounded-[8px] border border-[#e0c18d] bg-[#fff4df] px-3 py-2 text-xs leading-relaxed text-[#7b5428]">
-                  Add at least one active hotel email before booking confirmed hotel alerts can be sent.
+                  Add at least one active hotel email before booking request hotel alerts can be sent.
                 </p>
               )}
             </section>
@@ -285,7 +294,7 @@ export default function EmailDashboardPage() {
               label="Hotel email"
               placeholder="hotel@example.com"
               emptyTitle="No hotel emails yet"
-              emptyCopy="Add a hotel inbox to send booking confirmed alerts."
+               emptyCopy="Add a hotel inbox to send booking request alerts."
               icon={Building2}
               recipients={hotelRecipients}
               groupKey="hotelEmailRecipients"
