@@ -18,6 +18,7 @@ const isProtectedRoute = createRouteMatcher([
 const isProtectedApiRoute = createRouteMatcher([
   "/api/tickets(.*)",
   "/api/retail-price-screenshot/upload-url",
+  "/api/booking-confirmed-hotel-alert-attachments/upload-url",
 ]);
 
 const isAuthRoute = createRouteMatcher([

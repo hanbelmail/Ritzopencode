@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BellRing, Building2, Check, Mail, Plus, Trash2 } from "lucide-react";
+import { BellRing, Building2, Check, Mail, Plus, Trash2, Upload } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -89,6 +89,7 @@ export default function EmailDashboardPage() {
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
+  const [uploadingAttachment, setUploadingAttachment] = useState(null);
 
   useEffect(() => {
     if (savedSettings) {
@@ -98,6 +99,7 @@ export default function EmailDashboardPage() {
 
   const staffRecipients = settings.staffEmailRecipients || [];
   const hotelRecipients = settings.hotelEmailRecipients || [];
+  const bookingConfirmedAttachments = settings.bookingConfirmedHotelAlertAttachments || [];
   const activeStaffRecipients = staffRecipients.filter((recipient) => recipient.active !== false && recipient.email.trim());
   const activeHotelRecipients = hotelRecipients.filter((recipient) => recipient.active !== false && recipient.email.trim());
   const guestAlertCount = [settings.priceSentGuestEmailEnabled].filter(Boolean).length;
@@ -132,6 +134,63 @@ export default function EmailDashboardPage() {
     setSettings((current) => ({
       ...current,
       [groupKey]: (current[groupKey] || []).filter((_, recipientIndex) => recipientIndex !== index),
+    }));
+  }
+
+  async function uploadBookingConfirmedAttachment(index, event) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
+      setError("Booking confirmed alert attachments must be PDF files.");
+      return;
+    }
+
+    setError("");
+    setUploadingAttachment(index);
+    try {
+      const uploadUrlResponse = await fetch("/api/booking-confirmed-hotel-alert-attachments/upload-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fileName: file.name, contentType: "application/pdf" }),
+      });
+
+      if (!uploadUrlResponse.ok) {
+        throw new Error("Failed to prepare PDF upload");
+      }
+
+      const { key, uploadUrl } = await uploadUrlResponse.json();
+      const uploadResponse = await fetch(uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": "application/pdf" },
+        body: file,
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error("Failed to upload PDF");
+      }
+
+      setSettings((current) => {
+        const attachments = [...(current.bookingConfirmedHotelAlertAttachments || [])];
+        if (index < attachments.length) {
+          attachments[index] = { key, fileName: file.name };
+        } else {
+          attachments.push({ key, fileName: file.name });
+        }
+        return { ...current, bookingConfirmedHotelAlertAttachments: attachments };
+      });
+    } catch (uploadError) {
+      setError(uploadError.message || "Failed to upload PDF.");
+    } finally {
+      setUploadingAttachment(null);
+    }
+  }
+
+  function removeBookingConfirmedAttachment(index) {
+    setSettings((current) => ({
+      ...current,
+      bookingConfirmedHotelAlertAttachments: (current.bookingConfirmedHotelAlertAttachments || []).filter((_, attachmentIndex) => attachmentIndex !== index),
     }));
   }
 
@@ -263,6 +322,40 @@ export default function EmailDashboardPage() {
                   Add at least one active hotel email before booking confirmed hotel alerts can be sent.
                 </p>
               )}
+            </section>
+
+            <section className="rounded-[12px] border border-[#e6dfd8] bg-[#faf9f5] p-5">
+              <h2 className="text-lg font-medium text-[#252523]">Booking confirmed PDF attachments</h2>
+              <p className="mt-1 text-sm leading-relaxed text-[#6c6a64]">Upload up to two PDFs. They are attached to every Booking Confirmed Hotel Alert.</p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                {[0, 1].map((index) => {
+                  const attachment = bookingConfirmedAttachments[index];
+                  const isUploading = uploadingAttachment === index;
+                  return (
+                    <div key={index} className="rounded-[10px] border border-dashed border-[#d9cfc2] bg-[#efe9de] p-3">
+                      <p className="text-xs font-medium uppercase tracking-[0.12em] text-[#8e8b82]">PDF {index + 1}</p>
+                      {attachment ? (
+                        <>
+                          <p className="mt-2 truncate text-sm font-medium text-[#252523]" title={attachment.fileName}>{attachment.fileName}</p>
+                          <div className="mt-3 flex gap-2">
+                            <label className="inline-flex h-8 cursor-pointer items-center rounded-[7px] border border-[#d9cfc2] bg-[#faf9f5] px-3 text-xs font-medium text-[#252523] hover:bg-white">
+                              Replace
+                              <input type="file" accept="application/pdf,.pdf" className="hidden" disabled={isUploading} onChange={(event) => uploadBookingConfirmedAttachment(index, event)} />
+                            </label>
+                            <Button type="button" variant="ghost" size="sm" onClick={() => removeBookingConfirmedAttachment(index)} disabled={isUploading} className="h-8 px-2 text-[#8e8b82] hover:text-red-600">Remove</Button>
+                          </div>
+                        </>
+                      ) : (
+                        <label className="mt-3 flex cursor-pointer items-center justify-center gap-2 rounded-[7px] border border-[#d9cfc2] bg-[#faf9f5] px-3 py-2 text-xs font-medium text-[#252523] hover:bg-white">
+                          <Upload className="h-3.5 w-3.5" /> {isUploading ? "Uploading..." : "Upload PDF"}
+                          <input type="file" accept="application/pdf,.pdf" className="hidden" disabled={isUploading} onChange={(event) => uploadBookingConfirmedAttachment(index, event)} />
+                        </label>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="mt-3 text-xs text-[#6c6a64]">Save email settings after uploading or removing PDFs.</p>
             </section>
 
             <section className="rounded-[12px] border border-[#e6dfd8] bg-[#faf9f5] p-5">

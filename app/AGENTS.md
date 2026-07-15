@@ -13,6 +13,7 @@
 - `api/tickets/` owns demo REST endpoints for fetching, status-filtered fetching, updating, deleting, and sending price-sent guest email notifications for Convex-backed reservation tickets.
 - `api/payment-proof/` owns private Cloudflare R2 signed upload and signed view URL endpoints for payment screenshots.
 - `api/retail-price-screenshot/` owns private Cloudflare R2 signed upload and signed view URL endpoints for Ritz website retail price screenshots.
+- `api/booking-confirmed-hotel-alert-attachments/` owns private Cloudflare R2 signed upload URLs for the two PDF attachments configured for booking-confirmed hotel email alerts.
 - `api/quote-webhook/` owns server-side forwarding of public quote tickets to the configured external webhook.
 - `api/quote-alerts/` owns server-side new quote staff email alerts through Resend and stamps tickets after successful delivery.
 - `api/payment-submitted-alerts/` owns server-side payment-submitted staff email alerts through Resend, including payment proof screenshot attachments from R2 when present.
@@ -34,7 +35,7 @@
 - Quote alert delivery must read email alert settings and active staff recipients from Convex-backed settings, send through server-side Resend credentials, and stamp `quoteAlertEmailSentAt` only after successful delivery.
 - Payment-submitted alert delivery must read email alert settings and active staff recipients from Convex-backed settings, attach the private payment proof screenshot from R2 when `paymentScreenshotKey` is present, and stamp `paymentSubmittedStaffEmailSentAt` only after successful delivery.
 - Booking requests hotel alert delivery must read email alert settings and active hotel recipients from Convex-backed settings after `PAYMENT VERIFIED`, use the fixed `1609E` subject, and stamp `bookingRequestHotelEmailSentAt` only after successful delivery.
-- Booking confirmed hotel alert delivery must read email alert settings and active hotel recipients from Convex-backed settings after `BOOKING CONFIRMED`, use `Ritz Confirmation #: <reservation confirmation number>` as the subject, and stamp `bookingConfirmedHotelEmailSentAt` only after successful delivery.
+- Booking confirmed hotel alert delivery must read email alert settings and active hotel recipients from Convex-backed settings after `BOOKING CONFIRMED`, attach up to two configured private R2 PDFs, use `Ritz Confirmation #: <reservation confirmation number>` as the subject, and stamp `bookingConfirmedHotelEmailSentAt` only after successful delivery.
 - Preserve App Router route group semantics; `(public)` and `(staff)` folders are URL-invisible boundaries.
 - Keep route-level reservation/settings data mutations delegated to Convex-backed hooks in `lib/store.js`.
 
