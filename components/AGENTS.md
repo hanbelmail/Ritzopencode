@@ -10,7 +10,7 @@
 - `forms/` owns reservation form inputs shared by staff and quote flows.
 - `home/` owns public-home-specific quote components.
 - `ticket/` owns single-ticket preview and payment-dialog components.
-- `tickets/` owns staff reservation list, card, table, stats, and status badge components.
+- `tickets/` owns staff reservation list, card, table, stats, status badge components, reservation confirmation number table display, and quick editing in the ticket dialog.
 - `ui/AGENTS.md` owns shadcn-style UI primitives and toast helpers.
 
 ## Local Contracts

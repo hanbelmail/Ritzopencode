@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { ArrowUpDown, CheckCircle, CircleDot, Columns3, Eye, Pencil, XCircle } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -45,6 +46,7 @@ const columns = [
   { key: "rateOffered", label: "Rate Offered", render: (t) => <span className="font-medium">{fmtMoney(t.rateOffered)}</span> },
   { key: "costPerNight", label: "Per Night", render: (t) => fmtMoney(t.costPerNight) },
   { key: "paymentMethod", label: "Method", render: (t) => t.paymentMethod || "—" },
+  { key: "reservationConfirmationNumber", label: "Confirmation #", render: (t) => t.reservationConfirmationNumber || "—" },
   { key: "notes", label: "Notes/special request", render: (t) => <span className="block max-w-64 truncate" title={t.notes || ""}>{t.notes || "—"}</span> },
   { key: "referredBy", label: "Referred By", render: (t) => t.referredBy || "—" },
 ];
@@ -60,10 +62,12 @@ const quickStatusActions = ["PRICE SENT", "PAYMENT VERIFIED", "BOOKING CONFIRMED
 
 export const ticketTableColumnKeys = columns.map((column) => column.key);
 
-export default function TicketTable({ tickets, selectedIds, onSelectedIdsChange, visibleColumns = ticketTableColumnKeys, onVisibleColumnsChange, onStatusChange }) {
+export default function TicketTable({ tickets, selectedIds, onSelectedIdsChange, visibleColumns = ticketTableColumnKeys, onVisibleColumnsChange, onStatusChange, onTicketUpdate }) {
   const [sort, setSort] = useState({ key: "createdAt", dir: -1 });
   const [selectedTicketId, setSelectedTicketId] = useState(null);
   const [statusToConfirm, setStatusToConfirm] = useState(null);
+  const [confirmationNumber, setConfirmationNumber] = useState("");
+  const [savingConfirmationNumber, setSavingConfirmationNumber] = useState(false);
   const selectable = Array.isArray(selectedIds) && typeof onSelectedIdsChange === "function";
   const safeVisibleColumns = useMemo(() => {
     const allowed = new Set(ticketTableColumnKeys);
@@ -87,6 +91,10 @@ export default function TicketTable({ tickets, selectedIds, onSelectedIdsChange,
   const guests = (selectedTicket?.guests || []).filter(Boolean);
   const primaryGuest = guests[0] || "Unnamed guest";
   const pendingStatusAction = statusToConfirm ? statusActions[statusToConfirm] : null;
+
+  useEffect(() => {
+    setConfirmationNumber(selectedTicket?.reservationConfirmationNumber || "");
+  }, [selectedTicket?.id, selectedTicket?.reservationConfirmationNumber]);
 
   const toggleSort = (key) =>
     setSort((s) => ({ key, dir: s.key === key ? -s.dir : 1 }));
@@ -133,6 +141,16 @@ export default function TicketTable({ tickets, selectedIds, onSelectedIdsChange,
     if (!selectedTicket || !statusToConfirm || typeof onStatusChange !== "function") return;
     onStatusChange(selectedTicket.id, statusToConfirm);
     closeTicketDialog();
+  };
+
+  const saveConfirmationNumber = async () => {
+    if (!selectedTicket || typeof onTicketUpdate !== "function") return;
+    setSavingConfirmationNumber(true);
+    try {
+      await onTicketUpdate(selectedTicket.id, { reservationConfirmationNumber: confirmationNumber.trim() });
+    } finally {
+      setSavingConfirmationNumber(false);
+    }
   };
 
   return (
@@ -244,13 +262,30 @@ export default function TicketTable({ tickets, selectedIds, onSelectedIdsChange,
                     <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-[#8e8b82]">Check-out</p>
                     <p className="mt-1 font-medium">{fmtDate(selectedTicket.checkOut)}</p>
                   </div>
-                  <div className="min-w-0 sm:col-span-2">
-                    <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-[#8e8b82]">Room</p>
-                    <p className="mt-1 break-words font-medium leading-5">{selectedTicket.roomType || "—"}</p>
-                  </div>
                   <div className="min-w-0">
                     <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-[#8e8b82]">Rate Offered</p>
                     <p className="mt-1 font-medium">{fmtMoney(selectedTicket.rateOffered)}</p>
+                  </div>
+                  <div className="min-w-0 sm:col-span-2">
+                    <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-[#8e8b82]">Reservation confirmation number</p>
+                    <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <Input
+                        value={confirmationNumber}
+                        onChange={(event) => setConfirmationNumber(event.target.value)}
+                        placeholder="Enter confirmation number"
+                        className="h-9 bg-white"
+                        onClick={(event) => event.stopPropagation()}
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={saveConfirmationNumber}
+                        disabled={savingConfirmationNumber || typeof onTicketUpdate !== "function"}
+                        className="h-9 shrink-0 rounded-[8px] bg-[#25211d] px-4 text-white hover:bg-[#3a3028]"
+                      >
+                        {savingConfirmationNumber ? "Saving..." : "Save"}
+                      </Button>
+                    </div>
                   </div>
                 </div>
                 <div className="grid gap-2 sm:grid-cols-2">

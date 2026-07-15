@@ -56,6 +56,7 @@ export default function NewReservation() {
     phone: "",
     referredBy: "",
     roomType: "",
+    reservationConfirmationNumber: "",
     retailPrice: settings.defaultRetailPrice,
     adjustment: "",
     notes: "",
@@ -78,6 +79,7 @@ export default function NewReservation() {
       phone: existing?.phone || "",
       referredBy: existing?.referredBy || "",
       roomType: existing?.roomType?.trim() || "",
+      reservationConfirmationNumber: existing?.reservationConfirmationNumber || "",
       retailPrice: existing ? (existing.retailPrice ?? "") : settings.defaultRetailPrice,
       adjustment: existing?.adjustment ?? "",
       notes: existing?.notes || "",
@@ -219,6 +221,7 @@ export default function NewReservation() {
       ...form,
       email,
       guests: guestNames,
+      reservationConfirmationNumber: form.reservationConfirmationNumber.trim(),
       retailPrice,
       adjustment: form.adjustment === "" ? 0 : Number(form.adjustment),
       ...computeTicket(form, settings),
@@ -335,7 +338,7 @@ export default function NewReservation() {
               <p>{errors.checkOut}</p>
             </div>
           )}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Email</Label>
               <Input type="email" aria-invalid={Boolean(errors.email)} value={form.email} onChange={(e) => set("email", e.target.value)} />
@@ -363,10 +366,14 @@ export default function NewReservation() {
                   ))}
                 </SelectContent>
               </Select>
-              {errors.roomType && <p className="text-xs font-medium text-red-600">{errors.roomType}</p>}
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
+               {errors.roomType && <p className="text-xs font-medium text-red-600">{errors.roomType}</p>}
+             </div>
+           </div>
+           <div className="space-y-2">
+             <Label>Reservation confirmation number <span className="text-muted-foreground font-normal">(optional, added by staff)</span></Label>
+             <Input value={form.reservationConfirmationNumber} onChange={(e) => set("reservationConfirmationNumber", e.target.value)} placeholder="Enter hotel confirmation number" />
+           </div>
+           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Retail price (total)</Label>
               <Input type="number" step="0.01" aria-invalid={Boolean(errors.retailPrice)} value={form.retailPrice} onChange={(e) => set("retailPrice", e.target.value)} />

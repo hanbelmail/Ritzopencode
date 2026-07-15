@@ -65,6 +65,7 @@ const csvColumns = [
   { key: "rateOffered", label: "Rate Offered" },
   { key: "costPerNight", label: "Cost Per Night" },
   { key: "paymentMethod", label: "Payment Method" },
+  { key: "reservationConfirmationNumber", label: "Reservation Confirmation Number" },
   { key: "notes", label: "Notes" },
   { key: "referredBy", label: "Referred By" },
 ];
@@ -633,7 +634,7 @@ export default function Dashboard() {
           )}
         </div>
       ) : (
-        <TicketTable tickets={pageTickets} selectedIds={selectedIds} onSelectedIdsChange={setSelectedIds} visibleColumns={visibleColumns} onVisibleColumnsChange={setVisibleColumns} onStatusChange={handleStatusChange} />
+        <TicketTable tickets={pageTickets} selectedIds={selectedIds} onSelectedIdsChange={setSelectedIds} visibleColumns={visibleColumns} onVisibleColumnsChange={setVisibleColumns} onStatusChange={handleStatusChange} onTicketUpdate={updateTicket} />
       )}
       {paginationControls}
       </div>

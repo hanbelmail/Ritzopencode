@@ -459,6 +459,7 @@ export default function TicketPage() {
               <Field label="Referred by" value={ticket.referredBy} />
               <Field label="Quote date" value={ticket.createdAt ? fmtDate(ticket.createdAt) : null} />
               <Field label="Ticket ID" value={ticket.id} />
+              {ticket.reservationConfirmationNumber && <Field label="Reservation confirmation number" value={ticket.reservationConfirmationNumber} />}
             </div>
           </DetailSection>
 

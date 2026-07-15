@@ -11,7 +11,7 @@
 - `analytics/` owns staff-only reservation analytics computed from Convex tickets, including KPI cards, charts, grouped tables, date range filtering, and analytics CSV export.
 - `api-dashboard/` owns the staff-only quote webhook URL/enabled setting and the public home page variant setting.
 - `email-dashboard/` owns guest, staff, and hotel email alert controls, active/inactive staff email recipients, active/inactive hotel email recipients, the new quote alert setting, the active-by-default guest price-sent email setting, the disabled-by-default price-sent staff copy setting, the disabled-by-default payment-submitted staff alert setting, and the disabled-by-default Booking Requests Hotel Alert setting.
-- `new/` owns reservation creation and edit saves, optional retail price screenshot upload to R2, warning before `PRICE SENT` saves without that screenshot, and status-driven email alert triggering after saves.
+- `new/` owns reservation creation and edit saves, the optional staff-entered `reservationConfirmationNumber`, optional retail price screenshot upload to R2, warning before `PRICE SENT` saves without that screenshot, and status-driven email alert triggering after saves.
 - `calendar/`, `clients/`, and `settings/` own their respective staff management views; `settings/` includes hotel info and the persisted app name used for the browser/tab title.
 
 ## Local Contracts
