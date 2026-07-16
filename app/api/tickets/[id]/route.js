@@ -3,7 +3,7 @@ import { api } from "@/convex/_generated/api";
 import { computeTicket } from "@/lib/calc";
 import { getConvexClient, jsonError } from "@/lib/convex-server";
 import { DEFAULT_SETTINGS } from "@/lib/defaults";
-import { sendPriceSentEmail } from "@/lib/price-sent-email-server";
+import { sendPriceSentNotifications } from "@/lib/price-sent-notifications-server";
 import { sendPaymentSubmittedAlertEmail } from "@/lib/payment-submitted-alert-email-server";
 import { sendBookingRequestHotelAlertEmail } from "@/lib/booking-request-hotel-alert-email-server";
 import { sendBookingConfirmedHotelAlertEmail } from "@/lib/booking-confirmed-hotel-alert-email-server";
@@ -77,24 +77,20 @@ export async function PATCH(request, { params }) {
 
     let ticket = await client.mutation(api.tickets.update, { id, data: updateData });
     let priceSentEmail = null;
+    let priceSentSms = null;
     let paymentSubmittedAlert = null;
     let bookingRequestHotelAlert = null;
     let bookingConfirmedHotelAlert = null;
 
     if (ticket.status === "PRICE SENT") {
-      try {
-        priceSentEmail = await sendPriceSentEmail({
-          client,
-          ticket,
-          origin: request.nextUrl.origin,
-        });
-        if (priceSentEmail.ticket) ticket = priceSentEmail.ticket;
-      } catch (error) {
-        priceSentEmail = {
-          sent: false,
-          error: error.message || "Failed to send price sent email",
-        };
-      }
+      const priceSentNotifications = await sendPriceSentNotifications({
+        client,
+        ticket,
+        origin: request.nextUrl.origin,
+      });
+      ticket = priceSentNotifications.ticket;
+      priceSentEmail = priceSentNotifications.email;
+      priceSentSms = priceSentNotifications.sms;
     }
 
     if (ticket.status === "PAYMENT SUBMITTED") {
@@ -140,7 +136,7 @@ export async function PATCH(request, { params }) {
       }
     }
 
-    return NextResponse.json({ ticket, priceSentEmail, paymentSubmittedAlert, bookingRequestHotelAlert, bookingConfirmedHotelAlert });
+    return NextResponse.json({ ticket, priceSentEmail, priceSentSms, paymentSubmittedAlert, bookingRequestHotelAlert, bookingConfirmedHotelAlert });
   } catch (error) {
     const message = error.message || "Failed to update ticket";
     if (message === "Invalid JSON body" || message.includes("must be a number")) {

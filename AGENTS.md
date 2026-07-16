@@ -90,9 +90,10 @@ When the user requests a durable behavior change, record it here or in the relev
 
 - Use `@/` imports for project paths, matching `jsconfig.json`.
 - Preserve the current JavaScript/JSX file style; do not introduce TypeScript unless explicitly requested.
-- Treat `lib/store.js` constants and Convex tables as reservation/settings data contracts, including the public home page variant, email alert settings, email delivery stamps, and R2 object-key fields such as `paymentScreenshotKey` and `retailPriceScreenshotKey`; legacy `ritz_*` localStorage keys are read only for one-time browser data migration.
+- Treat `lib/store.js` constants and Convex tables as reservation/settings data contracts, including the public home page variant, email/SMS alert settings, delivery stamps, and R2 object-key fields such as `paymentScreenshotKey` and `retailPriceScreenshotKey`; legacy `ritz_*` localStorage keys are read only for one-time browser data migration.
 - Keep public guest flows, staff-authenticated flows, reusable components, and storage/business logic separated by their owning child DOX files.
-- `middleware.js` protects staff routes, including `/email-dashboard`, with Convex Auth, skips automatic Convex Auth `code` handling on `/reset-password` so password-reset links keep their verification code, and allows protected API access for `/api/tickets(.*)`, `/api/retail-price-screenshot/upload-url`, and `/api/booking-confirmed-hotel-alert-attachments/upload-url` through either Convex Auth or a server-side `N8N_API_KEY` sent as `Authorization: Bearer <key>` or `x-api-key`.
+- `middleware.js` protects staff routes, including `/email-dashboard` and `/sms-dashboard`, with Convex Auth, skips automatic Convex Auth `code` handling on `/reset-password` so password-reset links keep their verification code, and allows protected API access for `/api/tickets(.*)`, `/api/retail-price-screenshot/upload-url`, and `/api/booking-confirmed-hotel-alert-attachments/upload-url` through either Convex Auth or a server-side `N8N_API_KEY` sent as `Authorization: Bearer <key>` or `x-api-key`.
+- Quo guest SMS delivery is server-only through `QUO_API_KEY` and `QUO_FROM`; `QUO_FROM` must be an E.164 number or Quo `PN...` identifier and guest recipients must use E.164 format.
 
 ## Verification
 

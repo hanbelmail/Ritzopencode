@@ -12,6 +12,7 @@ import GuestNamesInput from "@/components/forms/GuestNamesInput";
 import ReservationDatePicker from "@/components/forms/ReservationDatePicker";
 import { DEFAULT_SETTINGS, useSettings, useTicketActions } from "@/lib/store";
 import { computeTicket } from "@/lib/calc";
+import { isE164Phone, normalizePhone } from "@/lib/phone";
 
 const MAX_PUBLIC_GUESTS = 4;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -49,6 +50,7 @@ export default function QuoteForm() {
     e.preventDefault();
     const guestNames = guests.map((g) => g.trim()).filter(Boolean);
     const email = form.email.trim();
+    const phone = normalizePhone(form.phone);
     const nextErrors = {};
 
     if (!guestNames.length) nextErrors.guests = "Add at least one guest name.";
@@ -59,6 +61,11 @@ export default function QuoteForm() {
       nextErrors.email = "Enter an email address.";
     } else if (!EMAIL_PATTERN.test(email)) {
       nextErrors.email = "Enter a valid email address.";
+    }
+    if (!phone) {
+      nextErrors.phone = "Enter a phone number.";
+    } else if (!isE164Phone(phone)) {
+      nextErrors.phone = "Use E.164 format, for example +18085551234.";
     }
 
     if (guestNames.length > MAX_PUBLIC_GUESTS) {
@@ -71,7 +78,7 @@ export default function QuoteForm() {
     }
 
     setErrors({});
-    const sanitizedForm = { ...form, email };
+    const sanitizedForm = { ...form, email, phone };
     const computed = computeTicket({ ...sanitizedForm, retailPrice: null, adjustment: 0 }, settings);
     const ticket = await createTicket({
       ...sanitizedForm,
@@ -161,7 +168,8 @@ export default function QuoteForm() {
         </div>
         <div className="space-y-2">
           <Label className="text-sm font-medium text-[#252523]">Phone</Label>
-          <Input className="h-10 rounded-[8px] border-[#e6dfd8] bg-[#faf9f5] shadow-none focus-visible:ring-[#cc785c]" type="tel" required value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder="+1 555 000 0000" />
+          <Input className="h-10 rounded-[8px] border-[#e6dfd8] bg-[#faf9f5] shadow-none focus-visible:ring-[#cc785c]" type="tel" required aria-invalid={Boolean(errors.phone)} value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder="+18085551234" />
+          {errors.phone && <p className="text-xs font-medium text-red-600">{errors.phone}</p>}
         </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

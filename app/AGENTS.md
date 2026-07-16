@@ -10,7 +10,7 @@
 - `globals.css` owns Tailwind globals and theme variables consumed across the app.
 - `login/` and `register/` own guest authentication flows backed by Convex Auth through `lib/AuthContext.jsx`.
 - `forgot-password/` and `reset-password/` own Convex Auth password reset request and verification flows.
-- `api/tickets/` owns demo REST endpoints for fetching, status-filtered fetching, updating, deleting, and sending price-sent guest email notifications for Convex-backed reservation tickets.
+- `api/tickets/` owns demo REST endpoints for fetching, status-filtered fetching, updating, deleting, and sending price-sent guest email/SMS notifications for Convex-backed reservation tickets.
 - `api/payment-proof/` owns private Cloudflare R2 signed upload and signed view URL endpoints for payment screenshots.
 - `api/retail-price-screenshot/` owns private Cloudflare R2 signed upload and signed view URL endpoints for Ritz website retail price screenshots.
 - `api/booking-confirmed-hotel-alert-attachments/` owns private Cloudflare R2 signed upload URLs for the two PDF attachments configured for booking-confirmed hotel email alerts.
@@ -28,8 +28,9 @@
 - API route handlers may call Convex backend functions through `ConvexHttpClient` and must preserve the Convex `tickets` table as the source of truth.
 - Payment proof and retail price screenshot API routes must keep R2 objects private and return only short-lived signed URLs.
 - Retail price screenshot upload URLs are protected by Convex Auth or `N8N_API_KEY`; public read URL requests must validate the requested key against the ticket before returning a signed URL.
-- Ticket API updates that leave a reservation in `PRICE SENT` must attempt the server-side Resend guest email path and return notification metadata without rolling back the ticket update when email delivery fails.
+- Ticket API updates that leave a reservation in `PRICE SENT` must attempt the server-side Resend guest email and Quo guest SMS paths and return notification metadata without rolling back the ticket update when either delivery fails.
 - Price-sent notification API routes must send guest emails server-side through Resend when `priceSentGuestEmailEnabled` is active, attach the retail price screenshot from R2 when `retailPriceScreenshotKey` is present, optionally send the same email and attachment to active staff recipients when the disabled-by-default staff copy setting is enabled, and stamp tickets only after each successful delivery.
+- Price-sent notification API routes must send Quo guest SMS when `priceSentSmsEnabled` is active and the ticket has an E.164 phone number, render the selected `priceSentSmsTemplates` entry with quote pricing placeholders, and stamp `priceSentSmsSentAt` only after Quo accepts delivery.
 - Ticket API updates that change price or stay-date inputs must recalculate derived pricing fields with `lib/calc.js` and Convex-backed settings.
 - Quote webhook forwarding must read `webhookUrl` and `webhookEnabled` from Convex-backed settings before calling any external URL.
 - Quote alert delivery must read email alert settings and active staff recipients from Convex-backed settings, send through server-side Resend credentials, and stamp `quoteAlertEmailSentAt` only after successful delivery.

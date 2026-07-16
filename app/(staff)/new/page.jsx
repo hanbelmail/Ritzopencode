@@ -11,7 +11,8 @@ import GuestNamesInput from "@/components/forms/GuestNamesInput";
 import ReservationDatePicker from "@/components/forms/ReservationDatePicker";
 import { DEFAULT_SETTINGS, useSettings, useTicket, useTicketActions, STATUSES } from "@/lib/store";
 import { computeTicket, fmtMoney } from "@/lib/calc";
-import { notifyPriceSent } from "@/lib/price-sent-email";
+import { isE164Phone, normalizePhone } from "@/lib/phone";
+import { getPriceSentNotificationFeedback, notifyPriceSent } from "@/lib/price-sent-email";
 import { notifyPaymentSubmitted } from "@/lib/payment-submitted-alert";
 import { notifyBookingRequestHotel } from "@/lib/booking-request-hotel-alert";
 import { notifyBookingConfirmedHotel } from "@/lib/booking-confirmed-hotel-alert";
@@ -188,6 +189,7 @@ export default function NewReservation() {
     e.preventDefault();
     const guestNames = guests.map((g) => g.trim()).filter(Boolean);
     const email = form.email.trim();
+    const phone = normalizePhone(form.phone);
     const retailPrice = form.retailPrice === "" || form.retailPrice == null ? null : Number(form.retailPrice);
     const nextErrors = {};
 
@@ -204,6 +206,11 @@ export default function NewReservation() {
     if (form.status === "PRICE SENT" && (retailPrice === null || Number.isNaN(retailPrice) || retailPrice <= 0)) {
       nextErrors.retailPrice = "Enter a valid retail price before saving PRICE SENT.";
     }
+    if (form.status === "PRICE SENT" && !phone) {
+      nextErrors.phone = "Enter a guest phone number before saving PRICE SENT.";
+    } else if (phone && !isE164Phone(phone)) {
+      nextErrors.phone = "Use E.164 format, for example +18085551234.";
+    }
 
     if (Object.keys(nextErrors).length) {
       setErrors(nextErrors);
@@ -213,7 +220,7 @@ export default function NewReservation() {
     setErrors({});
     const hasRetailScreenshot = Boolean(retailScreenshotFile || existing?.retailPriceScreenshotKey);
     if (form.status === "PRICE SENT" && !hasRetailScreenshot) {
-      const shouldContinue = window.confirm("No retail price screenshot is attached. Send the PRICE SENT email without the screenshot?");
+      const shouldContinue = window.confirm("No retail price screenshot is attached. Send the PRICE SENT guest notifications without the screenshot?");
       if (!shouldContinue) return;
     }
 
@@ -221,6 +228,7 @@ export default function NewReservation() {
     const data = {
       ...form,
       email,
+      phone,
       guests: guestNames,
       reservationConfirmationNumber: form.reservationConfirmationNumber.trim(),
       retailPrice,
@@ -245,15 +253,11 @@ export default function NewReservation() {
       if (ticket.status === "PRICE SENT") {
         try {
           const result = await notifyPriceSent(ticket.id);
-          toast({
-            title: result.sent ? "Price email sent" : "Price email skipped",
-            description: result.sent ? "The guest received the ticket link and quote details." : result.reason,
-            variant: result.sent ? "success" : "destructive",
-          });
+          toast(getPriceSentNotificationFeedback(result));
         } catch (error) {
           toast({
-            title: "Price email failed",
-            description: error.message || "The reservation was saved, but the email was not sent.",
+            title: "Price notifications failed",
+            description: error.message || "The reservation was saved, but price notifications were not sent.",
             variant: "destructive",
           });
         }
@@ -355,7 +359,7 @@ export default function NewReservation() {
               <p>{errors.checkOut}</p>
             </div>
           )}
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Email</Label>
               <Input type="email" aria-invalid={Boolean(errors.email)} value={form.email} onChange={(e) => set("email", e.target.value)} />
@@ -363,7 +367,8 @@ export default function NewReservation() {
             </div>
             <div className="space-y-2">
               <Label>Phone</Label>
-              <Input type="tel" value={form.phone} onChange={(e) => set("phone", e.target.value)} />
+              <Input type="tel" aria-invalid={Boolean(errors.phone)} value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder="+18085551234" />
+              {errors.phone && <p className="text-xs font-medium text-red-600">{errors.phone}</p>}
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

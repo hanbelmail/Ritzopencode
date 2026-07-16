@@ -31,7 +31,8 @@ import {
   useTicketActions,
   useTicketPage,
 } from "@/lib/store";
-import { notifyPriceSent } from "@/lib/price-sent-email";
+import { isE164Phone } from "@/lib/phone";
+import { getPriceSentNotificationFeedback, notifyPriceSent } from "@/lib/price-sent-email";
 import { notifyPaymentSubmitted } from "@/lib/payment-submitted-alert";
 import { notifyBookingRequestHotel } from "@/lib/booking-request-hotel-alert";
 import { notifyBookingConfirmedHotel } from "@/lib/booking-confirmed-hotel-alert";
@@ -257,19 +258,27 @@ export default function Dashboard() {
   };
 
   const handleStatusChange = async (id, status) => {
+    if (status === "PRICE SENT") {
+      const ticket = pageTickets.find((item) => item.id === id);
+      if (!ticket?.phone || !isE164Phone(ticket.phone)) {
+        toast({
+          title: "Guest phone number required",
+          description: "Edit this reservation and enter an E.164 phone number, for example +18085551234, before sending the price.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     await updateTicket(id, { status });
     if (status === "PRICE SENT") {
       try {
         const result = await notifyPriceSent(id);
-        toast({
-          title: result.sent ? "Price email sent" : "Price email skipped",
-          description: result.sent ? "The guest received the ticket link and quote details." : result.reason,
-          variant: result.sent ? "success" : "destructive",
-        });
+        toast(getPriceSentNotificationFeedback(result));
       } catch (error) {
         toast({
-          title: "Price email failed",
-          description: error.message || "The reservation was updated, but the email was not sent.",
+          title: "Price notifications failed",
+          description: error.message || "The reservation was updated, but price notifications were not sent.",
           variant: "destructive",
         });
       }

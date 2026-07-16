@@ -11,6 +11,7 @@ const isProtectedRoute = createRouteMatcher([
   "/clients(.*)",
   "/settings(.*)",
   "/email-dashboard(.*)",
+  "/sms-dashboard(.*)",
   "/api-dashboard(.*)",
   "/new(.*)",
 ]);
