@@ -24,6 +24,7 @@
 - Status labels must stay aligned with `STATUSES` from `lib/store.js`.
 - Saving or changing a reservation to `PRICE SENT` should call the protected notification API after Convex persistence; when enabled, guests receive the ticket link and quote details by email and the ticket link by Quo SMS once each; if a retail price screenshot is selected, upload it and persist `retailPriceScreenshotKey` before calling the notification API.
 - `new/` must validate before saving that a reservation has at least one guest name, check-in, check-out, room type, valid email, valid status, and a positive retail price and E.164 guest phone number when status is `PRICE SENT`.
+- `new/` accepts familiar US/Canada guest phone formatting, normalizes it to `+1` E.164 on blur, and persists the normalized value.
 - `new/` auto-selects the only visible room type for new reservations and edit-mode tickets without a saved room, and preserves saved edit-mode room/status values in selects even when settings changed.
 - `PRICE SENT` notification delivery may also send the same guest email and retail screenshot attachment to active staff recipients when email alerts and `priceSentStaffAlertEnabled` are enabled; staff copy delivery is stamped with `priceSentStaffEmailSentAt`.
 - `PAYMENT SUBMITTED` changes should trigger the payment-submitted staff alert API after Convex persistence; the alert attaches the payment proof screenshot when `paymentScreenshotKey` is present and stamps `paymentSubmittedStaffEmailSentAt`.

@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CheckCircle2, Copy, Check } from "lucide-react";
 import GuestNamesInput from "@/components/forms/GuestNamesInput";
 import ReservationDatePicker from "@/components/forms/ReservationDatePicker";
@@ -65,7 +64,7 @@ export default function QuoteForm() {
     if (!phone) {
       nextErrors.phone = "Enter a phone number.";
     } else if (!isE164Phone(phone)) {
-      nextErrors.phone = "Use E.164 format, for example +18085551234.";
+      nextErrors.phone = "Enter a valid US or Canada phone number.";
     }
 
     if (guestNames.length > MAX_PUBLIC_GUESTS) {
@@ -168,27 +167,13 @@ export default function QuoteForm() {
         </div>
         <div className="space-y-2">
           <Label className="text-sm font-medium text-[#252523]">Phone</Label>
-          <Input className="h-10 rounded-[8px] border-[#e6dfd8] bg-[#faf9f5] shadow-none focus-visible:ring-[#cc785c]" type="tel" required aria-invalid={Boolean(errors.phone)} value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder="+18085551234" />
+          <Input className="h-10 rounded-[8px] border-[#e6dfd8] bg-[#faf9f5] shadow-none focus-visible:ring-[#cc785c]" type="tel" required aria-invalid={Boolean(errors.phone)} value={form.phone} onChange={(e) => set("phone", e.target.value)} onBlur={() => set("phone", normalizePhone(form.phone))} placeholder="(786) 749-0725" />
           {errors.phone && <p className="text-xs font-medium text-red-600">{errors.phone}</p>}
         </div>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label className="text-sm font-medium text-[#252523]">Referred by <span className="text-[#6c6a64] font-normal">(optional)</span></Label>
-          <Input className="h-10 rounded-[8px] border-[#e6dfd8] bg-[#faf9f5] shadow-none focus-visible:ring-[#cc785c]" value={form.referredBy} onChange={(e) => set("referredBy", e.target.value)} />
-        </div>
-        <div className="space-y-2">
-          <Label className="text-sm font-medium text-[#252523]">Room name</Label>
-          <Select value={form.roomType} onValueChange={(v) => set("roomType", v)} required>
-            <SelectTrigger className="h-10 rounded-[8px] border-[#e6dfd8] bg-[#faf9f5] shadow-none focus:ring-[#cc785c]"><SelectValue placeholder="Select room type" /></SelectTrigger>
-            <SelectContent>
-              {visibleRoomOptions.map((room) => (
-                <SelectItem key={room} value={room}>{room}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {errors.roomType && <p className="text-xs font-medium text-red-600">{errors.roomType}</p>}
-        </div>
+      <div className="space-y-2">
+        <Label className="text-sm font-medium text-[#252523]">Referred by <span className="text-[#6c6a64] font-normal">(optional)</span></Label>
+        <Input className="h-10 rounded-[8px] border-[#e6dfd8] bg-[#faf9f5] shadow-none focus-visible:ring-[#cc785c]" value={form.referredBy} onChange={(e) => set("referredBy", e.target.value)} />
       </div>
       <div className="space-y-2">
         <Label className="text-sm font-medium text-[#252523]">Notes / special requests <span className="text-[#6c6a64] font-normal">(optional)</span></Label>

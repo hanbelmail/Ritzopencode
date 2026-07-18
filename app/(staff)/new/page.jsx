@@ -209,7 +209,7 @@ export default function NewReservation() {
     if (form.status === "PRICE SENT" && !phone) {
       nextErrors.phone = "Enter a guest phone number before saving PRICE SENT.";
     } else if (phone && !isE164Phone(phone)) {
-      nextErrors.phone = "Use E.164 format, for example +18085551234.";
+      nextErrors.phone = "Enter a valid US or Canada phone number.";
     }
 
     if (Object.keys(nextErrors).length) {
@@ -367,7 +367,7 @@ export default function NewReservation() {
             </div>
             <div className="space-y-2">
               <Label>Phone</Label>
-              <Input type="tel" aria-invalid={Boolean(errors.phone)} value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder="+18085551234" />
+              <Input type="tel" aria-invalid={Boolean(errors.phone)} value={form.phone} onChange={(e) => set("phone", e.target.value)} onBlur={() => set("phone", normalizePhone(form.phone))} placeholder="(786) 749-0725" />
               {errors.phone && <p className="text-xs font-medium text-red-600">{errors.phone}</p>}
             </div>
           </div>

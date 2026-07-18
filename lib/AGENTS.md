@@ -39,6 +39,7 @@
 - Keep browser-only storage access guarded for server rendering where applicable.
 - Keep R2 credentials server-only; client components must use API routes for signed payment proof, retail price screenshot, and booking-confirmed alert PDF upload URLs.
 - Do not duplicate status, payment method, settings, or ticket schema constants in route or component files.
+- `normalizePhone()` converts formatted 10-digit US/Canada numbers and 11-digit North American numbers beginning with `1` to persisted `+1` E.164 values while preserving already international `+` numbers.
 
 ## Work Guidance
 
