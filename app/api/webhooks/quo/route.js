@@ -15,6 +15,38 @@ function secureEqual(left, right) {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
+function signatureShape(value) {
+  const candidates = String(value || "").trim().split(/\s+/).filter(Boolean);
+  return {
+    candidates: candidates.length,
+    formats: candidates.map((candidate) => {
+      if (/^v\d+,[A-Za-z0-9+/_=-]+$/.test(candidate)) return "versioned-comma";
+      if (/^[A-Za-z][\w-]*=[A-Fa-f0-9]+$/.test(candidate)) return "algorithm-hex";
+      if (/^[A-Fa-f0-9]+$/.test(candidate)) return "hex";
+      if (/^[A-Za-z0-9+/]+={0,2}$/.test(candidate)) return "base64";
+      if (/^[A-Za-z0-9_-]+$/.test(candidate)) return "base64url-or-token";
+      return "unknown";
+    }),
+    lengths: candidates.map((candidate) => candidate.length),
+  };
+}
+
+function logWebhookVerificationFailure(request, reason) {
+  const relevantHeaderNames = Array.from(request.headers.keys())
+    .filter((name) => /signature|timestamp|webhook|openphone|quo/i.test(name))
+    .sort();
+  const signatureShapes = Object.fromEntries(
+    relevantHeaderNames
+      .filter((name) => /signature/i.test(name))
+      .map((name) => [name, signatureShape(request.headers.get(name))])
+  );
+  console.warn("[quo-webhook] signature verification failed", {
+    reason,
+    relevantHeaderNames,
+    signatureShapes,
+  });
+}
+
 function webhookAuthorized(request, rawBody) {
   const signingSecret = process.env.QUO_WEBHOOK_SECRET;
   if (signingSecret) {
@@ -22,20 +54,24 @@ function webhookAuthorized(request, rawBody) {
     const timestamp = request.headers.get("webhook-timestamp") || "";
     const signatureHeader = request.headers.get("webhook-signature") || "";
     const timestampSeconds = Number(timestamp);
-    if (!webhookId || !timestampSeconds || Math.abs(Date.now() / 1000 - timestampSeconds) > 300) return false;
+    if (!webhookId || !timestamp || !signatureHeader) return { authorized: false, reason: "missing_standard_header" };
+    if (!timestampSeconds) return { authorized: false, reason: "invalid_timestamp" };
+    if (Math.abs(Date.now() / 1000 - timestampSeconds) > 300) return { authorized: false, reason: "timestamp_outside_replay_window" };
     const encodedSecret = signingSecret.startsWith("whsec_") ? signingSecret.slice(6) : signingSecret;
     const secret = Buffer.from(encodedSecret, "base64");
     const expected = createHmac("sha256", secret).update(`${webhookId}.${timestamp}.${rawBody}`).digest("base64");
-    return signatureHeader.split(/\s+/).some((candidate) => {
+    const authorized = signatureHeader.split(/\s+/).some((candidate) => {
       const [version, signature] = candidate.split(",");
       return version === "v1" && secureEqual(signature, expected);
     });
+    return { authorized, reason: authorized ? null : "signature_mismatch" };
   }
 
   if (process.env.NODE_ENV === "production") throw new Error("QUO_WEBHOOK_SECRET is not configured");
   const expected = process.env.QUO_WEBHOOK_TOKEN;
   const provided = request.nextUrl.searchParams.get("token") || request.headers.get("x-webhook-token") || "";
-  return Boolean(expected && secureEqual(provided, expected));
+  const authorized = Boolean(expected && secureEqual(provided, expected));
+  return { authorized, reason: authorized ? null : "development_token_mismatch" };
 }
 
 function eventResource(payload) {
@@ -136,7 +172,11 @@ export async function POST(request) {
   let claimToken = "";
   try {
     const rawBody = await request.text();
-    if (!webhookAuthorized(request, rawBody)) return jsonError("Invalid webhook signature", 401);
+    const authorization = webhookAuthorized(request, rawBody);
+    if (!authorization.authorized) {
+      logWebhookVerificationFailure(request, authorization.reason);
+      return jsonError("Invalid webhook signature", 401);
+    }
     const payload = JSON.parse(rawBody);
     const type = eventType(payload);
     const resource = eventResource(payload);
