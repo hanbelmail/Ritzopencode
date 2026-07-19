@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
   ArrowLeft,
   BadgeCheck,
@@ -23,6 +24,8 @@ import {
   ReceiptText,
   ShieldCheck,
   Sparkles,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
 import StatusBadge from "@/components/tickets/StatusBadge";
 import TicketPreview from "@/components/ticket/TicketPreview";
@@ -59,6 +62,22 @@ function DetailSection({ title, icon: Icon, children }) {
       </div>
       {children}
     </section>
+  );
+}
+
+function ZoomableImage({ src, alt, className, onOpen }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onOpen({ src, alt })}
+      className="group relative block w-full cursor-zoom-in overflow-hidden text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8a5c2e] focus-visible:ring-offset-2"
+      aria-label={`Enlarge ${alt}`}
+    >
+      <img src={src} alt={alt} className={className} />
+      <span className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-full bg-[#211b17]/85 px-3 py-1.5 text-xs font-medium text-white opacity-90 shadow-lg backdrop-blur transition-opacity group-hover:opacity-100">
+        <ZoomIn className="h-3.5 w-3.5" /> Enlarge
+      </span>
+    </button>
   );
 }
 
@@ -157,6 +176,20 @@ export default function TicketPage() {
   const [payOpen, setPayOpen] = useState(false);
   const [paymentProofUrl, setPaymentProofUrl] = useState(null);
   const [retailScreenshotUrl, setRetailScreenshotUrl] = useState(null);
+  const [enlargedImage, setEnlargedImage] = useState(null);
+  const [imageZoom, setImageZoom] = useState(1);
+
+  const openImage = (image) => {
+    setImageZoom(1);
+    setEnlargedImage(image);
+  };
+
+  const handleImageDialogChange = (open) => {
+    if (!open) {
+      setEnlargedImage(null);
+      setImageZoom(1);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -405,7 +438,12 @@ export default function TicketPage() {
                   <div className="border-b border-[#eee7dc] px-4 py-3">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#9a8f80]">Retail price from Ritz website</p>
                   </div>
-                  <img src={retailScreenshotUrl} alt="Retail price from Ritz website" className="max-h-96 w-full object-contain bg-[#faf6ef]" />
+                  <ZoomableImage
+                    src={retailScreenshotUrl}
+                    alt="Retail price from Ritz website"
+                    className="max-h-96 w-full object-contain bg-[#faf6ef]"
+                    onOpen={openImage}
+                  />
                 </div>
               )}
             </section>
@@ -505,9 +543,56 @@ export default function TicketPage() {
             <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-[#25211d]">
               <CheckCircle2 className="h-4 w-4 text-emerald-700" /> Payment proof
             </div>
-            <img src={paymentProofUrl || ticket.paymentScreenshot} alt="Payment proof" className="max-h-72 rounded-2xl border border-[#eee7dc] object-contain" />
+            <ZoomableImage
+              src={paymentProofUrl || ticket.paymentScreenshot}
+              alt="Payment proof"
+              className="max-h-72 w-full rounded-2xl border border-[#eee7dc] object-contain"
+              onOpen={openImage}
+            />
           </div>
         )}
+
+        <Dialog open={Boolean(enlargedImage)} onOpenChange={handleImageDialogChange}>
+          <DialogContent className="h-[94dvh] w-[96vw] max-w-none gap-0 overflow-hidden border-white/10 bg-black/95 p-0 text-white sm:rounded-2xl [&>button]:right-3 [&>button]:top-3 [&>button]:z-20 [&>button]:rounded-full [&>button]:bg-white/10 [&>button]:p-2 [&>button]:text-white [&>button]:opacity-100">
+            <DialogTitle className="border-b border-white/10 px-5 py-4 pr-16 text-sm font-semibold">
+              {enlargedImage?.alt}
+            </DialogTitle>
+            <div className="min-h-0 flex-1 overflow-auto p-4 md:p-6">
+              <div className="flex min-h-full min-w-full items-center justify-center">
+                {enlargedImage && (
+                  <img
+                    src={enlargedImage.src}
+                    alt={enlargedImage.alt}
+                    onClick={() => setImageZoom((zoom) => (zoom === 1 ? 2 : 1))}
+                    className="max-h-[78dvh] max-w-[88vw] cursor-zoom-in object-contain transition-transform duration-200"
+                    style={{ transform: `scale(${imageZoom})`, cursor: imageZoom > 1 ? "zoom-out" : "zoom-in" }}
+                  />
+                )}
+              </div>
+            </div>
+            <div className="absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/10 bg-black/75 p-1.5 shadow-xl backdrop-blur">
+              <button
+                type="button"
+                onClick={() => setImageZoom((zoom) => Math.max(0.5, zoom - 0.5))}
+                disabled={imageZoom <= 0.5}
+                className="rounded-full p-2 text-white transition-colors hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-35"
+                aria-label="Zoom out"
+              >
+                <ZoomOut className="h-5 w-5" />
+              </button>
+              <span className="w-12 text-center text-xs font-semibold tabular-nums">{Math.round(imageZoom * 100)}%</span>
+              <button
+                type="button"
+                onClick={() => setImageZoom((zoom) => Math.min(3, zoom + 0.5))}
+                disabled={imageZoom >= 3}
+                className="rounded-full p-2 text-white transition-colors hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-35"
+                aria-label="Zoom in"
+              >
+                <ZoomIn className="h-5 w-5" />
+              </button>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         <PayDialog
           open={payOpen}
