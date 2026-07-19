@@ -45,7 +45,7 @@
 - Keep route-level reservation/settings data mutations delegated to Convex-backed hooks in `lib/store.js`.
 - Public Sara chat must reject cross-origin writes, keep the session token HTTP-only, enforce message limits, and use `PUBLIC_APP_URL` for durable guest links when configured.
 - Production Quo webhooks must validate the standard `webhook-id`, `webhook-timestamp`, and `webhook-signature` headers against `QUO_WEBHOOK_SECRET` with a five-minute replay window; `QUO_WEBHOOK_TOKEN` is a development-only local payload fallback.
-- Failed Quo signature checks may log only the rejection reason, relevant header names, and signature encoding shapes; never log webhook payloads, header values, signing secrets, or guest data.
+- Failed Quo signature checks may log only the rejection reason, relevant header names, signature encoding shapes, and non-secret HMAC algorithm match labels; never log webhook payloads, header values, signing secrets, or guest data.
 - Quo webhook processing must store disabled or non-allowlisted inbound messages without sending a paid response, and unsupported MMS proof must redirect the guest to the secure ticket upload path.
 - Quo webhook workers use owned leases; terminal duplicates return success, active leases return a retryable non-2xx response, and deterministic pending replies recover on provider retries without duplicating ambiguous sends.
 

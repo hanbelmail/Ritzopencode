@@ -31,20 +31,60 @@ function signatureShape(value) {
   };
 }
 
-function logWebhookVerificationFailure(request, reason) {
+function signatureCandidates(value) {
+  const candidates = new Set();
+  for (const part of String(value || "").trim().split(/\s+/).filter(Boolean)) {
+    candidates.add(part);
+    const prefixed = part.match(/^(?:sha256|hmac-sha256|v\d+)[=,:](.+)$/i);
+    if (prefixed) candidates.add(prefixed[1]);
+  }
+  return Array.from(candidates);
+}
+
+function openPhoneSignatureMatches(request, rawBody, signingSecret) {
+  const provided = signatureCandidates(request.headers.get("openphone-signature"));
+  if (!provided.length || !signingSecret) return [];
+
+  const trimmedSecret = signingSecret.trim();
+  const encodedSecret = trimmedSecret.startsWith("whsec_") ? trimmedSecret.slice(6) : trimmedSecret;
+  const keys = [["literal-key", trimmedSecret]];
+  if (/^[A-Za-z0-9+/]+={0,2}$/.test(encodedSecret)) {
+    const decoded = Buffer.from(encodedSecret, "base64");
+    if (decoded.length) keys.push(["base64-decoded-key", decoded]);
+  }
+
+  const matches = [];
+  for (const [keyLabel, key] of keys) {
+    const digest = createHmac("sha256", key).update(rawBody).digest();
+    const encodings = [
+      ["hex", digest.toString("hex")],
+      ["base64", digest.toString("base64")],
+      ["base64url", digest.toString("base64url")],
+    ];
+    for (const [encoding, expected] of encodings) {
+      if (provided.some((candidate) => secureEqual(candidate, expected))) matches.push(`${keyLabel}:${encoding}`);
+    }
+  }
+  return matches;
+}
+
+function logWebhookVerificationFailure(request, rawBody, reason) {
   const relevantHeaderNames = Array.from(request.headers.keys())
     .filter((name) => /signature|timestamp|webhook|openphone|quo/i.test(name))
     .sort();
-  const signatureShapes = Object.fromEntries(
-    relevantHeaderNames
-      .filter((name) => /signature/i.test(name))
-      .map((name) => [name, signatureShape(request.headers.get(name))])
-  );
-  console.warn("[quo-webhook] signature verification failed", {
+  const signatureShapes = relevantHeaderNames
+    .filter((name) => /signature/i.test(name))
+    .map((name) => {
+      const shape = signatureShape(request.headers.get(name));
+      return `${name}:${shape.formats.join("|") || "empty"}:${shape.lengths.join("|") || "0"}`;
+    });
+  const diagnostics = {
     reason,
     relevantHeaderNames,
     signatureShapes,
-  });
+    openPhoneHmacMatches: openPhoneSignatureMatches(request, rawBody, process.env.QUO_WEBHOOK_SECRET || ""),
+  };
+  console.warn("[quo-webhook] signature verification failed", JSON.stringify(diagnostics));
 }
 
 function webhookAuthorized(request, rawBody) {
@@ -174,7 +214,7 @@ export async function POST(request) {
     const rawBody = await request.text();
     const authorization = webhookAuthorized(request, rawBody);
     if (!authorization.authorized) {
-      logWebhookVerificationFailure(request, authorization.reason);
+      logWebhookVerificationFailure(request, rawBody, authorization.reason);
       return jsonError("Invalid webhook signature", 401);
     }
     const payload = JSON.parse(rawBody);
