@@ -4,7 +4,7 @@ import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, LayoutGrid, Plus, Settings, Globe, LogOut, Users, Calendar, Code, Menu, Workflow, UserRound, X, Mail, MessageSquare } from "lucide-react";
+import { BarChart3, Bot, LayoutGrid, Plus, Settings, Globe, LogOut, Users, Calendar, Code, Menu, Workflow, UserRound, X, Mail, MessageSquare } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 
 const navItems = [
@@ -17,6 +17,7 @@ const drawerItems = [
   { to: "/clients", label: "Clients", description: "Guest records", icon: Users },
   { to: "/email-dashboard", label: "Email", description: "Alerts and recipients", icon: Mail },
   { to: "/sms-dashboard", label: "SMS", description: "Quote message alerts", icon: MessageSquare },
+  { to: "/sara-dashboard", label: "Sara AI", description: "Concierge and knowledge", icon: Bot },
   { to: "/api-dashboard", label: "API", description: "Integrations and docs", icon: Code },
   { to: "/settings", label: "Settings", description: "Workspace preferences", icon: Settings },
   { to: "#", label: "Automations", description: "Coming soon", icon: Workflow, disabled: true },
@@ -31,6 +32,7 @@ const sideItems = [
   { to: "/clients", label: "Clients", icon: Users },
   { to: "/email-dashboard", label: "Email Dashboard", icon: Mail },
   { to: "/sms-dashboard", label: "SMS Dashboard", icon: MessageSquare },
+  { to: "/sara-dashboard", label: "Sara AI Concierge", icon: Bot },
   { to: "/api-dashboard", label: "API Dashboard", icon: Code },
   { to: "/settings", label: "Settings", icon: Settings },
 ];

@@ -27,7 +27,7 @@ import {
 import StatusBadge from "@/components/tickets/StatusBadge";
 import TicketPreview from "@/components/ticket/TicketPreview";
 import PayDialog from "@/components/ticket/PayDialog";
-import { DEFAULT_SETTINGS, useSettings, useTicket, useTicketActions } from "@/lib/store";
+import { DEFAULT_SETTINGS, useGuestPaymentActions, usePublicPaymentOptions, useSettings, useTicket } from "@/lib/store";
 import { fmtDate, fmtMoney } from "@/lib/calc";
 import { notifyPaymentSubmitted } from "@/lib/payment-submitted-alert";
 
@@ -145,14 +145,15 @@ function getPaymentState(ticket, hasPrice) {
   if (ticket.status === "BOOKING CONFIRMED") {
     return { canPay: false, title: "Booking confirmed", description: "Your reservation is finalized. We look forward to welcoming you." };
   }
-  return { canPay: true, title: "Secure your reservation", description: "Review the Ritz info and FAQ terms, then upload your payment proof." };
+  return { canPay: true, title: "Secure your reservation", description: "Review and accept the published booking Terms, then upload your payment proof." };
 }
 
 export default function TicketPage() {
   const { id } = useParams();
   const ticket = useTicket(id);
   const settings = useSettings() || DEFAULT_SETTINGS;
-  const { updateTicket } = useTicketActions();
+  const paymentOptions = usePublicPaymentOptions(id);
+  const { acceptGuestTerms, submitGuestPayment } = useGuestPaymentActions();
   const [payOpen, setPayOpen] = useState(false);
   const [paymentProofUrl, setPaymentProofUrl] = useState(null);
   const [retailScreenshotUrl, setRetailScreenshotUrl] = useState(null);
@@ -245,7 +246,7 @@ export default function TicketPage() {
   const primaryGuest = (ticket.guests || []).filter(Boolean)[0] || "Guest";
   const guestList = (ticket.guests || []).filter(Boolean).join(", ");
   const paymentState = getPaymentState(ticket, hasPrice);
-  const canPay = paymentState.canPay;
+  const canPay = paymentState.canPay && paymentOptions?.available === true;
   const isPaymentSubmitted = ticket.status === "PAYMENT SUBMITTED";
   const isPaymentVerified = ticket.status === "PAYMENT VERIFIED";
   const isBookingConfirmed = ticket.status === "BOOKING CONFIRMED";
@@ -277,18 +278,23 @@ export default function TicketPage() {
       throw new Error("Failed to upload payment proof");
     }
 
+    const confirmResponse = await fetch("/api/payment-proof/confirm-upload", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ticketId: ticket.id, key }),
+    });
+    if (!confirmResponse.ok) throw new Error("Failed to verify the uploaded payment proof");
+
     return key;
   };
 
-  const handlePayment = async (method, screenshotFile) => {
+  const handlePayment = async (method, screenshotFile, termsVersion) => {
     const paymentScreenshotKey = await uploadPaymentProof(screenshotFile);
 
-    await updateTicket(ticket.id, {
-      status: "PAYMENT SUBMITTED",
+    await submitGuestPayment(ticket.id, {
       paymentMethod: method,
-      paymentScreenshot: null,
       paymentScreenshotKey,
-      paymentDate: new Date().toISOString().slice(0, 10),
+      termsVersion,
     });
 
     notifyPaymentSubmitted(ticket.id).catch((error) => {
@@ -506,7 +512,9 @@ export default function TicketPage() {
         <PayDialog
           open={payOpen}
           onOpenChange={setPayOpen}
+          onAcceptTerms={(termsVersion, termsHash) => acceptGuestTerms(ticket.id, termsVersion, termsHash)}
           onConfirmPayment={handlePayment}
+          paymentOptions={paymentOptions}
         />
       </main>
     </div>

@@ -14,6 +14,7 @@
 - `sms-dashboard/` owns the active/inactive guest price-sent SMS alert, three editable/selectable Quo templates, and their quote pricing, ticket-link, screenshot-link, and cleaning-fee placeholders.
 - `new/` owns reservation creation and edit saves, the optional staff-entered `reservationConfirmationNumber`, optional retail price screenshot upload to R2, warning before `PRICE SENT` saves without that screenshot, and status-driven email alert triggering after saves.
 - `calendar/`, `clients/`, and `settings/` own their respective staff management views; `settings/` includes hotel info and the persisted app name used for the browser/tab title.
+- `sara-dashboard/` owns Sara web/SMS activation, model and quote-validity settings, approved Terms and workflow messages, SMS test allowlists, Knowledge draft/approval management, conversation review, and human pause/resume controls.
 
 ## Local Contracts
 
@@ -31,6 +32,9 @@
 - `PAYMENT VERIFIED` saves or updates should trigger the booking requests hotel alert API after Convex persistence; the alert sends active hotel recipients the fixed-subject `1609E` booking request template and stamps `bookingRequestHotelEmailSentAt`.
 - `BOOKING CONFIRMED` saves or updates should trigger the booking confirmed hotel alert API after Convex persistence; the alert sends the hotel confirmation template and up to two configured PDFs to active hotel recipients with subject `Ritz Confirmation #: <reservation confirmation number>` and stamps `bookingConfirmedHotelEmailSentAt`.
 - Public quote creation triggers the new quote staff alert API after Convex persistence; delivery is skipped unless email alerts, the new quote alert, and at least one active staff recipient are configured.
+- Sara channels are disabled by default; staff must review and publish Knowledge entries individually, configure Terms, and test the website before enabling Quo SMS.
+- Staff human takeover increments the conversation control version and sets `aiEnabled` false. Web replies persist directly; SMS replies require Convex Auth, stable message IDs, active channel/test policy, and current phone consent, and expose delivery state in the transcript.
+- The 42 starter Knowledge entries are inserted as drafts only and may not be retrieved by Sara until staff approves them.
 
 ## Work Guidance
 

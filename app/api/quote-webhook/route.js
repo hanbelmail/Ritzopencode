@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { api } from "@/convex/_generated/api";
-import { getConvexClient, jsonError } from "@/lib/convex-server";
+import { getAutomationServiceKey, getConvexClient, jsonError } from "@/lib/convex-server";
 import { DEFAULT_SETTINGS } from "@/lib/defaults";
 
 async function readJsonBody(request) {
@@ -20,7 +20,7 @@ export async function POST(request) {
       return jsonError("Request body must include a ticket object", 400);
     }
 
-    const settings = { ...DEFAULT_SETTINGS, ...((await getConvexClient().query(api.settings.get)) || {}) };
+    const settings = { ...DEFAULT_SETTINGS, ...((await getConvexClient().query(api.settings.get, { serviceKey: getAutomationServiceKey() })) || {}) };
 
     if (!settings.webhookEnabled) {
       return NextResponse.json({ skipped: true, reason: "Webhook is disabled" });

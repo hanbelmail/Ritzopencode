@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { api } from "@/convex/_generated/api";
 import { computeTicket } from "@/lib/calc";
-import { getConvexClient, jsonError } from "@/lib/convex-server";
+import { getAutomationServiceKey, getConvexClient, jsonError } from "@/lib/convex-server";
 import { DEFAULT_SETTINGS } from "@/lib/defaults";
 import { sendPriceSentNotifications } from "@/lib/price-sent-notifications-server";
 import { sendPaymentSubmittedAlertEmail } from "@/lib/payment-submitted-alert-email-server";
@@ -71,11 +71,11 @@ export async function PATCH(request, { params }) {
     const updateData = { ...normalizedData };
 
     if (shouldRecalculate) {
-      const settings = await client.query(api.settings.get);
+      const settings = await client.query(api.settings.get, { serviceKey: getAutomationServiceKey() });
       Object.assign(updateData, computeTicket(mergedTicket, { ...DEFAULT_SETTINGS, ...(settings || {}) }));
     }
 
-    let ticket = await client.mutation(api.tickets.update, { id, data: updateData });
+    let ticket = await client.mutation(api.tickets.update, { id, data: updateData, serviceKey: getAutomationServiceKey() });
     let priceSentEmail = null;
     let priceSentSms = null;
     let paymentSubmittedAlert = null;
@@ -156,7 +156,7 @@ export async function DELETE(_request, { params }) {
       return jsonError("Ticket not found", 404);
     }
 
-    await client.mutation(api.tickets.remove, { id });
+    await client.mutation(api.tickets.remove, { id, serviceKey: getAutomationServiceKey() });
     return NextResponse.json({ deleted: true, id });
   } catch (error) {
     return jsonError(error.message || "Failed to delete ticket");

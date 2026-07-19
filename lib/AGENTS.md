@@ -8,7 +8,7 @@
 
 - `defaults.js` owns server-safe default settings, including the default app name, public home page variant, quote webhook defaults, email/SMS alert defaults, and payment method constants shared by client hooks and API routes.
 - `convex-server.js` owns server-side Convex HTTP client creation and JSON error helpers for App Router API routes.
-- `r2.js` owns server-side Cloudflare R2 S3 client setup, signed URL helpers, key validation helpers, and server-side attachment reads for private payment proof, retail price screenshot, and booking-confirmed alert PDF objects.
+- `r2.js` owns server-side Cloudflare R2 S3 client setup, signed URL helpers, payment-proof object inspection, key validation helpers, and server-side attachment reads for private payment proof, retail price screenshot, and booking-confirmed alert PDF objects.
 - `store.js` owns full-list and paginated reservation tickets/settings client hooks, account-scoped dashboard preference hooks and normalization, persisted status constants, dashboard filter option constants, default/settings normalization, and legacy `ritz_*` localStorage migration keys.
 - `price-sent-email.js` owns the client helper for calling the protected price-sent guest email/SMS notification API after ticket saves and summarizing its results.
 - `price-sent-email-server.js` owns the server-side Resend template, delivery, retail price screenshot attachment, `priceSentGuestEmailEnabled` skip rule, successful-delivery ticket stamps for price-sent guest emails, and the disabled-by-default staff copy.
@@ -29,6 +29,9 @@
 - `Providers.jsx` and `query-client.js` own app-wide client context providers outside Convex Auth.
 - `calc.js` owns money formatting and reservation price/date calculations.
 - `utils.js` owns shared utility helpers such as class-name composition.
+- `sara-prompt.js` owns Sara's fixed identity, source hierarchy, booking/payment permissions, handoff rules, channel style, and prompt version.
+- `sara-agent-server.js` owns the server-only OpenAI Responses tool loop, strict tool schemas, control-fenced tool execution, immutable Terms links, channel formatting, and agent-run completion.
+- `quo-server.js` owns the shared server-only Quo text transport, sender/recipient normalization, timeout, and rejected-versus-ambiguous provider error classification.
 
 ## Local Contracts
 
@@ -40,6 +43,10 @@
 - Keep R2 credentials server-only; client components must use API routes for signed payment proof, retail price screenshot, and booking-confirmed alert PDF upload URLs.
 - Do not duplicate status, payment method, settings, or ticket schema constants in route or component files.
 - `normalizePhone()` converts formatted 10-digit US/Canada numbers and 11-digit North American numbers beginning with `1` to persisted `+1` E.164 values while preserving already international `+` numbers.
+- Use Convex transcripts and structured state as Sara's durable context; OpenAI Responses must use `store: false`, bounded history, bounded output, and no browser-provided model or system instructions.
+- Keep property facts in approved Knowledge or dynamic settings tools, Terms behind the priced-ticket gate, and payment instructions behind recorded Terms acceptance.
+- Keep default/client payment methods instruction-free; configured instructions may leave the server only through a current Terms-hash and payable-ticket gate.
+- Conversational SMS must use `lib/quo-server.js` and the Convex outbox; do not add another direct Quo transport.
 
 ## Work Guidance
 

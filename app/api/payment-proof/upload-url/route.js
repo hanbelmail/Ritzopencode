@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { api } from "@/convex/_generated/api";
-import { getConvexClient, jsonError } from "@/lib/convex-server";
+import { getAutomationServiceKey, getConvexClient, jsonError } from "@/lib/convex-server";
 import { assertImageContentType, createPaymentProofKey, createPaymentProofUploadUrl } from "@/lib/r2";
 
 export const runtime = "nodejs";
@@ -33,6 +33,7 @@ export async function POST(request) {
 
     const key = createPaymentProofKey(ticketId, fileName);
     const uploadUrl = await createPaymentProofUploadUrl({ key, contentType });
+    await getConvexClient().mutation(api.tickets.registerPaymentProofKey, { id: ticketId, key, contentType, serviceKey: getAutomationServiceKey() });
 
     return NextResponse.json({ key, uploadUrl });
   } catch (error) {

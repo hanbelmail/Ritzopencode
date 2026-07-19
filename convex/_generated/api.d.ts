@@ -9,9 +9,17 @@
  */
 
 import type * as auth from "../auth.js";
+import type * as conversations from "../conversations.js";
 import type * as dashboardPreferences from "../dashboardPreferences.js";
 import type * as http from "../http.js";
+import type * as knowledge from "../knowledge.js";
+import type * as knowledgeSeed from "../knowledgeSeed.js";
+import type * as messaging from "../messaging.js";
+import type * as sara from "../sara.js";
+import type * as security from "../security.js";
 import type * as settings from "../settings.js";
+import type * as smsConsent from "../smsConsent.js";
+import type * as terms from "../terms.js";
 import type * as tickets from "../tickets.js";
 
 import type {
@@ -22,9 +30,17 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
+  conversations: typeof conversations;
   dashboardPreferences: typeof dashboardPreferences;
   http: typeof http;
+  knowledge: typeof knowledge;
+  knowledgeSeed: typeof knowledgeSeed;
+  messaging: typeof messaging;
+  sara: typeof sara;
+  security: typeof security;
   settings: typeof settings;
+  smsConsent: typeof smsConsent;
+  terms: typeof terms;
   tickets: typeof tickets;
 }>;
 

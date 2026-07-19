@@ -9,9 +9,11 @@ const isProtectedRoute = createRouteMatcher([
   "/dashboard(.*)",
   "/calendar(.*)",
   "/clients(.*)",
+  "/analytics(.*)",
   "/settings(.*)",
   "/email-dashboard(.*)",
   "/sms-dashboard(.*)",
+  "/sara-dashboard(.*)",
   "/api-dashboard(.*)",
   "/new(.*)",
 ]);
@@ -20,6 +22,10 @@ const isProtectedApiRoute = createRouteMatcher([
   "/api/tickets(.*)",
   "/api/retail-price-screenshot/upload-url",
   "/api/booking-confirmed-hotel-alert-attachments/upload-url",
+]);
+
+const isStaffOnlyApiRoute = createRouteMatcher([
+  "/api/sara/staff-reply",
 ]);
 
 const isAuthRoute = createRouteMatcher([
@@ -42,6 +48,10 @@ function hasApiKey(request) {
 }
 
 export default convexAuthNextjsMiddleware(async (request, { convexAuth }) => {
+  if (isStaffOnlyApiRoute(request) && !(await convexAuth.isAuthenticated())) {
+    return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+  }
+
   if (isProtectedApiRoute(request) && !hasApiKey(request) && !(await convexAuth.isAuthenticated())) {
     return NextResponse.json({ error: "Authentication required" }, { status: 401 });
   }

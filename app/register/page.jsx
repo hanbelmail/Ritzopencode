@@ -18,8 +18,10 @@ export default function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [inviteCode, setInviteCode] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const registrationEnabled = process.env.NEXT_PUBLIC_STAFF_REGISTRATION_ENABLED === "true";
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -34,6 +36,7 @@ export default function Register() {
       formData.set("email", email);
       formData.set("password", password);
       formData.set("flow", "signUp");
+      formData.set("inviteCode", inviteCode);
       await signIn("password", formData);
       router.push("/dashboard");
     } catch (err) {
@@ -46,6 +49,25 @@ export default function Register() {
   const handleGoogle = () => {
     setError("Google sign-in needs Google OAuth credentials configured in Convex first.");
   };
+
+  if (!registrationEnabled) {
+    return (
+      <AuthLayout
+        icon={UserPlus}
+        title="Registration is private"
+        subtitle="Staff accounts are created by an administrator."
+        footer={
+          <Link href="/login" className="text-primary font-medium hover:underline">
+            Return to staff login
+          </Link>
+        }
+      >
+        <div className="rounded-lg border border-border bg-muted/40 p-4 text-sm leading-relaxed text-muted-foreground">
+          Public staff registration is disabled to protect guest and reservation data.
+        </div>
+      </AuthLayout>
+    );
+  }
 
   return (
     <AuthLayout
@@ -86,6 +108,19 @@ export default function Register() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="invite-code">Staff invitation code</Label>
+          <Input
+            id="invite-code"
+            type="password"
+            autoComplete="one-time-code"
+            required
+            placeholder="Invitation code"
+            value={inviteCode}
+            onChange={(e) => setInviteCode(e.target.value)}
+          />
+        </div>
+
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
           <div className="relative">

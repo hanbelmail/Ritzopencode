@@ -13,6 +13,19 @@ function requireEnv(name: string) {
 export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
   providers: [
     Password({
+      profile(params) {
+        const email = String(params.email || "").trim().toLowerCase();
+        if (!email) throw new Error("Email is required");
+        if (params.flow === "signUp") {
+          const enabled = process.env.STAFF_REGISTRATION_ENABLED === "true";
+          const expectedInvite = process.env.STAFF_REGISTRATION_INVITE_CODE;
+          const suppliedInvite = String(params.inviteCode || "");
+          if (!enabled || !expectedInvite || suppliedInvite !== expectedInvite) {
+            throw new Error("Staff registration is disabled or the invitation code is invalid");
+          }
+        }
+        return { email };
+      },
       reset: Resend({
         from: requireEnv("AUTH_RESEND_FROM"),
         async sendVerificationRequest({ identifier: to, provider, url }) {

@@ -1,11 +1,13 @@
 "use client"
 
 import { useEffect } from "react";
+import { useConvexAuth } from "convex/react";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { MIGRATION_KEY, readLegacyStore } from "@/lib/store";
 
 export default function StoreMigrator() {
+  const { isAuthenticated, isLoading } = useConvexAuth();
   const importTickets = useMutation(api.tickets.importLegacy);
   const saveSettings = useMutation(api.settings.save);
 
@@ -13,6 +15,7 @@ export default function StoreMigrator() {
     let cancelled = false;
 
     async function migrate() {
+      if (isLoading || !isAuthenticated) return;
       if (typeof window === "undefined" || localStorage.getItem(MIGRATION_KEY)) return;
 
       const { tickets, settings } = readLegacyStore();
@@ -40,7 +43,7 @@ export default function StoreMigrator() {
     return () => {
       cancelled = true;
     };
-  }, [importTickets, saveSettings]);
+  }, [importTickets, isAuthenticated, isLoading, saveSettings]);
 
   return null;
 }

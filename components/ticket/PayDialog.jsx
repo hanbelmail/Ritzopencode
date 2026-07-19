@@ -9,17 +9,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Upload, X, Info } from "lucide-react";
 import Link from "next/link";
-import { DEFAULT_SETTINGS, useSettings } from "@/lib/store";
 
-export default function PayDialog({ open, onOpenChange, onConfirmPayment }) {
-  const settings = useSettings() || DEFAULT_SETTINGS;
-  const activeMethods = (settings.paymentMethods || []).filter((m) => !m.hidden);
+export default function PayDialog({ open, onOpenChange, onAcceptTerms, onConfirmPayment, paymentOptions }) {
+  const activeMethods = paymentOptions?.methods || [];
   const [step, setStep] = useState("terms");
   const [agreed, setAgreed] = useState(false);
   const [method, setMethod] = useState("");
   const [screenshotFile, setScreenshotFile] = useState(null);
   const [screenshotPreview, setScreenshotPreview] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [accepting, setAccepting] = useState(false);
   const [error, setError] = useState("");
 
   const handleFile = (e) => {
@@ -49,7 +48,22 @@ export default function PayDialog({ open, onOpenChange, onConfirmPayment }) {
       setScreenshotFile(null);
       setScreenshotPreview(null);
       setSaving(false);
+      setAccepting(false);
       setError("");
+    }
+  };
+
+  const acceptTerms = async () => {
+    if (!agreed || !paymentOptions?.termsVersion) return;
+    setAccepting(true);
+    setError("");
+    try {
+      await onAcceptTerms(paymentOptions.termsVersion, paymentOptions.termsContentHash);
+      setStep("method");
+    } catch (acceptError) {
+      setError(acceptError.message || "Terms acceptance failed. Please try again.");
+    } finally {
+      setAccepting(false);
     }
   };
 
@@ -57,10 +71,10 @@ export default function PayDialog({ open, onOpenChange, onConfirmPayment }) {
     if (!method || !screenshotFile) return;
     setSaving(true);
     try {
-      await onConfirmPayment(method, screenshotFile);
+      await onConfirmPayment(method, screenshotFile, paymentOptions?.termsVersion);
       close(false);
-    } catch {
-      setError("Payment proof upload failed. Please try again.");
+    } catch (paymentError) {
+      setError(paymentError.message || "Payment proof upload failed. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -74,15 +88,18 @@ export default function PayDialog({ open, onOpenChange, onConfirmPayment }) {
             <DialogHeader>
               <DialogTitle>Before you pay</DialogTitle>
               <DialogDescription className="pt-2 leading-relaxed">
-                Please confirm that you have read and agree to the{" "}
-                <Link href="/ritz-info" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline underline-offset-2 hover:text-blue-700">Ritz Info</Link>
-                {" "}and{" "}
-                <Link href="/faq" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline underline-offset-2 hover:text-blue-700">FAQ terms</Link>.
+                Review the exact published booking agreement below. You can also open{" "}
+                <Link href={`/terms/${encodeURIComponent(paymentOptions?.termsVersion || "")}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline underline-offset-2 hover:text-blue-700">Terms version {paymentOptions?.termsVersion}</Link>
+                {" "}in a new tab.
               </DialogDescription>
             </DialogHeader>
 
+            <div className="max-h-52 overflow-y-auto whitespace-pre-wrap rounded-lg border bg-slate-50 px-4 py-3 text-xs leading-relaxed text-slate-700">
+              {paymentOptions?.termsContent || "Published Terms are unavailable. Please contact the reservations team."}
+            </div>
+
             <div className="rounded-lg border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-800 leading-relaxed">
-              A cleaning fee of ${settings.cleaningFee} is paid directly to the Ritz at check-in and is not part of your quoted price.
+                A cleaning fee of ${paymentOptions?.cleaningFee || 0} is paid directly to the Ritz at check-in and is not part of your quoted price.
             </div>
 
             <div className="flex items-center gap-2.5">
@@ -93,17 +110,17 @@ export default function PayDialog({ open, onOpenChange, onConfirmPayment }) {
                 className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
               />
               <label htmlFor="agree" className="text-sm cursor-pointer select-none">
-                I have read and agree to the terms.
+                I agree to the Terms ({paymentOptions?.termsVersion}).
               </label>
             </div>
 
             <DialogFooter className="gap-2">
               <Button
-                disabled={!agreed}
-                onClick={() => setStep("method")}
+                disabled={!agreed || accepting || !paymentOptions?.termsContent}
+                onClick={acceptTerms}
                 className="bg-blue-600 hover:bg-blue-700 text-white"
               >
-                Continue
+                {accepting ? "Recording agreement..." : "Agree and continue"}
               </Button>
             </DialogFooter>
           </>

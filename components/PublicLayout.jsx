@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, Camera, Info, BookOpen, Ticket } from "lucide-react";
+import GuestChatWidget from "@/components/chat/GuestChatWidget";
 
 const mobileNav = [
   { to: "/", label: "Home", icon: Home, exact: true },
@@ -22,11 +23,13 @@ export default function PublicLayout({ children }) {
 
   return (
     <div className="min-h-screen">
-      <div className="pb-16 md:pb-0">
+      <div className="pb-[calc(64px+env(safe-area-inset-bottom))] md:pb-0">
         {children}
       </div>
 
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#faf9f5] border-t border-[#e6dfd8] flex items-stretch">
+      <GuestChatWidget />
+
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#faf9f5] border-t border-[#e6dfd8] flex items-stretch pb-[env(safe-area-inset-bottom)]">
         {mobileNav.map(({ to, label, icon: Icon, exact, isAnchor }) => {
           const active = isAnchor ? false : isActive(to, exact);
           if (isAnchor) {

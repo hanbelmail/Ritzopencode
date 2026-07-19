@@ -4,14 +4,11 @@ import { useState } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
-import { useTickets } from "@/lib/store";
+import { useUnavailableStays } from "@/lib/store";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameDay, isBefore, isAfter, isWithinInterval, parseISO, isToday } from "date-fns";
 
-// Get all reserved date ranges from finalized reservations.
-function getReservedRanges(tickets, excludeId = null) {
-  return tickets
-    .filter((t) => ["PAYMENT VERIFIED", "BOOKING CONFIRMED"].includes(t.status) && t.id !== excludeId && t.checkIn && t.checkOut)
-    .map((t) => ({ checkIn: parseISO(t.checkIn), checkOut: parseISO(t.checkOut) }));
+function getReservedRanges(stays) {
+  return stays.map((stay) => ({ checkIn: parseISO(stay.checkIn), checkOut: parseISO(stay.checkOut) }));
 }
 
 function getReservationMarker(date, reservedRanges) {
@@ -154,12 +151,12 @@ function CalendarMonth({ month, checkIn, checkOut, focusField, onSelectDate, res
 }
 
 export default function ReservationDatePicker({ checkIn, checkOut, onCheckInChange, onCheckOutChange, excludeId }) {
-  const tickets = useTickets();
+  const unavailableStays = useUnavailableStays(excludeId);
   const [checkInOpen, setCheckInOpen] = useState(false);
   const [checkOutOpen, setCheckOutOpen] = useState(false);
   const [checkInMonth, setCheckInMonth] = useState(checkIn ? parseISO(checkIn) : new Date());
   const [checkOutMonth, setCheckOutMonth] = useState(checkOut ? parseISO(checkOut) : new Date());
-  const reservedRanges = getReservedRanges(tickets, excludeId);
+  const reservedRanges = getReservedRanges(unavailableStays);
 
   const fmtDate = (d) => d ? format(parseISO(d), "MMM d, yyyy") : null;
 

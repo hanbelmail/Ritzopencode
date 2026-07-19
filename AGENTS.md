@@ -2,7 +2,7 @@
 
 ## Purpose
 
-- Next.js 15 reservations app for Ritz-Carlton private room quotes, public ticket lookup, staff reservation management, and Convex Auth-backed staff authentication.
+- Next.js 15 reservations app for Ritz-Carlton private room quotes, public ticket lookup, staff reservation management, Convex Auth-backed staff authentication, and the shared Sara AI concierge for public web chat and Quo SMS.
 - Source is JavaScript/JSX with the App Router, Tailwind CSS, shadcn-style UI primitives, Convex backend files, Convex Auth, and Convex-backed reservation/settings persistence.
 - Generated outputs and installed dependencies are present in the workspace but are not source-of-truth work areas.
 
@@ -14,7 +14,7 @@
 - AGENTS.md files are binding work contracts for their subtrees
 - Work products, source materials, instructions, records, assets, and durable docs must stay understandable from the nearest applicable AGENTS.md plus every parent AGENTS.md above it
 - Keep durable source changes in `app/`, `components/`, `lib/`, `convex/`, `hooks/`, root config files, or `public/` if assets are added.
-- Do not edit `.next/`, `.next-build/`, or `node_modules/` as source; regenerate them through the relevant toolchain when needed.
+- Do not edit `.next/`, `.next-build/`, `.next-verify/`, or `node_modules/` as source; regenerate them through the relevant toolchain when needed.
 
 ## Read Before Editing
 
@@ -90,14 +90,24 @@ When the user requests a durable behavior change, record it here or in the relev
 
 - Use `@/` imports for project paths, matching `jsconfig.json`.
 - Preserve the current JavaScript/JSX file style; do not introduce TypeScript unless explicitly requested.
-- Treat `lib/store.js` constants and Convex tables as reservation/settings data contracts, including the public home page variant, email/SMS alert settings, delivery stamps, and R2 object-key fields such as `paymentScreenshotKey` and `retailPriceScreenshotKey`; legacy `ritz_*` localStorage keys are read only for one-time browser data migration.
+- Treat `lib/store.js` constants and Convex tables as reservation/settings data contracts, including the public home page variant, versioned Terms acceptance, confirmed payment-upload receipts, email/SMS alert settings, delivery stamps, and R2 object-key fields such as `paymentScreenshotKey` and `retailPriceScreenshotKey`; legacy `ritz_*` localStorage keys are read only for one-time browser data migration.
 - Keep public guest flows, staff-authenticated flows, reusable components, and storage/business logic separated by their owning child DOX files.
 - `middleware.js` protects staff routes, including `/email-dashboard` and `/sms-dashboard`, with Convex Auth, skips automatic Convex Auth `code` handling on `/reset-password` so password-reset links keep their verification code, and allows protected API access for `/api/tickets(.*)`, `/api/retail-price-screenshot/upload-url`, and `/api/booking-confirmed-hotel-alert-attachments/upload-url` through either Convex Auth or a server-side `N8N_API_KEY` sent as `Authorization: Bearer <key>` or `x-api-key`.
+- `/api/sara/staff-reply` is Convex Auth staff-only; `N8N_API_KEY` never grants staff reply or Sara control authority.
 - Quo guest SMS delivery is server-only through `QUO_API_KEY` and `QUO_FROM`; `QUO_FROM` must be an E.164 number or Quo `PN...` identifier and guest recipients must use E.164 format.
+- SMS consent is canonical per normalized phone; every conversational, staff, and price-sent provider call must pass a final Convex claim that rechecks STOP/START state, channel policy, test allowlist, and current control/message versions.
+- Sara uses one server-side OpenAI Responses tool loop for web and SMS; the browser and model receive no direct Convex mutation credentials, and all CRM actions must remain constrained by `lib/sara-agent-server.js` and `convex/sara.ts`.
+- `SARA_SERVICE_KEY` must use the same secret in the Next.js and Convex environments; it authenticates narrow server-to-Convex Sara operations and must never use a `NEXT_PUBLIC_` name.
+- Keep `SARA_SERVICE_KEY` and `N8N_API_KEY` separate; Sara's key authenticates only Sara domains, while the same `N8N_API_KEY` value in Next.js and Convex authenticates existing ticket automation and delivery-stamp operations.
+- Keep `saraWebEnabled` and `saraSmsEnabled` off until OpenAI, approved Knowledge, Terms, channel credentials, and staff handoff operations are ready; Quo must remain allowlist-only while `saraSmsTestMode` is active.
+- Sara represents an independent private residence reservation service, identifies itself as AI, and must not imply it is the official Ritz-Carlton hotel reservations desk.
+- Payment instructions require an active positive-price quote and acceptance of the current immutable Terms hash; public `PAYMENT SUBMITTED` requires a server-confirmed, unexpired R2 upload receipt.
+- Public staff registration defaults to disabled; `NEXT_PUBLIC_STAFF_REGISTRATION_ENABLED=true` is an explicit bootstrap/admin exception, not a production default.
 
 ## Verification
 
 - Use `npm run build` for production build verification when behavior or routing changes are made.
+- If an existing generated trace is not writable, use `NEXT_DIST_DIR=.next-verify npm run build` rather than changing ownership or deleting generated artifacts.
 - `npm run lint` exists in `package.json`, but this Next.js 15 project may require lint script maintenance before it is a reliable check.
 
 ## Child DOX Index
@@ -106,5 +116,5 @@ When the user requests a durable behavior change, record it here or in the relev
 - `components/AGENTS.md` owns reusable React components outside route files, including layouts, forms, tickets, ticket preview/payment, home quote form, and auth helpers.
 - `convex/AGENTS.md` owns Convex backend configuration, schema, HTTP routes, and Convex Auth provider setup.
 - `lib/AGENTS.md` owns shared providers, auth context, Convex-backed store hooks, legacy localStorage migration helpers, calculations, app params, query client setup, and utilities.
-- Root owns `middleware.js`, `hooks/`, `public/`, root config files, package manifests, and workspace-level generated/ignored directories unless a child DOX is later added; `public/api-documentation.html` is the static custom App Router API reference and ticket workflow tutorial, and `public/crm-staff-guide.html` is the static staff-facing CRM status and email-alert operations guide.
-- `.next/`, `.next-build/`, and `node_modules/` are generated or installed artifacts and are not editable DOX domains.
+- Root owns `middleware.js`, `hooks/`, `public/`, `.env.example`, root config files, package manifests, and workspace-level generated/ignored directories unless a child DOX is later added; `public/api-documentation.html` is the static custom App Router API reference and ticket workflow tutorial, and `public/crm-staff-guide.html` is the static staff-facing CRM status and email-alert operations guide.
+- `.next/`, `.next-build/`, `.next-verify/`, and `node_modules/` are generated or installed artifacts and are not editable DOX domains.
