@@ -17,6 +17,7 @@
 ## Local Contracts
 
 - Components must not introduce new persistence contracts; route mutations and storage live in `lib/`.
+- `PublicLayout.jsx` must not mount the Sara guest chat widget on `/ticket` or `/ticket/*` reservation pages.
 - `components/home/QuoteForm.jsx` creates Convex quote tickets through `lib/store.js` and may call the app-level quote webhook route after creation.
 - `components/home/QuoteForm.jsx` requires at least one guest name, check-in, check-out, room name, and a valid email before creating a public quote ticket.
 - `components/home/QuoteForm.jsx` auto-selects the only visible room type from settings for public quote requests.

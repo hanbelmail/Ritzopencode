@@ -12,7 +12,7 @@
 - `faq/` and `ritz-info/` own guest information content.
 - `terms/[version]/` renders immutable published booking Terms by version and content-hash reference.
 - `ticket/[id]/` owns public reservation ticket display by ticket ID, including signed-read display of the retail price screenshot when attached and a public redirect that creates a fresh private screenshot URL for guest SMS links.
-- `components/PublicLayout.jsx` mounts `components/chat/GuestChatWidget.jsx` once across public pages when `saraWebEnabled` is active.
+- `components/PublicLayout.jsx` mounts `components/chat/GuestChatWidget.jsx` once across public pages when `saraWebEnabled` is active, except on `/ticket` and `/ticket/*` reservation pages.
 
 ## Local Contracts
 

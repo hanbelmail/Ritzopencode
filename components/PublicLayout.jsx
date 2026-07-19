@@ -15,6 +15,7 @@ const mobileNav = [
 
 export default function PublicLayout({ children }) {
   const pathname = usePathname();
+  const showGuestChat = pathname !== "/ticket" && !pathname.startsWith("/ticket/");
 
   const isActive = (to, exact) => {
     if (exact) return pathname === to;
@@ -27,7 +28,7 @@ export default function PublicLayout({ children }) {
         {children}
       </div>
 
-      <GuestChatWidget />
+      {showGuestChat && <GuestChatWidget />}
 
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#faf9f5] border-t border-[#e6dfd8] flex items-stretch pb-[env(safe-area-inset-bottom)]">
         {mobileNav.map(({ to, label, icon: Icon, exact, isAnchor }) => {
