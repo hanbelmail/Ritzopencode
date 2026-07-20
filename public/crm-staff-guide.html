@@ -557,15 +557,15 @@
     </section>
 
     <section id="email-alerts">
-      <h2>Email Alerts</h2>
-      <p>Recommended setup: turn ON the master email alert switch and all individual alerts in the Email Dashboard.</p>
+      <h2>Email and SMS Alerts</h2>
+      <p>Recommended setup: configure email recipients in the Email Dashboard, review each template in the SMS Dashboard, and enable only the lifecycle messages that are ready to send.</p>
 
       <div class="table-card">
         <div class="table-scroll">
           <table>
             <thead>
               <tr>
-                <th>Email Event</th>
+                <th>Notification Event</th>
                 <th>Trigger</th>
                 <th>Who Receives It?</th>
                 <th>Purpose</th>
@@ -601,6 +601,24 @@
                 <td>Ticket changes to <span class="status s-verified">PAYMENT VERIFIED</span></td>
                 <td>Active hotel email recipients</td>
                 <td>Notify the hotel inbox that the booking request is confirmed.</td>
+              </tr>
+              <tr>
+                <td><strong>Payment Submitted Guest SMS</strong></td>
+                <td>Ticket changes to <span class="status s-submitted">PAYMENT SUBMITTED</span></td>
+                <td>Guest phone on the ticket</td>
+                <td>Acknowledge that payment proof is pending review.</td>
+              </tr>
+              <tr>
+                <td><strong>Payment Verified Guest SMS</strong></td>
+                <td>Ticket changes to <span class="status s-verified">PAYMENT VERIFIED</span></td>
+                <td>Guest phone on the ticket</td>
+                <td>Confirm payment verification while booking is finalized.</td>
+              </tr>
+              <tr>
+                <td><strong>Booking Confirmed Guest SMS</strong></td>
+                <td>Ticket changes to <span class="status s-confirmed">BOOKING CONFIRMED</span></td>
+                <td>Guest phone on the ticket</td>
+                <td>Send the reservation confirmation number and confirmation-email address.</td>
               </tr>
             </tbody>
           </table>

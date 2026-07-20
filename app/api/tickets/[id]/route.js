@@ -4,9 +4,9 @@ import { computeTicket } from "@/lib/calc";
 import { getAutomationServiceKey, getConvexClient, jsonError } from "@/lib/convex-server";
 import { DEFAULT_SETTINGS } from "@/lib/defaults";
 import { sendPriceSentNotifications } from "@/lib/price-sent-notifications-server";
-import { sendPaymentSubmittedAlertEmail } from "@/lib/payment-submitted-alert-email-server";
-import { sendBookingRequestHotelAlertEmail } from "@/lib/booking-request-hotel-alert-email-server";
-import { sendBookingConfirmedHotelAlertEmail } from "@/lib/booking-confirmed-hotel-alert-email-server";
+import { sendPaymentSubmittedNotifications } from "@/lib/payment-submitted-notifications-server";
+import { sendPaymentVerifiedNotifications } from "@/lib/payment-verified-notifications-server";
+import { sendBookingConfirmedNotifications } from "@/lib/booking-confirmed-notifications-server";
 
 const pricingInputFields = new Set(["retailPrice", "adjustment", "checkIn", "checkOut"]);
 
@@ -95,7 +95,7 @@ export async function PATCH(request, { params }) {
 
     if (ticket.status === "PAYMENT SUBMITTED") {
       try {
-        paymentSubmittedAlert = await sendPaymentSubmittedAlertEmail({
+        paymentSubmittedAlert = await sendPaymentSubmittedNotifications({
           client,
           ticket,
           origin: request.nextUrl.origin,
@@ -111,7 +111,7 @@ export async function PATCH(request, { params }) {
 
     if (ticket.status === "PAYMENT VERIFIED") {
       try {
-        bookingRequestHotelAlert = await sendBookingRequestHotelAlertEmail({ client, ticket });
+        bookingRequestHotelAlert = await sendPaymentVerifiedNotifications({ client, ticket, origin: request.nextUrl.origin });
         if (bookingRequestHotelAlert.ticket) ticket = bookingRequestHotelAlert.ticket;
       } catch (error) {
         bookingRequestHotelAlert = {
@@ -123,9 +123,10 @@ export async function PATCH(request, { params }) {
 
     if (ticket.status === "BOOKING CONFIRMED") {
       try {
-        bookingConfirmedHotelAlert = await sendBookingConfirmedHotelAlertEmail({
+        bookingConfirmedHotelAlert = await sendBookingConfirmedNotifications({
           client,
           ticket,
+          origin: request.nextUrl.origin,
         });
         if (bookingConfirmedHotelAlert.ticket) ticket = bookingConfirmedHotelAlert.ticket;
       } catch (error) {

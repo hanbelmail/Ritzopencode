@@ -16,9 +16,9 @@
 - `api/booking-confirmed-hotel-alert-attachments/` owns private Cloudflare R2 signed upload URLs for the two PDF attachments configured for booking-confirmed hotel email alerts.
 - `api/quote-webhook/` owns server-side forwarding of public quote tickets to the configured external webhook.
 - `api/quote-alerts/` owns server-side new quote staff email alerts through Resend and stamps tickets after successful delivery.
-- `api/payment-submitted-alerts/` owns server-side payment-submitted staff email alerts through Resend, including payment proof screenshot attachments from R2 when present.
-- `api/booking-request-hotel-alerts/` owns server-side payment-verified booking request hotel email alerts through Resend with the fixed `1609E` subject.
-- `api/booking-confirmed-hotel-alerts/` owns server-side booking-confirmed hotel email alerts through Resend with the reservation confirmation number in the subject.
+- `api/payment-submitted-alerts/` owns independent server-side payment-submitted staff email and guest SMS delivery, including payment proof screenshot attachments from R2 when present.
+- `api/booking-request-hotel-alerts/` owns independent server-side payment-verified booking request hotel email and guest SMS delivery, with the fixed `1609E` email subject.
+- `api/booking-confirmed-hotel-alerts/` owns independent server-side booking-confirmed hotel email and guest SMS delivery, with the reservation confirmation number in the email subject.
 - `api/sara/chat/` owns the public web-chat adapter, opaque HTTP-only conversation sessions, origin checks, Sara execution, and safe transcript responses.
 - `api/sara/staff-reply/` owns authenticated staff-only, stable-ID Quo reply dispatch after the staff reply and takeover are persisted in Convex.
 - `api/webhooks/quo/` owns Quo message ingestion, webhook-token validation, event deduplication, SMS allowlist/test-mode enforcement, STOP/START processing, Sara execution, and outbound delivery tracking.
@@ -41,6 +41,7 @@
 - Payment-submitted alert delivery must read email alert settings and active staff recipients from Convex-backed settings, attach the private payment proof screenshot from R2 when `paymentScreenshotKey` is present, and stamp `paymentSubmittedStaffEmailSentAt` only after successful delivery.
 - Booking requests hotel alert delivery must read email alert settings and active hotel recipients from Convex-backed settings after `PAYMENT VERIFIED`, use the fixed `1609E` subject, and stamp `bookingRequestHotelEmailSentAt` only after successful delivery.
 - Booking confirmed hotel alert delivery must read email alert settings and active hotel recipients from Convex-backed settings after `BOOKING CONFIRMED`, attach up to two configured private R2 PDFs, use `Ritz Confirmation #: <reservation confirmation number>` as the subject, and stamp `bookingConfirmedHotelEmailSentAt` only after successful delivery.
+- `PAYMENT SUBMITTED`, `PAYMENT VERIFIED`, and `BOOKING CONFIRMED` notification routes must attempt their independently enabled guest Quo SMS after the corresponding status is persisted; each status SMS uses its selected editable template and stamps a successful provider acceptance once per ticket/status without allowing email failure to block SMS.
 - Preserve App Router route group semantics; `(public)` and `(staff)` folders are URL-invisible boundaries.
 - Keep route-level reservation/settings data mutations delegated to Convex-backed hooks in `lib/store.js`.
 - Public Sara chat must reject cross-origin writes, keep the session token HTTP-only, enforce message limits, and use `PUBLIC_APP_URL` for durable guest links when configured.

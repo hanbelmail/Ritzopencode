@@ -4,6 +4,17 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +23,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { DEFAULT_SETTINGS, useSaraSettingsActions, useSettings } from "@/lib/store";
 import { isE164Phone, normalizePhone } from "@/lib/phone";
-import { Bot, BookOpen, Check, ExternalLink, Inbox, Loader2, Pause, Play, Plus, Save, Send, ShieldCheck } from "lucide-react";
+import { Bot, BookOpen, Check, ExternalLink, Inbox, Loader2, Pause, Play, Plus, Save, Send, ShieldCheck, Trash2 } from "lucide-react";
 
 const serif = "font-['Cormorant_Garamond',_'EB_Garamond',_'Times_New_Roman',_serif]";
 const tabs = [
@@ -305,9 +316,11 @@ function InboxPanel() {
   const detail = useQuery(api.conversations.getForStaff, selectedId ? { publicId: selectedId } : "skip");
   const setControl = useMutation(api.conversations.setStaffControl);
   const addReply = useMutation(api.conversations.addStaffReply);
+  const deleteConversation = useMutation(api.conversations.deleteForStaff);
   const [reply, setReply] = useState("");
   const [replyMessageId, setReplyMessageId] = useState(null);
   const [sending, setSending] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [actionError, setActionError] = useState("");
 
   useEffect(() => {
@@ -358,6 +371,20 @@ function InboxPanel() {
     }
   }
 
+  async function removeConversation() {
+    if (!selectedId) return;
+    setDeleting(true);
+    setActionError("");
+    try {
+      await deleteConversation({ publicId: selectedId });
+      setSelectedId(null);
+    } catch (deleteError) {
+      setActionError(deleteError.message || "Failed to delete conversation");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   return (
     <div className="grid min-h-[650px] overflow-hidden rounded-[14px] border border-[#e6dfd8] bg-white lg:grid-cols-[340px_minmax(0,1fr)]">
       <aside className="border-b border-[#e6dfd8] lg:border-b-0 lg:border-r">
@@ -391,9 +418,32 @@ function InboxPanel() {
                 <p className="font-medium">{detail.contact?.displayName || detail.conversation.externalParticipant || "Website guest"}</p>
                 <p className="mt-1 text-xs text-[#6c6a64]">{detail.conversation.stage.replaceAll("_", " ")}{detail.ticket ? ` · Ticket ${detail.ticket.id.slice(0, 8)}...` : ""}</p>
               </div>
-              <Button type="button" variant="outline" disabled={Boolean(detail.smsConsent?.optedOut && !detail.conversation.aiEnabled)} onClick={() => toggleAi(detail.conversation, !detail.conversation.aiEnabled)} className="border-[#d9cfc2]">
-                {detail.conversation.aiEnabled ? <><Pause className="h-4 w-4" /> Pause Sara</> : <><Play className="h-4 w-4" /> Resume Sara</>}
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button type="button" variant="outline" disabled={Boolean(detail.smsConsent?.optedOut && !detail.conversation.aiEnabled)} onClick={() => toggleAi(detail.conversation, !detail.conversation.aiEnabled)} className="border-[#d9cfc2]">
+                  {detail.conversation.aiEnabled ? <><Pause className="h-4 w-4" /> Pause Sara</> : <><Play className="h-4 w-4" /> Resume Sara</>}
+                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button type="button" variant="outline" size="icon" aria-label="Delete conversation" className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete this conversation?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This permanently deletes the transcript and Sara run history. Linked reservation tickets, contacts, and SMS consent are kept.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+                      <AlertDialogAction disabled={deleting} onClick={removeConversation} className="bg-red-700 text-white hover:bg-red-800">
+                        {deleting ? <><Loader2 className="h-4 w-4 animate-spin" /> Deleting...</> : "Delete conversation"}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
             </header>
             <div className="flex-1 space-y-3 overflow-y-auto bg-[#faf9f5] p-4">
               {detail.messages.map((message) => (

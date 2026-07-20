@@ -36,6 +36,7 @@ import { getPriceSentNotificationFeedback, notifyPriceSent } from "@/lib/price-s
 import { notifyPaymentSubmitted } from "@/lib/payment-submitted-alert";
 import { notifyBookingRequestHotel } from "@/lib/booking-request-hotel-alert";
 import { notifyBookingConfirmedHotel } from "@/lib/booking-confirmed-hotel-alert";
+import { getLifecycleNotificationFeedback } from "@/lib/lifecycle-notification-feedback";
 import { useToast } from "@/components/ui/use-toast";
 import { readDashboardTableColumns, saveDashboardTableColumns } from "@/lib/ui-preferences";
 
@@ -287,11 +288,7 @@ export default function Dashboard() {
     if (status === "PAYMENT SUBMITTED") {
       try {
         const result = await notifyPaymentSubmitted(id);
-        toast({
-          title: result.sent ? "Payment alert sent" : "Payment alert skipped",
-          description: result.sent ? "Active staff recipients received the payment proof alert." : result.reason,
-          variant: result.sent ? "success" : "destructive",
-        });
+        toast(getLifecycleNotificationFeedback(result, "Payment submitted", "Active staff recipients received the payment proof alert."));
       } catch (error) {
         toast({
           title: "Payment alert failed",
@@ -304,11 +301,7 @@ export default function Dashboard() {
     if (status === "PAYMENT VERIFIED") {
       try {
         const result = await notifyBookingRequestHotel(id);
-        toast({
-          title: result.sent ? "Booking request sent" : "Booking request skipped",
-          description: result.sent ? "Active hotel inboxes received the booking request." : result.reason,
-          variant: result.sent ? "success" : "destructive",
-        });
+        toast(getLifecycleNotificationFeedback(result, "Payment verified", "Active hotel inboxes received the booking request."));
       } catch (error) {
         toast({
           title: "Booking request failed",
@@ -321,11 +314,7 @@ export default function Dashboard() {
     if (status === "BOOKING CONFIRMED") {
       try {
         const result = await notifyBookingConfirmedHotel(id);
-        toast({
-          title: result.sent ? "Booking confirmation sent" : "Booking confirmation skipped",
-          description: result.sent ? "Active hotel inboxes received the booking confirmation." : result.reason,
-          variant: result.sent ? "success" : "destructive",
-        });
+        toast(getLifecycleNotificationFeedback(result, "Booking confirmed", "Active hotel inboxes received the booking confirmation."));
       } catch (error) {
         toast({
           title: "Booking confirmation failed",

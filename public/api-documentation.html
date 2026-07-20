@@ -328,7 +328,7 @@
     "checkIn": "2026-08-10",
     "checkOut": "2026-08-14"
   }'</pre>
-            <div class="note">When the saved ticket is in <code class="inline">PRICE SENT</code> and the Guest Price Sent Email setting is active, the API attempts the guest price email. Delivery metadata is returned with the updated ticket.</div>
+            <div class="note">When the saved ticket is in <code class="inline">PRICE SENT</code>, the API independently attempts the enabled guest price email and selected guest SMS template. Delivery metadata is returned with the updated ticket.</div>
           </div>
         </div>
 
@@ -344,7 +344,7 @@
     "status": "PAYMENT SUBMITTED",
     "paymentScreenshotKey": "payment-proofs/8d4b6b3e-4a66-48b0-8a0d-fd8f28a07000/payment.png"
   }'</pre>
-            <p>If payment-submitted alerts are enabled, active staff recipients receive the staff alert with the payment screenshot attached when available.</p>
+            <p>If payment-submitted notifications are enabled, active staff recipients receive the email with the payment screenshot attached when available and the guest receives the selected payment-received SMS. Email and SMS delivery are independent.</p>
           </div>
         </div>
 
@@ -352,7 +352,7 @@
           <span class="step-number">4</span>
           <div>
             <h3>Verify the payment</h3>
-            <p>Staff reviews the payment proof and changes the ticket to <code class="inline">PAYMENT VERIFIED</code>. This marks the payment as accepted and sends the hotel booking request.</p>
+            <p>Staff reviews the payment proof and changes the ticket to <code class="inline">PAYMENT VERIFIED</code>. This marks the payment as accepted, sends the enabled hotel booking request, and sends the enabled selected guest SMS.</p>
             <pre>curl -X PATCH "https://your-domain.com/api/tickets/8d4b6b3e-4a66-48b0-8a0d-fd8f28a07000" \
   -H "Authorization: Bearer $N8N_API_KEY" \
   -H "Content-Type: application/json" \
@@ -364,12 +364,12 @@
           <span class="step-number">5</span>
           <div>
             <h3>Confirm the booking</h3>
-            <p>After payment has been reviewed and accepted, set the ticket status to <code class="inline">PAYMENT VERIFIED</code>. This sends the booking request to the hotel.</p>
+            <p>After the hotel reservation is finalized, set the ticket status to <code class="inline">BOOKING CONFIRMED</code> with its confirmation number. This independently sends the enabled hotel confirmation email and selected guest confirmation SMS.</p>
             <pre>curl -X PATCH "https://your-domain.com/api/tickets/8d4b6b3e-4a66-48b0-8a0d-fd8f28a07000" \
   -H "Authorization: Bearer $N8N_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{ "status": "PAYMENT VERIFIED" }'</pre>
-            <p>If Booking Requests Hotel Alert is enabled, active hotel recipients receive the hotel booking request email with subject <code class="inline">1609E</code>. The ticket is stamped after successful delivery so duplicate sends are skipped.</p>
+  -d '{ "status": "BOOKING CONFIRMED", "reservationConfirmationNumber": "RC-123456" }'</pre>
+            <p>Each accepted email or SMS delivery is stamped independently so later saves and status re-entry do not send duplicates.</p>
           </div>
         </div>
       </div>

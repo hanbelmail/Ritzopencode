@@ -1,6 +1,6 @@
 import { api } from "@/convex/_generated/api";
 import { getConvexClient, jsonError } from "@/lib/convex-server";
-import { sendBookingConfirmedHotelAlertEmail } from "@/lib/booking-confirmed-hotel-alert-email-server";
+import { sendBookingConfirmedNotifications } from "@/lib/booking-confirmed-notifications-server";
 
 async function readJsonBody(request) {
   try {
@@ -26,7 +26,7 @@ export async function POST(request) {
       return jsonError("Ticket not found", 404);
     }
 
-    const result = await sendBookingConfirmedHotelAlertEmail({ client, ticket });
+    const result = await sendBookingConfirmedNotifications({ client, ticket, origin: request.nextUrl.origin });
 
     return Response.json(result);
   } catch (error) {

@@ -457,6 +457,38 @@ export const getForStaff = query({
   },
 });
 
+export const deleteForStaff = mutation({
+  args: { publicId: v.string() },
+  handler: async (ctx, { publicId }) => {
+    await requireStaff(ctx);
+    const conversation = await findByPublicId(ctx, publicId);
+    if (!conversation) throw new Error("Conversation not found");
+
+    const [messages, runs] = await Promise.all([
+      ctx.db.query("messages").withIndex("by_conversation_createdAt", (q) => q.eq("conversationId", conversation._id)).collect(),
+      ctx.db.query("agentRuns").withIndex("by_conversation_createdAt", (q) => q.eq("conversationId", conversation._id)).collect(),
+    ]);
+    const outboxes = (await Promise.all(
+      messages.map((message) => ctx.db.query("messageOutbox").withIndex("by_messageId", (q) => q.eq("messageId", message._id)).collect())
+    )).flat();
+
+    if (conversation.ticketId) {
+      const ticket = await ctx.db.query("tickets").withIndex("by_ticketId", (q) => q.eq("ticketId", conversation.ticketId)).first();
+      if (ticket?.data?.conversationId === publicId) {
+        const { conversationId: _conversationId, ...data } = ticket.data;
+        await ctx.db.patch(ticket._id, { data, updatedAt: new Date().toISOString() });
+      }
+    }
+
+    for (const outbox of outboxes) await ctx.db.delete(outbox._id);
+    for (const message of messages) await ctx.db.delete(message._id);
+    for (const run of runs) await ctx.db.delete(run._id);
+    await ctx.db.delete(conversation._id);
+
+    return { deleted: true };
+  },
+});
+
 export const setStaffControl = mutation({
   args: {
     publicId: v.string(),

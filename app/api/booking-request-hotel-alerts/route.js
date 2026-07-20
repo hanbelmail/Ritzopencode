@@ -1,6 +1,6 @@
 import { api } from "@/convex/_generated/api";
 import { getConvexClient, jsonError } from "@/lib/convex-server";
-import { sendBookingRequestHotelAlertEmail } from "@/lib/booking-request-hotel-alert-email-server";
+import { sendPaymentVerifiedNotifications } from "@/lib/payment-verified-notifications-server";
 
 async function readJsonBody(request) {
   try {
@@ -26,7 +26,7 @@ export async function POST(request) {
       return jsonError("Ticket not found", 404);
     }
 
-    return Response.json(await sendBookingRequestHotelAlertEmail({ client, ticket }));
+    return Response.json(await sendPaymentVerifiedNotifications({ client, ticket, origin: request.nextUrl.origin }));
   } catch (error) {
     const message = error.message || "Failed to send booking request hotel alert";
     const status = message === "Invalid JSON body" ? 400 : message.includes("Missing required environment variable") ? 500 : 502;

@@ -543,53 +543,115 @@ export const submitGuestPayment = mutation({
   },
 });
 
-export const claimPriceSentSms = mutation({
-  args: { id: v.string(), serviceKey: v.string(), phone: v.string() },
+const ticketStatusSmsEvent = v.union(
+  v.literal("priceSent"),
+  v.literal("paymentSubmitted"),
+  v.literal("paymentVerified"),
+  v.literal("bookingConfirmed")
+);
+
+function ticketStatusSmsConfig(event: string) {
+  const configs: Record<string, any> = {
+    priceSent: { status: "PRICE SENT", label: "Price sent", prefix: "priceSent", enabledKey: "priceSentSmsEnabled", templatesKey: "priceSentSmsTemplates", templateIdKey: "priceSentSmsTemplateId" },
+    paymentSubmitted: { status: "PAYMENT SUBMITTED", label: "Payment submitted", prefix: "paymentSubmitted", enabledKey: "paymentSubmittedSmsEnabled", templatesKey: "paymentSubmittedSmsTemplates", templateIdKey: "paymentSubmittedSmsTemplateId" },
+    paymentVerified: { status: "PAYMENT VERIFIED", label: "Payment verified", prefix: "paymentVerified", enabledKey: "paymentVerifiedSmsEnabled", templatesKey: "paymentVerifiedSmsTemplates", templateIdKey: "paymentVerifiedSmsTemplateId" },
+    bookingConfirmed: { status: "BOOKING CONFIRMED", label: "Booking confirmed", prefix: "bookingConfirmed", enabledKey: "bookingConfirmedSmsEnabled", templatesKey: "bookingConfirmedSmsTemplates", templateIdKey: "bookingConfirmedSmsTemplateId" },
+  };
+  return configs[event];
+}
+
+export const claimTicketStatusSms = mutation({
+  args: { id: v.string(), event: ticketStatusSmsEvent, serviceKey: v.string(), phone: v.string() },
   handler: async (ctx, args) => {
     if (!isAutomationKey(args.serviceKey)) throw new Error("Invalid automation credential");
+    const config = ticketStatusSmsConfig(args.event);
     const row = await ctx.db.query("tickets").withIndex("by_ticketId", (q) => q.eq("ticketId", args.id)).first();
     if (!row) throw new Error("Ticket not found");
-    const ticket = normalizeTicket(row.data);
-    if (ticket.status !== "PRICE SENT") return { claimed: false, reason: "Ticket is not PRICE SENT", ticket };
-    if (ticket.priceSentSmsSentAt) return { claimed: false, reason: "Price sent SMS already sent", ticket };
-    if (ticket.priceSentSmsClaimedAt) return { claimed: false, reason: "Price sent SMS delivery is already claimed", ticket };
+    const ticket: any = normalizeTicket(row.data);
+    const sentAtKey = `${config.prefix}SmsSentAt`;
+    const claimedAtKey = `${config.prefix}SmsClaimedAt`;
+    if (ticket.status !== config.status) return { claimed: false, reason: `Ticket is not ${config.status}`, ticket };
+    if (ticket[sentAtKey]) return { claimed: false, reason: `${config.label} SMS already sent`, ticket };
+    if (ticket[claimedAtKey]) return { claimed: false, reason: `${config.label} SMS delivery is already claimed`, ticket };
     const phone = normalizeSmsPhone(ticket.phone || "");
     if (phone !== normalizeSmsPhone(args.phone) || !/^\+[1-9]\d{1,14}$/.test(phone)) return { claimed: false, reason: "Ticket phone changed or is invalid", ticket };
     const consent = await getSmsConsent(ctx, phone);
     if (consent.optedOut) return { claimed: false, reason: "Guest opted out of SMS", ticket };
     const settingsRow = await ctx.db.query("settings").withIndex("by_key", (q) => q.eq("key", "main")).first();
-    const settings = settingsRow?.data || {};
-    if (!settings.priceSentSmsEnabled) return { claimed: false, reason: "Guest price sent SMS is disabled", ticket };
+    const settings: any = settingsRow?.data || {};
+    if (!settings[config.enabledKey]) return { claimed: false, reason: `${config.label} guest SMS is disabled`, ticket };
     const allowlisted = (settings.saraSmsAllowlist || []).some((allowed: string) => normalizeSmsPhone(allowed) === phone);
     if (settings.saraSmsTestMode !== false && !allowlisted) return { claimed: false, reason: "Guest is not on the SMS test allowlist", ticket };
     const claimedAt = new Date().toISOString();
     const claimToken = crypto.randomUUID();
-    const updated = {
+    const updated: any = {
       ...ticket,
-      priceSentSmsClaimedAt: claimedAt,
-      priceSentSmsClaimToken: claimToken,
-      priceSentSmsSettingsUpdatedAt: settingsRow?.updatedAt || "",
-      priceSentSmsError: null,
+      [claimedAtKey]: claimedAt,
+      [`${config.prefix}SmsClaimToken`]: claimToken,
+      [`${config.prefix}SmsSettingsUpdatedAt`]: settingsRow?.updatedAt || "",
+      [`${config.prefix}SmsConsentVersion`]: consent.version,
+      [`${config.prefix}SmsError`]: null,
     };
     await ctx.db.patch(row._id, { data: updated, updatedAt: claimedAt, ...ticketIndexFields(updated) });
     return {
       claimed: true,
-      claimedAt,
       claimToken,
       phone,
       ticket: updated,
       smsSettings: {
-        priceSentSmsTemplates: settings.priceSentSmsTemplates,
-        priceSentSmsTemplateId: settings.priceSentSmsTemplateId,
-        priceSentSmsTemplate: settings.priceSentSmsTemplate,
+        templates: settings[config.templatesKey],
+        templateId: settings[config.templateIdKey],
+        legacyTemplate: args.event === "priceSent" ? settings.priceSentSmsTemplate : undefined,
       },
     };
   },
 });
 
-export const finishPriceSentSms = mutation({
+export const confirmTicketStatusSmsClaim = mutation({
+  args: { id: v.string(), event: ticketStatusSmsEvent, serviceKey: v.string(), claimToken: v.string(), phone: v.string() },
+  handler: async (ctx, args) => {
+    if (!isAutomationKey(args.serviceKey)) throw new Error("Invalid automation credential");
+    const config = ticketStatusSmsConfig(args.event);
+    const row = await ctx.db.query("tickets").withIndex("by_ticketId", (q) => q.eq("ticketId", args.id)).first();
+    if (!row) throw new Error("Ticket not found");
+    const ticket: any = normalizeTicket(row.data);
+    const claimTokenKey = `${config.prefix}SmsClaimToken`;
+    const claimedAtKey = `${config.prefix}SmsClaimedAt`;
+    const settingsUpdatedAtKey = `${config.prefix}SmsSettingsUpdatedAt`;
+    const consentVersionKey = `${config.prefix}SmsConsentVersion`;
+    const sentAtKey = `${config.prefix}SmsSentAt`;
+    let reason = "";
+    const phone = normalizeSmsPhone(ticket.phone || "");
+    if (ticket[claimTokenKey] !== args.claimToken) reason = `${config.label} SMS claim was superseded`;
+    else if (ticket.status !== config.status || ticket[sentAtKey]) reason = `Ticket is no longer accepting a ${config.label.toLowerCase()} SMS`;
+    else if (row.updatedAt !== ticket[claimedAtKey]) reason = `Ticket changed while the ${config.label.toLowerCase()} SMS was being prepared`;
+    else if (phone !== normalizeSmsPhone(args.phone)) reason = "Ticket phone changed before delivery";
+    const consent = await getSmsConsent(ctx, phone);
+    if (!reason && consent.optedOut) reason = "Guest opted out of SMS before delivery";
+    if (!reason && consent.version !== ticket[consentVersionKey]) reason = "Guest SMS consent changed before delivery";
+    const settingsRow = await ctx.db.query("settings").withIndex("by_key", (q) => q.eq("key", "main")).first();
+    const settings: any = settingsRow?.data || {};
+    if (!reason && (settingsRow?.updatedAt || "") !== ticket[settingsUpdatedAtKey]) reason = "SMS settings changed while the message was being prepared";
+    if (!reason && !settings[config.enabledKey]) reason = `${config.label} guest SMS was disabled before delivery`;
+    const allowlisted = (settings.saraSmsAllowlist || []).some((allowed: string) => normalizeSmsPhone(allowed) === phone);
+    if (!reason && settings.saraSmsTestMode !== false && !allowlisted) reason = "Guest was removed from the SMS test allowlist";
+    if (reason) {
+      const updated: any = { ...ticket, [`${config.prefix}SmsError`]: reason };
+      delete updated[claimedAtKey];
+      delete updated[claimTokenKey];
+      delete updated[settingsUpdatedAtKey];
+      delete updated[consentVersionKey];
+      await ctx.db.patch(row._id, { data: updated, updatedAt: new Date().toISOString(), ...ticketIndexFields(updated) });
+      return { confirmed: false, reason };
+    }
+    return { confirmed: true, phone };
+  },
+});
+
+export const finishTicketStatusSms = mutation({
   args: {
     id: v.string(),
+    event: ticketStatusSmsEvent,
     serviceKey: v.string(),
     claimToken: v.string(),
     accepted: v.boolean(),
@@ -599,56 +661,27 @@ export const finishPriceSentSms = mutation({
   },
   handler: async (ctx, args) => {
     if (!isAutomationKey(args.serviceKey)) throw new Error("Invalid automation credential");
+    const config = ticketStatusSmsConfig(args.event);
     const row = await ctx.db.query("tickets").withIndex("by_ticketId", (q) => q.eq("ticketId", args.id)).first();
     if (!row) throw new Error("Ticket not found");
-    if (row.data.priceSentSmsClaimToken !== args.claimToken) return row.data;
+    const claimTokenKey = `${config.prefix}SmsClaimToken`;
+    if (row.data[claimTokenKey] !== args.claimToken) return row.data;
     const now = new Date().toISOString();
     const updated: any = {
       ...row.data,
-      ...(args.accepted ? { priceSentSmsSentAt: now, priceSentSmsMessageId: args.providerMessageId || null } : {}),
-      priceSentSmsError: args.error || null,
+      ...(args.accepted ? { [`${config.prefix}SmsSentAt`]: now, [`${config.prefix}SmsMessageId`]: args.providerMessageId || null } : {}),
+      [`${config.prefix}SmsError`]: args.error || null,
     };
     if (args.accepted || args.retryable) {
-      delete updated.priceSentSmsClaimedAt;
-      delete updated.priceSentSmsClaimToken;
-      delete updated.priceSentSmsSettingsUpdatedAt;
+      delete updated[`${config.prefix}SmsClaimedAt`];
+      delete updated[claimTokenKey];
+      delete updated[`${config.prefix}SmsSettingsUpdatedAt`];
+      delete updated[`${config.prefix}SmsConsentVersion`];
     } else if (!args.accepted) {
-      updated.priceSentSmsDeliveryUnknownAt = now;
+      updated[`${config.prefix}SmsDeliveryUnknownAt`] = now;
     }
     await ctx.db.patch(row._id, { data: updated, updatedAt: now, ...ticketIndexFields(updated) });
     return updated;
-  },
-});
-
-export const confirmPriceSentSmsClaim = mutation({
-  args: { id: v.string(), serviceKey: v.string(), claimToken: v.string(), phone: v.string() },
-  handler: async (ctx, args) => {
-    if (!isAutomationKey(args.serviceKey)) throw new Error("Invalid automation credential");
-    const row = await ctx.db.query("tickets").withIndex("by_ticketId", (q) => q.eq("ticketId", args.id)).first();
-    if (!row) throw new Error("Ticket not found");
-    const ticket = normalizeTicket(row.data);
-    let reason = "";
-    const phone = normalizeSmsPhone(ticket.phone || "");
-    if (ticket.priceSentSmsClaimToken !== args.claimToken) reason = "Price sent SMS claim was superseded";
-    else if (ticket.status !== "PRICE SENT" || ticket.priceSentSmsSentAt) reason = "Ticket is no longer accepting a price sent SMS";
-    else if (row.updatedAt !== ticket.priceSentSmsClaimedAt) reason = "Ticket changed while the price sent SMS was being prepared";
-    else if (phone !== normalizeSmsPhone(args.phone)) reason = "Ticket phone changed before delivery";
-    else if ((await getSmsConsent(ctx, phone)).optedOut) reason = "Guest opted out of SMS before delivery";
-    const settingsRow = await ctx.db.query("settings").withIndex("by_key", (q) => q.eq("key", "main")).first();
-    const settings = settingsRow?.data || {};
-    if (!reason && (settingsRow?.updatedAt || "") !== ticket.priceSentSmsSettingsUpdatedAt) reason = "SMS settings changed while the message was being prepared";
-    if (!reason && !settings.priceSentSmsEnabled) reason = "Guest price sent SMS was disabled before delivery";
-    const allowlisted = (settings.saraSmsAllowlist || []).some((allowed: string) => normalizeSmsPhone(allowed) === phone);
-    if (!reason && settings.saraSmsTestMode !== false && !allowlisted) reason = "Guest was removed from the SMS test allowlist";
-    if (reason) {
-      const updated = { ...ticket, priceSentSmsError: reason };
-      delete updated.priceSentSmsClaimedAt;
-      delete updated.priceSentSmsClaimToken;
-      delete updated.priceSentSmsSettingsUpdatedAt;
-      await ctx.db.patch(row._id, { data: updated, updatedAt: new Date().toISOString(), ...ticketIndexFields(updated) });
-      return { confirmed: false, reason };
-    }
-    return { confirmed: true, phone };
   },
 });
 

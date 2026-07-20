@@ -1,6 +1,6 @@
 import { api } from "@/convex/_generated/api";
 import { getConvexClient, jsonError } from "@/lib/convex-server";
-import { sendPaymentSubmittedAlertEmail } from "@/lib/payment-submitted-alert-email-server";
+import { sendPaymentSubmittedNotifications } from "@/lib/payment-submitted-notifications-server";
 
 async function readJsonBody(request) {
   try {
@@ -26,7 +26,7 @@ export async function POST(request) {
       return jsonError("Ticket not found", 404);
     }
 
-    const result = await sendPaymentSubmittedAlertEmail({
+    const result = await sendPaymentSubmittedNotifications({
       client,
       ticket,
       origin: request.nextUrl.origin,

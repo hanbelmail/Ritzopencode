@@ -330,9 +330,11 @@ export default function TicketPage() {
       termsVersion,
     });
 
-    notifyPaymentSubmitted(ticket.id).catch((error) => {
-      console.error("Failed to send payment submitted alert", error);
-    });
+    try {
+      await notifyPaymentSubmitted(ticket.id);
+    } catch (error) {
+      console.error("Failed to send payment submitted notifications", error);
+    }
   };
 
   return (
