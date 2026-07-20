@@ -14,6 +14,7 @@ import {
   CheckCircle2,
   ChevronRight,
   Clock3,
+  Copy,
   CreditCard,
   FileText,
   HelpCircle,
@@ -101,10 +102,29 @@ function PortalLink({ href, icon: Icon, title, description }) {
   );
 }
 
-function Timeline({ status }) {
+function Timeline({ status, confirmationNumber }) {
+  const [copyState, setCopyState] = useState("idle");
   const activeIndex = FLOW_STEPS.findIndex((step) => step.status === status);
   const currentIndex = activeIndex >= 0 ? activeIndex : 0;
   const isCancelled = status === "CANCELLED";
+  const isConfirmed = status === "BOOKING CONFIRMED";
+  const confirmation = String(confirmationNumber || "").trim();
+
+  useEffect(() => {
+    if (copyState !== "copied") return;
+
+    const timeout = setTimeout(() => setCopyState("idle"), 2000);
+    return () => clearTimeout(timeout);
+  }, [copyState]);
+
+  const copyConfirmationNumber = async () => {
+    try {
+      await navigator.clipboard.writeText(confirmation);
+      setCopyState("copied");
+    } catch {
+      setCopyState("error");
+    }
+  };
 
   return (
     <section className="rounded-[1.75rem] border border-[#e8dfd2] bg-white p-4 shadow-sm shadow-[#4a2f1d]/5 md:p-5">
@@ -123,21 +143,43 @@ function Timeline({ status }) {
       ) : (
         <div className="space-y-0">
           {FLOW_STEPS.map((step, index) => {
-            const isDone = index < currentIndex;
+            const isDone = index < currentIndex || (isConfirmed && index === currentIndex);
             const isCurrent = index === currentIndex;
             const isUpcoming = index > currentIndex;
+            const showConfirmation = isConfirmed && index === FLOW_STEPS.length - 1 && confirmation;
 
             return (
-              <div key={step.status} className="relative flex gap-3 pb-5 last:pb-0">
+              <div key={step.status} className="relative flex gap-3 pb-6 last:pb-0">
                 {index !== FLOW_STEPS.length - 1 && (
                   <div className={`absolute left-[17px] top-9 h-[calc(100%-2rem)] w-px ${isDone ? "bg-[#b48a4f]" : "bg-[#eadfce]"}`} />
                 )}
                 <div className={`relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border ${isDone ? "border-[#b48a4f] bg-[#b48a4f] text-white" : isCurrent ? "border-[#8a5c2e] bg-[#25211d] text-white shadow-lg shadow-[#8a5c2e]/20" : "border-[#eadfce] bg-[#faf6ef] text-[#b6a895]"}`}>
                   {isDone ? <Check className="h-4 w-4" /> : isCurrent ? <Clock3 className="h-4 w-4" /> : <span className="h-2 w-2 rounded-full bg-current" />}
                 </div>
-                <div className="min-w-0 pt-1">
+                <div className="min-w-0 flex-1 pt-1">
                   <p className={`text-sm font-semibold ${isUpcoming ? "text-[#9a8f80]" : "text-[#25211d]"}`}>{step.label}</p>
                   <p className="mt-0.5 text-xs leading-relaxed text-[#766b5f]">{step.description}</p>
+                  {showConfirmation && (
+                    <div className="mt-3 rounded-2xl border border-[#dcc49e] bg-[#fff8ec] p-3 shadow-sm shadow-[#8a5c2e]/5 sm:flex sm:items-center sm:justify-between sm:gap-4 sm:p-4">
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8a5c2e]">Confirmation number</p>
+                        <p className="mt-1 break-all font-mono text-lg font-semibold tracking-wide text-[#25211d]">{confirmation}</p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={copyConfirmationNumber}
+                        className={`mt-3 h-11 w-full shrink-0 rounded-xl px-4 shadow-none sm:mt-0 sm:w-auto ${copyState === "copied" ? "border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-700" : "border-[#d8c5a6] bg-white text-[#25211d] hover:bg-[#f5ede0] hover:text-[#25211d]"}`}
+                        aria-label={`Copy reservation confirmation number ${confirmation}`}
+                      >
+                        {copyState === "copied" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                        {copyState === "copied" ? "Copied" : copyState === "error" ? "Copy failed" : "Copy number"}
+                      </Button>
+                      <span className="sr-only" aria-live="polite">
+                        {copyState === "copied" ? "Confirmation number copied" : copyState === "error" ? "Unable to copy confirmation number" : ""}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             );
@@ -450,7 +492,7 @@ export default function TicketPage() {
               )}
             </section>
 
-            <Timeline status={ticket.status} />
+            <Timeline status={ticket.status} confirmationNumber={ticket.reservationConfirmationNumber} />
           </div>
 
           <aside className="space-y-5 lg:sticky lg:top-20">
