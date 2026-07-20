@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import Link from "next/link";
 import { ArrowUpDown, CheckCircle, CircleDot, Columns3, Eye, Pencil, XCircle } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -68,6 +68,7 @@ export default function TicketTable({ tickets, selectedIds, onSelectedIdsChange,
   const [statusToConfirm, setStatusToConfirm] = useState(null);
   const [confirmationNumber, setConfirmationNumber] = useState("");
   const [savingConfirmationNumber, setSavingConfirmationNumber] = useState(false);
+  const dialogTitleRef = useRef(null);
   const selectable = Array.isArray(selectedIds) && typeof onSelectedIdsChange === "function";
   const safeVisibleColumns = useMemo(() => {
     const allowed = new Set(ticketTableColumnKeys);
@@ -234,14 +235,20 @@ export default function TicketTable({ tickets, selectedIds, onSelectedIdsChange,
         </DropdownMenu>
       </div>
       <Dialog open={Boolean(selectedTicket)} onOpenChange={(open) => { if (!open && !statusToConfirm) closeTicketDialog(); }}>
-        <DialogContent className="max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-lg overflow-hidden rounded-[18px] border-[#e6dfd8] bg-[#fffdf8] p-0 text-[#141413] shadow-2xl sm:w-full">
+        <DialogContent
+          onOpenAutoFocus={(event) => {
+            event.preventDefault();
+            dialogTitleRef.current?.focus();
+          }}
+          className="max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-lg overflow-hidden rounded-[18px] border-[#e6dfd8] bg-[#fffdf8] p-0 text-[#141413] shadow-2xl sm:w-full"
+        >
           {selectedTicket && (
             <>
               <div className="border-b border-[#efe9de] px-5 py-5 pr-12 sm:px-6 sm:pr-12">
                 <DialogHeader className="space-y-2 text-left">
                   <div className="flex min-w-0 flex-col items-start gap-3 sm:flex-row sm:justify-between">
                     <div className="min-w-0">
-                      <DialogTitle className="truncate text-xl font-semibold tracking-[-0.02em]">{primaryGuest}</DialogTitle>
+                      <DialogTitle ref={dialogTitleRef} tabIndex={-1} className="truncate text-xl font-semibold tracking-[-0.02em] outline-none">{primaryGuest}</DialogTitle>
                       <DialogDescription className="mt-1 font-mono text-xs text-[#6c6a64]">
                         Ticket {shortId(selectedTicket.id)}
                       </DialogDescription>
