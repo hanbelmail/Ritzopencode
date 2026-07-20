@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo, useRef } from "react";
 import Link from "next/link";
-import { ArrowUpDown, CheckCircle, CircleDot, Columns3, Eye, Pencil, XCircle } from "lucide-react";
+import { ArrowUpDown, Check, CheckCircle, CircleDot, Columns3, Eye, Loader2, Pencil, XCircle } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -68,6 +68,7 @@ export default function TicketTable({ tickets, selectedIds, onSelectedIdsChange,
   const [statusToConfirm, setStatusToConfirm] = useState(null);
   const [confirmationNumber, setConfirmationNumber] = useState("");
   const [savingConfirmationNumber, setSavingConfirmationNumber] = useState(false);
+  const [confirmationNumberSaved, setConfirmationNumberSaved] = useState(false);
   const dialogTitleRef = useRef(null);
   const selectable = Array.isArray(selectedIds) && typeof onSelectedIdsChange === "function";
   const safeVisibleColumns = useMemo(() => {
@@ -96,6 +97,10 @@ export default function TicketTable({ tickets, selectedIds, onSelectedIdsChange,
   useEffect(() => {
     setConfirmationNumber(selectedTicket?.reservationConfirmationNumber || "");
   }, [selectedTicket?.id, selectedTicket?.reservationConfirmationNumber]);
+
+  useEffect(() => {
+    setConfirmationNumberSaved(false);
+  }, [selectedTicket?.id]);
 
   const toggleSort = (key) =>
     setSort((s) => ({ key, dir: s.key === key ? -s.dir : 1 }));
@@ -147,8 +152,10 @@ export default function TicketTable({ tickets, selectedIds, onSelectedIdsChange,
   const saveConfirmationNumber = async () => {
     if (!selectedTicket || typeof onTicketUpdate !== "function") return;
     setSavingConfirmationNumber(true);
+    setConfirmationNumberSaved(false);
     try {
       await onTicketUpdate(selectedTicket.id, { reservationConfirmationNumber: confirmationNumber.trim() });
+      setConfirmationNumberSaved(true);
     } finally {
       setSavingConfirmationNumber(false);
     }
@@ -278,7 +285,10 @@ export default function TicketTable({ tickets, selectedIds, onSelectedIdsChange,
                     <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-center">
                       <Input
                         value={confirmationNumber}
-                        onChange={(event) => setConfirmationNumber(event.target.value)}
+                        onChange={(event) => {
+                          setConfirmationNumber(event.target.value);
+                          setConfirmationNumberSaved(false);
+                        }}
                         placeholder="Enter confirmation number"
                         className="h-9 bg-white"
                         onClick={(event) => event.stopPropagation()}
@@ -288,9 +298,17 @@ export default function TicketTable({ tickets, selectedIds, onSelectedIdsChange,
                         size="sm"
                         onClick={saveConfirmationNumber}
                         disabled={savingConfirmationNumber || typeof onTicketUpdate !== "function"}
-                        className="h-9 shrink-0 rounded-[8px] bg-[#25211d] px-4 text-white hover:bg-[#3a3028]"
+                        className={`h-9 min-w-[92px] shrink-0 rounded-[8px] px-4 text-white transition-all duration-200 ${confirmationNumberSaved ? "bg-emerald-600 hover:bg-emerald-600" : "bg-[#25211d] hover:bg-[#3a3028]"}`}
                       >
-                        {savingConfirmationNumber ? "Saving..." : "Save"}
+                        <span key={savingConfirmationNumber ? "saving" : confirmationNumberSaved ? "saved" : "save"} className="inline-flex animate-in items-center gap-1.5 fade-in zoom-in-95 duration-200" aria-live="polite">
+                          {savingConfirmationNumber ? (
+                            <><Loader2 className="animate-spin" /> Saving</>
+                          ) : confirmationNumberSaved ? (
+                            <><Check /> Saved</>
+                          ) : (
+                            "Save"
+                          )}
+                        </span>
                       </Button>
                     </div>
                   </div>
