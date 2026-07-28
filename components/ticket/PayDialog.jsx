@@ -39,6 +39,13 @@ export default function PayDialog({ open, onOpenChange, onAcceptTerms, onConfirm
     };
   }, [screenshotPreview]);
 
+  useEffect(() => {
+    if (!open) return;
+    setStep(paymentOptions?.termsAccepted ? "method" : "terms");
+    setAgreed(false);
+    setError("");
+  }, [open, paymentOptions?.termsAccepted, paymentOptions?.termsVersion]);
+
   const close = (v) => {
     onOpenChange(v);
     if (!v) {
@@ -102,25 +109,29 @@ export default function PayDialog({ open, onOpenChange, onAcceptTerms, onConfirm
                 A cleaning fee of ${paymentOptions?.cleaningFee || 0} is paid directly to the Ritz at check-in and is not part of your quoted price.
             </div>
 
-            <div className="flex items-center gap-2.5">
-              <Checkbox
-                id="agree"
-                checked={agreed}
-                onCheckedChange={setAgreed}
-                className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
-              />
-              <label htmlFor="agree" className="text-sm cursor-pointer select-none">
-                I agree to the Terms ({paymentOptions?.termsVersion}).
-              </label>
-            </div>
+            {paymentOptions?.termsAccepted ? (
+              <p className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">Your acceptance of this Terms version is already recorded.</p>
+            ) : (
+              <div className="flex items-center gap-2.5">
+                <Checkbox
+                  id="agree"
+                  checked={agreed}
+                  onCheckedChange={setAgreed}
+                  className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                />
+                <label htmlFor="agree" className="text-sm cursor-pointer select-none">
+                  {paymentOptions?.agreementText || `I agree to the Terms (${paymentOptions?.termsVersion}).`}
+                </label>
+              </div>
+            )}
 
             <DialogFooter className="gap-2">
               <Button
-                disabled={!agreed || accepting || !paymentOptions?.termsContent}
-                onClick={acceptTerms}
+                disabled={(!paymentOptions?.termsAccepted && !agreed) || accepting || !paymentOptions?.termsContent}
+                onClick={paymentOptions?.termsAccepted ? () => setStep("method") : acceptTerms}
                 className="bg-blue-600 hover:bg-blue-700 text-white"
               >
-                {accepting ? "Recording agreement..." : "Agree and continue"}
+                {accepting ? "Recording agreement..." : paymentOptions?.termsAccepted ? "Continue to payment" : "Agree and continue"}
               </Button>
             </DialogFooter>
           </>

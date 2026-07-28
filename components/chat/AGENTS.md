@@ -6,12 +6,13 @@
 
 ## Ownership
 
-- `GuestChatWidget.jsx` owns transcript loading, optimistic guest messages, message submission, paused/handoff display, ticket links, accessibility, and mobile safe-area placement.
+- `GuestChatWidget.jsx` owns transcript loading, optimistic guest messages, message submission, paused/handoff display, ticket links, structured Terms acceptance controls, accessibility, and mobile safe-area placement.
 
 ## Local Contracts
 
 - Use only `/api/sara/chat` for conversation reads and writes; never call OpenAI or Convex Sara mutations from browser code.
 - Render plain text, preserve guest input during network failures, and never collect card numbers, passwords, or banking credentials.
+- Keep arbitrary transcript URLs as plain text; only the server-described immutable Terms action may render its trusted clickable link, exact agreement label, checkbox, button, and accepted timestamp.
 - Clearly display that Sara is AI for an independent private residence service and that human help is available.
 - Hide the widget unless public settings enable `saraWebEnabled`.
 

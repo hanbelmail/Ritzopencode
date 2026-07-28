@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Bot, Headphones, Loader2, MessageCircle, Send, ShieldCheck, UserRound } from "lucide-react";
+import { Bot, CheckCircle2, ExternalLink, Headphones, Loader2, MessageCircle, Send, ShieldCheck, UserRound } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -10,6 +10,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useSettings } from "@/lib/store";
 
 function newMessageId() {
@@ -40,6 +41,55 @@ function Message({ message }) {
   );
 }
 
+function TermsAcceptanceCard({ termsAction, checked, accepting, disabled, error, onCheckedChange, onAccept }) {
+  const accepted = termsAction.status === "accepted";
+  return (
+    <section className="ml-9 mt-2 max-w-[82%] rounded-2xl border border-[#d9cfc2] bg-[#fffdf9] p-3.5 text-sm text-[#252523] shadow-sm" aria-label={`Terms version ${termsAction.version} acceptance`}>
+      <a
+        href={termsAction.href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-1.5 font-medium text-[#a9583e] underline underline-offset-2 hover:text-[#7f402d]"
+      >
+        Review Terms version {termsAction.version}
+        <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+      </a>
+      <p className="mt-1 text-[10px] text-[#8e8b82]">Reference {termsAction.contentHash.slice(0, 12)}</p>
+
+      {accepted ? (
+        <div className="mt-3 flex items-start gap-2 rounded-xl bg-emerald-50 px-3 py-2.5 text-xs leading-relaxed text-emerald-800">
+          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          <span>Terms accepted{termsAction.acceptedAt ? ` on ${new Date(termsAction.acceptedAt).toLocaleString()}` : ""}.</span>
+        </div>
+      ) : (
+        <>
+          <div className="mt-3 flex items-start gap-2.5">
+            <Checkbox
+              id={`sara-terms-${termsAction.presentedMessageId}`}
+              checked={checked}
+              disabled={disabled || accepting}
+              onCheckedChange={(value) => onCheckedChange(value === true)}
+              className="mt-0.5 border-[#a9583e] data-[state=checked]:border-[#a9583e] data-[state=checked]:bg-[#a9583e]"
+            />
+            <label htmlFor={`sara-terms-${termsAction.presentedMessageId}`} className="cursor-pointer select-none text-xs leading-relaxed">
+              {termsAction.agreementText}
+            </label>
+          </div>
+          <button
+            type="button"
+            disabled={!checked || accepting || disabled}
+            onClick={onAccept}
+            className="mt-3 inline-flex h-9 items-center justify-center rounded-lg bg-[#a9583e] px-3.5 text-xs font-medium text-white transition-colors hover:bg-[#7f402d] focus:outline-none focus:ring-2 focus:ring-[#cc785c] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-45"
+          >
+            {accepting ? <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> Recording acceptance...</> : "Accept Terms"}
+          </button>
+        </>
+      )}
+      {error && <p className="mt-2 text-xs text-red-700" role="alert">{error}</p>}
+    </section>
+  );
+}
+
 export default function GuestChatWidget() {
   const settings = useSettings();
   const [open, setOpen] = useState(false);
@@ -51,6 +101,10 @@ export default function GuestChatWidget() {
   const [error, setError] = useState("");
   const [status, setStatus] = useState("open");
   const [ticketId, setTicketId] = useState(null);
+  const [termsAction, setTermsAction] = useState(null);
+  const [termsChecked, setTermsChecked] = useState(false);
+  const [acceptingTerms, setAcceptingTerms] = useState(false);
+  const [termsError, setTermsError] = useState("");
   const transcriptRef = useRef(null);
   const agentName = settings?.saraAgentName || "Sara";
   const enabled = Boolean(settings?.saraWebEnabled);
@@ -69,6 +123,7 @@ export default function GuestChatWidget() {
           setMessages(data.messages || []);
           setStatus(data.status || "open");
           setTicketId(data.ticketId || null);
+          setTermsAction(data.termsAction || null);
           setLoaded(true);
         }
       } catch (loadError) {
@@ -88,11 +143,48 @@ export default function GuestChatWidget() {
   useEffect(() => {
     if (!transcriptRef.current) return;
     transcriptRef.current.scrollTop = transcriptRef.current.scrollHeight;
-  }, [loading, messages]);
+  }, [acceptingTerms, loading, messages, termsAction]);
+
+  const termsActionKey = termsAction
+    ? `${termsAction.version}:${termsAction.contentHash}:${termsAction.presentedMessageId}`
+    : "";
+
+  useEffect(() => {
+    setTermsChecked(false);
+    setTermsError("");
+  }, [termsActionKey]);
 
   if (!enabled) return null;
 
   const paused = status === "human_required" || status === "closed";
+
+  async function acceptTerms() {
+    if (!termsAction || termsAction.status !== "pending" || !termsChecked || acceptingTerms || paused) return;
+    setTermsError("");
+    setAcceptingTerms(true);
+    try {
+      const response = await fetch("/api/sara/chat", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: termsAction.action,
+          termsVersion: termsAction.version,
+          termsHash: termsAction.contentHash,
+          presentedMessageId: termsAction.presentedMessageId,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Terms acceptance failed");
+      setMessages(data.messages || []);
+      setStatus(data.status || "open");
+      setTicketId(data.ticketId || null);
+      setTermsAction(data.termsAction || null);
+    } catch (acceptError) {
+      setTermsError(acceptError.message || "Terms acceptance failed. Please try again.");
+    } finally {
+      setAcceptingTerms(false);
+    }
+  }
 
   async function sendMessage(event) {
     event.preventDefault();
@@ -116,6 +208,7 @@ export default function GuestChatWidget() {
       setMessages(data.messages || []);
       setStatus(data.status || "open");
       setTicketId(data.ticketId || null);
+      setTermsAction(data.termsAction || null);
     } catch (sendError) {
       setError(sendError.message || "Message failed. Your text is still shown above.");
     } finally {
@@ -159,7 +252,22 @@ export default function GuestChatWidget() {
               <p className="mt-2">I can answer approved property questions, check dates, and collect the details for a private quote. What check-in and check-out dates are you considering?</p>
             </div>
           )}
-          {messages.map((message) => <Message key={message.id} message={message} />)}
+          {messages.map((message) => (
+            <div key={message.id}>
+              <Message message={message} />
+              {termsAction?.presentedMessageId === message.id && (
+                <TermsAcceptanceCard
+                  termsAction={termsAction}
+                  checked={termsChecked}
+                  accepting={acceptingTerms}
+                  disabled={paused}
+                  error={termsError}
+                  onCheckedChange={setTermsChecked}
+                  onAccept={acceptTerms}
+                />
+              )}
+            </div>
+          ))}
           {(loading || initializing) && (
             <div className="flex items-center gap-2 pl-10 text-xs text-[#6c6a64]">
               <Loader2 className="h-3.5 w-3.5 animate-spin text-[#cc785c]" /> {initializing ? "Loading conversation..." : `${agentName} is checking...`}

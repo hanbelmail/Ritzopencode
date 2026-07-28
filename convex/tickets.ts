@@ -3,6 +3,7 @@ import { paginationOptsValidator } from "convex/server";
 import { mutation, query } from "./_generated/server";
 import { isAutomationKey, isStaff, requireStaff, requireStaffOrAutomation } from "./security";
 import { getSmsConsent, normalizeSmsPhone } from "./smsConsent";
+import { termsAgreementText } from "./termsContract";
 
 const legacyStatusMap: Record<string, string> = {
   QUOTE: "QUOTE REQUESTED",
@@ -372,13 +373,14 @@ export const getPaymentOptions = query({
       termsVersion,
       termsContent: terms.content,
       termsContentHash: terms.contentHash,
+      agreementText: termsAgreementText(termsVersion),
       termsAccepted,
     };
   },
 });
 
 export const acceptGuestTerms = mutation({
-  args: { id: v.string(), termsVersion: v.string(), termsHash: v.string(), acceptedText: v.string() },
+  args: { id: v.string(), termsVersion: v.string(), termsHash: v.string() },
   handler: async (ctx, args) => {
     const row = await ctx.db.query("tickets").withIndex("by_ticketId", (q) => q.eq("ticketId", args.id)).first();
     if (!row) throw new Error("Ticket not found");
@@ -389,8 +391,8 @@ export const acceptGuestTerms = mutation({
     const currentVersion = String(settingsRow?.data?.saraTermsVersion || "");
     const terms = currentVersion ? await ctx.db.query("termsVersions").withIndex("by_version", (q) => q.eq("version", currentVersion)).first() : null;
     if (!terms || args.termsVersion !== currentVersion || args.termsHash !== terms.contentHash) throw new Error("Review the current published Terms");
-    const expectedText = `I agree to the Terms (${currentVersion}).`;
-    if (args.acceptedText !== expectedText) throw new Error("Explicit Terms acceptance is required");
+    const expectedText = termsAgreementText(currentVersion);
+    if (ticket.termsAcceptedAt && ticket.termsVersion === currentVersion && ticket.termsAcceptedHash === terms.contentHash) return ticket;
     const now = new Date().toISOString();
     const updated = {
       ...ticket,
@@ -399,6 +401,7 @@ export const acceptGuestTerms = mutation({
       termsAcceptedText: expectedText,
       termsAcceptedHash: terms.contentHash,
       termsAcceptanceSource: "public_payment_dialog",
+      termsAcceptanceAction: "checkbox_button",
     };
     await ctx.db.patch(row._id, { data: updated, updatedAt: now, ...ticketIndexFields(updated) });
     const idempotencyKey = `public-terms:${args.id}:${currentVersion}:${ticket.quoteExpiresAt}`;
@@ -409,7 +412,7 @@ export const acceptGuestTerms = mutation({
         type: "terms_accepted",
         actorType: "guest",
         idempotencyKey,
-        payload: { termsVersion: currentVersion, termsHash: terms.contentHash, source: "public_payment_dialog" },
+        payload: { termsVersion: currentVersion, termsHash: terms.contentHash, source: "public_payment_dialog", action: "checkbox_button" },
         createdAt: now,
       });
     }
@@ -756,7 +759,7 @@ export const update = mutation({
     const updated = normalizeTicket({ ...row.data, ...allowedData, id });
 
     if (trusted && quoteInputsChanged && !PAYMENT_BLOCKING_STATUSES.has(currentTicket.status)) {
-      for (const field of ["termsAcceptedAt", "termsVersion", "termsAcceptedText", "termsAcceptedHash", "termsAcceptedMessageId", "termsAcceptanceSource"]) delete updated[field];
+      for (const field of ["termsAcceptedAt", "termsVersion", "termsAcceptedText", "termsAcceptedHash", "termsAcceptedMessageId", "termsAcceptanceSource", "termsAcceptanceAction"]) delete updated[field];
     }
     await ensureFinalStayAvailable(ctx, updated, row._id);
 

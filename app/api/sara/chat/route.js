@@ -78,6 +78,55 @@ async function saraSettings(client, serviceKey) {
   return { ...DEFAULT_SETTINGS, ...((await client.query(api.settings.get, { serviceKey })) || {}) };
 }
 
+async function termsAction(client, serviceKey, context) {
+  const conversation = context?.conversation;
+  if (
+    conversation?.channel !== "web" ||
+    !conversation.termsPresentedAt ||
+    !conversation.termsPresentedMessageId ||
+    !conversation.termsPresentedVersion ||
+    !conversation.termsPresentedHash
+  ) return null;
+
+  try {
+    const terms = await client.query(api.sara.getBookingTerms, { serviceKey, publicId: conversation.publicId });
+    if (
+      terms.version !== conversation.termsPresentedVersion ||
+      terms.contentHash !== conversation.termsPresentedHash
+    ) return null;
+    const accepted = Boolean(
+      context.ticket?.termsAcceptedAt &&
+      context.ticket?.termsVersion === terms.version &&
+      context.ticket?.termsAcceptedHash === terms.contentHash
+    );
+    return {
+      action: "accept_terms",
+      status: accepted ? "accepted" : "pending",
+      version: terms.version,
+      contentHash: terms.contentHash,
+      agreementText: terms.requiredAgreement,
+      href: `/terms/${encodeURIComponent(terms.version)}`,
+      presentedAt: conversation.termsPresentedAt,
+      presentedMessageId: conversation.termsPresentedMessageId,
+      acceptedAt: accepted ? context.ticket.termsAcceptedAt : null,
+      acceptedAction: accepted ? context.ticket.termsAcceptanceAction || null : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function chatState(client, serviceKey, context) {
+  return {
+    messages: safeMessages(context?.messages || []),
+    status: context?.conversation?.status,
+    stage: context?.conversation?.stage,
+    aiEnabled: context?.conversation?.aiEnabled,
+    ticketId: context?.conversation?.ticketId || null,
+    termsAction: await termsAction(client, serviceKey, context),
+  };
+}
+
 export async function GET(request) {
   try {
     const client = getConvexClient();
@@ -110,11 +159,7 @@ export async function GET(request) {
     return NextResponse.json({
       enabled: Boolean(settings.saraWebEnabled),
       agentName: settings.saraAgentName,
-      messages: safeMessages(context.messages),
-      status: context.conversation.status,
-      stage: context.conversation.stage,
-      aiEnabled: context.conversation.aiEnabled,
-      ticketId: context.conversation.ticketId || null,
+      ...(await chatState(client, serviceKey, context)),
     });
   } catch (error) {
     return jsonError(error.message || "Failed to load Sara", 503);
@@ -171,10 +216,7 @@ export async function POST(request) {
       });
       const response = NextResponse.json({
         duplicate: true,
-        messages: safeMessages(context?.messages || []),
-        status: context?.conversation?.status,
-        stage: context?.conversation?.stage,
-        ticketId: context?.conversation?.ticketId || null,
+        ...(await chatState(client, serviceKey, context)),
       });
       if (isNewSession) setSessionCookie(response, session);
       return response;
@@ -200,10 +242,7 @@ export async function POST(request) {
         const response = NextResponse.json({
           skipped: true,
           reason: errorMessage.includes("already processing") ? "Sara is still processing the previous message" : "Sara was paused by the reservations team",
-          messages: safeMessages(context?.messages || []),
-          status: context?.conversation?.status,
-          stage: context?.conversation?.stage,
-          ticketId: context?.conversation?.ticketId || null,
+          ...(await chatState(client, serviceKey, context)),
         }, { status: 202 });
         if (isNewSession) setSessionCookie(response, session);
         return response;
@@ -245,16 +284,65 @@ export async function POST(request) {
     });
     const response = NextResponse.json({
       ...result,
-      messages: safeMessages(context?.messages || []),
-      status: context?.conversation?.status,
-      stage: context?.conversation?.stage,
-      ticketId: context?.conversation?.ticketId || null,
+      ...(await chatState(client, serviceKey, context)),
     });
     if (isNewSession) setSessionCookie(response, session);
     return response;
   } catch (error) {
     const message = error.message || "Sara could not process the message";
     const status = /limit|between|Invalid|not allowed/i.test(message) ? 400 : 500;
+    return jsonError(message, status);
+  }
+}
+
+export async function PATCH(request) {
+  if (!allowedOrigin(request)) return jsonError("Origin not allowed", 403);
+
+  try {
+    const session = readSession(request);
+    if (!session) return jsonError("Conversation session is required", 401);
+    const body = await request.json();
+    const action = String(body?.action || "");
+    const termsVersion = String(body?.termsVersion || "");
+    const termsHash = String(body?.termsHash || "");
+    const presentedMessageId = String(body?.presentedMessageId || "");
+    if (action !== "accept_terms") return jsonError("Unsupported chat action", 400);
+    if (!termsVersion || termsVersion.length > 200 || !termsHash || termsHash.length > 200 || !presentedMessageId || presentedMessageId.length > 200) {
+      return jsonError("Invalid Terms acceptance action", 400);
+    }
+
+    const client = getConvexClient();
+    const serviceKey = getConvexServiceKey();
+    const settings = await saraSettings(client, serviceKey);
+    if (!settings.saraWebEnabled) return jsonError("Sara web chat is not enabled", 503);
+    const context = await client.query(api.conversations.getContext, {
+      serviceKey,
+      publicId: session.publicId,
+      accessTokenHash: session.accessTokenHash,
+    });
+    if (!context) return jsonError("Conversation not found", 404);
+
+    const acceptance = await client.mutation(api.sara.acceptWebTerms, {
+      serviceKey,
+      publicId: session.publicId,
+      accessTokenHash: session.accessTokenHash,
+      termsVersion,
+      termsHash,
+      presentedMessageId,
+    });
+    const current = await client.query(api.conversations.getContext, {
+      serviceKey,
+      publicId: session.publicId,
+      accessTokenHash: session.accessTokenHash,
+    });
+    return NextResponse.json({ acceptance, ...(await chatState(client, serviceKey, current)) });
+  } catch (error) {
+    const message = error.message || "Terms acceptance failed";
+    const status = /access denied/i.test(message)
+      ? 403
+      : /current|expired|price|available|paused|presented|review/i.test(message)
+        ? 409
+        : 500;
     return jsonError(message, status);
   }
 }

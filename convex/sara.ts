@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { isAutomationKey, requireServiceKey } from "./security";
 import { getSmsConsent, normalizeSmsPhone } from "./smsConsent";
+import { isTermsAgreementNearMiss, termsAgreementText } from "./termsContract";
 
 const FINALIZED_STATUSES = new Set(["PAYMENT VERIFIED", "BOOKING CONFIRMED"]);
 const PAYMENT_BLOCKING_STATUSES = new Set(["PAYMENT SUBMITTED", "PAYMENT VERIFIED", "BOOKING CONFIRMED"]);
@@ -95,6 +96,69 @@ async function getCurrentTerms(ctx: any) {
   const terms = version ? await ctx.db.query("termsVersions").withIndex("by_version", (q: any) => q.eq("version", version)).first() : null;
   if (!terms) throw new Error("Current Terms are not published");
   return { settings: settingsRow?.data || {}, terms };
+}
+
+async function persistTermsAcceptance(ctx: any, {
+  conversation,
+  ticketRow,
+  terms,
+  messageId,
+  acceptedText,
+  source,
+  action,
+}: {
+  conversation: any;
+  ticketRow: any;
+  terms: any;
+  messageId: string;
+  acceptedText: string;
+  source: string;
+  action: string;
+}) {
+  const idempotencyKey = `terms:${conversation.ticketId}:${messageId}`;
+  const existingEvent = await ctx.db.query("reservationEvents").withIndex("by_idempotencyKey", (q: any) => q.eq("idempotencyKey", idempotencyKey)).first();
+  if (existingEvent) {
+    return { accepted: true, acceptedAt: existingEvent.createdAt, termsVersion: terms.version, termsHash: terms.contentHash, action };
+  }
+
+  const now = new Date().toISOString();
+  const ticket = {
+    ...ticketRow.data,
+    termsAcceptedAt: now,
+    termsVersion: terms.version,
+    termsAcceptedText: acceptedText.slice(0, 500),
+    termsAcceptedHash: terms.contentHash,
+    termsAcceptedMessageId: messageId,
+    termsAcceptanceSource: source,
+    termsAcceptanceAction: action,
+  };
+  await ctx.db.patch(ticketRow._id, { data: ticket, updatedAt: now, ...ticketIndexFields(ticket) });
+  await ctx.db.patch(conversation._id, {
+    stage: "terms_accepted",
+    termsVersion: terms.version,
+    termsAcceptedAt: now,
+    termsAcceptedMessageId: messageId,
+    updatedAt: now,
+  });
+  await ctx.db.insert("reservationEvents", {
+    ticketId: ticket.id,
+    conversationId: conversation._id,
+    type: "terms_accepted",
+    actorType: "guest",
+    idempotencyKey,
+    payload: {
+      termsVersion: terms.version,
+      termsHash: terms.contentHash,
+      acceptedText: acceptedText.slice(0, 500),
+      channel: conversation.channel,
+      source,
+      action,
+      presentedMessageId: conversation.termsPresentedMessageId,
+      acceptedMessageId: messageId,
+    },
+    createdAt: now,
+  });
+  return { accepted: true, acceptedAt: now, termsVersion: terms.version, termsHash: terms.contentHash, action };
 }
 
 function ticketIndexFields(ticket: any) {
@@ -368,7 +432,11 @@ export const getBookingTerms = query({
     assertActiveQuote(row.data);
     if (await hasPaymentConflict(ctx, row.data, row.data.id)) throw new Error("These dates are no longer available for payment");
     const { terms } = await getCurrentTerms(ctx);
-    return { version: terms.version, content: terms.content, contentHash: terms.contentHash };
+    return {
+      version: terms.version,
+      contentHash: terms.contentHash,
+      requiredAgreement: termsAgreementText(terms.version),
+    };
   },
 });
 
@@ -394,64 +462,138 @@ export const getPaymentInstructions = query({
   },
 });
 
-export const recordTermsAcceptance = mutation({
+export const processTermsReply = mutation({
   args: {
     serviceKey: v.string(),
     publicId: v.string(),
     messageId: v.string(),
-    termsVersion: v.string(),
-    acceptedText: v.string(),
     expectedControlVersion: v.number(),
   },
   handler: async (ctx, args) => {
     requireServiceKey(args.serviceKey);
     const conversation = await getConversation(ctx, args.publicId);
     assertControlVersion(conversation, args.expectedControlVersion);
-    if (!conversation.ticketId) throw new Error("A quote ticket is required before accepting Terms");
-    const idempotencyKey = `terms:${conversation.ticketId}:${args.messageId}`;
-    const existingEvent = await ctx.db.query("reservationEvents").withIndex("by_idempotencyKey", (q) => q.eq("idempotencyKey", idempotencyKey)).first();
-    if (existingEvent) return { accepted: true, acceptedAt: existingEvent.createdAt, termsVersion: conversation.termsVersion };
+    if (!conversation.ticketId || !conversation.termsPresentedAt) return { status: "not_applicable" };
     const { terms } = await getCurrentTerms(ctx);
-    const currentTermsVersion = terms.version;
-    if (args.termsVersion !== currentTermsVersion || conversation.termsPresentedVersion !== currentTermsVersion || conversation.termsPresentedHash !== terms.contentHash || !conversation.termsPresentedAt) {
-      throw new Error("The current Terms must be presented before acceptance");
+    if (conversation.termsPresentedVersion !== terms.version || conversation.termsPresentedHash !== terms.contentHash) {
+      return { status: "not_applicable" };
     }
     const inbound = await ctx.db.query("messages").withIndex("by_idempotencyKey", (q) => q.eq("idempotencyKey", args.messageId)).first();
     if (!inbound || inbound.conversationId !== conversation._id || inbound.direction !== "inbound") throw new Error("Acceptance must reference the current guest message");
     const actualText = inbound.content.trim();
-    const expectedAgreement = `I agree to the Terms (${currentTermsVersion}).`;
-    if (actualText !== expectedAgreement) throw new Error(`Reply exactly: ${expectedAgreement}`);
+    const expectedAgreement = termsAgreementText(terms.version);
+    const row = await getTicketRow(ctx, conversation.ticketId);
+    const quoteActive = Number.isFinite(Number(row.data?.rateOffered)) && Number(row.data.rateOffered) > 0 && Date.parse(String(row.data?.quoteExpiresAt || "")) > Date.now();
+    if (normalizedStatus(row.data.status) !== "PRICE SENT" || !quoteActive || await hasPaymentConflict(ctx, row.data, row.data.id)) {
+      return { status: "not_applicable" };
+    }
+    if (actualText === expectedAgreement) {
+      if (row.data.termsAcceptedAt && row.data.termsVersion === terms.version && row.data.termsAcceptedHash === terms.contentHash) {
+        return { status: "accepted", acceptedAt: row.data.termsAcceptedAt, termsVersion: terms.version, termsHash: terms.contentHash };
+      }
+      const source = conversation.channel === "sms" ? "sara_sms" : "sara_web_chat";
+      const result = await persistTermsAcceptance(ctx, {
+        conversation,
+        ticketRow: row,
+        terms,
+        messageId: args.messageId,
+        acceptedText: actualText,
+        source,
+        action: "exact_phrase_reply",
+      });
+      return { status: "accepted", ...result };
+    }
+    if (isTermsAgreementNearMiss(actualText, expectedAgreement)) {
+      return { status: "retry_exact", requiredAgreement: expectedAgreement, termsVersion: terms.version };
+    }
+    return { status: "not_applicable" };
+  },
+});
+
+export const acceptWebTerms = mutation({
+  args: {
+    serviceKey: v.string(),
+    publicId: v.string(),
+    accessTokenHash: v.string(),
+    termsVersion: v.string(),
+    termsHash: v.string(),
+    presentedMessageId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    requireServiceKey(args.serviceKey);
+    const conversation = await getConversation(ctx, args.publicId);
+    if (conversation.channel !== "web" || conversation.accessTokenHash !== args.accessTokenHash) throw new Error("Conversation access denied");
+    if (!conversation.aiEnabled || ["human_required", "closed"].includes(conversation.status)) throw new Error("Sara is paused for this conversation");
+    if (!conversation.ticketId) throw new Error("A quote ticket is required before accepting Terms");
+    const { terms } = await getCurrentTerms(ctx);
+    if (
+      args.termsVersion !== terms.version ||
+      args.termsHash !== terms.contentHash ||
+      args.presentedMessageId !== conversation.termsPresentedMessageId ||
+      conversation.termsPresentedVersion !== terms.version ||
+      conversation.termsPresentedHash !== terms.contentHash ||
+      !conversation.termsPresentedAt
+    ) {
+      throw new Error("Review the current published Terms before accepting");
+    }
+    const presented = await ctx.db.query("messages").withIndex("by_idempotencyKey", (q) => q.eq("idempotencyKey", args.presentedMessageId)).first();
+    if (!presented || presented.conversationId !== conversation._id || presented.direction !== "outbound") throw new Error("Terms presentation message not found");
     const row = await getTicketRow(ctx, conversation.ticketId);
     if (normalizedStatus(row.data.status) !== "PRICE SENT") throw new Error("Terms can only be accepted after the price is sent");
     assertActiveQuote(row.data);
     if (await hasPaymentConflict(ctx, row.data, row.data.id)) throw new Error("These dates are no longer available for payment");
-    const now = new Date().toISOString();
-    const ticket = {
-      ...row.data,
-      termsAcceptedAt: now,
-      termsVersion: currentTermsVersion,
-      termsAcceptedText: actualText.slice(0, 500),
-      termsAcceptedHash: terms.contentHash,
-      termsAcceptedMessageId: args.messageId,
-    };
-    await ctx.db.patch(row._id, { data: ticket, updatedAt: now, ...ticketIndexFields(ticket) });
-    await ctx.db.patch(conversation._id, {
-      stage: "terms_accepted",
-      termsVersion: currentTermsVersion,
-      termsAcceptedAt: now,
-      termsAcceptedMessageId: args.messageId,
-      updatedAt: now,
+    if (row.data.termsAcceptedAt && row.data.termsVersion === terms.version && row.data.termsAcceptedHash === terms.contentHash) {
+      return {
+        accepted: true,
+        acceptedAt: row.data.termsAcceptedAt,
+        termsVersion: terms.version,
+        termsHash: terms.contentHash,
+        action: row.data.termsAcceptanceAction || "checkbox_button",
+      };
+    }
+
+    const messageId = `web-terms-accept:${args.presentedMessageId}`;
+    const acceptedText = termsAgreementText(terms.version);
+    const existingMessage = await ctx.db.query("messages").withIndex("by_idempotencyKey", (q) => q.eq("idempotencyKey", messageId)).first();
+    if (!existingMessage) {
+      const now = new Date().toISOString();
+      await ctx.db.insert("messages", {
+        conversationId: conversation._id,
+        messageId,
+        direction: "inbound",
+        authorType: "guest",
+        channel: "web",
+        content: acceptedText,
+        deliveryStatus: "received",
+        idempotencyKey: messageId,
+        metadata: {
+          action: "accept_terms",
+          inputType: "checkbox_button",
+          termsVersion: terms.version,
+          termsHash: terms.contentHash,
+          presentedMessageId: args.presentedMessageId,
+        },
+        createdAt: now,
+      });
+      await ctx.db.patch(conversation._id, {
+        lastMessageAt: now,
+        lastInboundAt: now,
+        messageCount: conversation.messageCount + 1,
+        updatedAt: now,
+      });
+    } else if (existingMessage.conversationId !== conversation._id || existingMessage.direction !== "inbound") {
+      throw new Error("Terms acceptance action ID is already in use");
+    }
+
+    return persistTermsAcceptance(ctx, {
+      conversation,
+      ticketRow: row,
+      terms,
+      messageId,
+      acceptedText,
+      source: "sara_web_chat",
+      action: "checkbox_button",
     });
-    await ctx.db.insert("reservationEvents", {
-      ticketId: ticket.id,
-      conversationId: conversation._id,
-      type: "terms_accepted",
-      actorType: "guest",
-      idempotencyKey,
-      payload: { termsVersion: currentTermsVersion, acceptedText: actualText.slice(0, 500), channel: conversation.channel, termsHash: terms.contentHash },
-      createdAt: now,
-    });
-    return { accepted: true, acceptedAt: now, termsVersion: currentTermsVersion };
   },
 });
 
@@ -478,14 +620,18 @@ export const recordTermsPresented = mutation({
     if (args.termsVersion !== terms.version) throw new Error("Terms version is not current");
     const presentedExactly = outbound.content.includes(`/terms/${encodeURIComponent(args.termsVersion)}`);
     if (!presentedExactly) throw new Error("Outbound message did not present the published Terms version");
+    if (conversation.channel === "sms" && !outbound.content.includes(termsAgreementText(terms.version))) {
+      throw new Error("Outbound SMS did not include the exact required agreement phrase");
+    }
     const now = new Date().toISOString();
+    const currentAcceptance = Boolean(row.data.termsAcceptedAt && row.data.termsVersion === terms.version && row.data.termsAcceptedHash === terms.contentHash);
     await ctx.db.patch(conversation._id, {
-      stage: "terms_sent",
+      stage: currentAcceptance ? "terms_accepted" : "terms_sent",
       termsPresentedVersion: args.termsVersion,
       termsPresentedAt: now,
       termsPresentedMessageId: args.messageId,
       termsPresentedHash: terms.contentHash,
-      ...(conversation.termsVersion === args.termsVersion && conversation.termsAcceptedAt ? {} : {
+      ...(currentAcceptance ? {} : {
         termsAcceptedAt: undefined,
         termsAcceptedMessageId: undefined,
       }),

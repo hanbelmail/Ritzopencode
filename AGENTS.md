@@ -102,6 +102,7 @@ When the user requests a durable behavior change, record it here or in the relev
 - Keep `saraWebEnabled` and `saraSmsEnabled` off until OpenAI, approved Knowledge, Terms, channel credentials, and staff handoff operations are ready; Quo must remain allowlist-only while `saraSmsTestMode` is active.
 - Sara represents an independent private residence reservation service, identifies itself as AI, and must not imply it is the official Ritz-Carlton hotel reservations desk.
 - Payment instructions require an active positive-price quote and acceptance of the current immutable Terms hash; public `PAYMENT SUBMITTED` requires a server-confirmed, unexpired R2 upload receipt.
+- Terms acceptance is deterministic rather than model-interpreted: web chat uses a version/hash-bound checkbox and button, SMS accepts only the exact server-provided phrase and re-prompts punctuation/casing near-misses, and Sara must never summarize or interpret the published legal Terms document; separate staff-approved policy FAQs may still be answered from Knowledge.
 - Public staff registration defaults to disabled; `NEXT_PUBLIC_STAFF_REGISTRATION_ENABLED=true` is an explicit bootstrap/admin exception, not a production default.
 
 ## Verification

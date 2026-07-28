@@ -20,6 +20,7 @@ import type * as security from "../security.js";
 import type * as settings from "../settings.js";
 import type * as smsConsent from "../smsConsent.js";
 import type * as terms from "../terms.js";
+import type * as termsContract from "../termsContract.js";
 import type * as tickets from "../tickets.js";
 
 import type {
@@ -41,6 +42,7 @@ declare const fullApi: ApiFromModules<{
   settings: typeof settings;
   smsConsent: typeof smsConsent;
   terms: typeof terms;
+  termsContract: typeof termsContract;
   tickets: typeof tickets;
 }>;
 
