@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { isAutomationKey, requireServiceKey } from "./security";
+import { availableRangesForWindow, monthAvailabilityWindow } from "./saraAvailability";
 import { getSmsConsent, normalizeSmsPhone } from "./smsConsent";
 import { isTermsAgreementNearMiss, termsAgreementText } from "./termsContract";
 
@@ -220,6 +221,30 @@ export const checkAvailability = query({
       nights: stay.nights,
       checkedAt: new Date().toISOString(),
       timezone: "Pacific/Honolulu",
+      held: false,
+    };
+  },
+});
+
+export const listMonthAvailability = query({
+  args: { serviceKey: v.string(), month: v.string() },
+  handler: async (ctx, args) => {
+    requireServiceKey(args.serviceKey);
+    const today = honoluluToday();
+    const window = monthAvailabilityWindow(args.month, today);
+    const rows = await ctx.db.query("tickets").collect();
+    const finalizedStays = rows
+      .map((row: any) => row.data || {})
+      .filter((ticket: any) => FINALIZED_STATUSES.has(normalizedStatus(ticket.status)))
+      .map((ticket: any) => ({ checkIn: dateStamp(ticket.checkIn), checkOut: dateStamp(ticket.checkOut) }));
+
+    return {
+      month: args.month,
+      today,
+      timezone: "Pacific/Honolulu",
+      ...window,
+      availableRanges: availableRangesForWindow(window.evaluatedWindow, finalizedStays),
+      checkedAt: new Date().toISOString(),
       held: false,
     };
   },

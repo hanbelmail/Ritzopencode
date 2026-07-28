@@ -16,6 +16,7 @@ import type * as knowledge from "../knowledge.js";
 import type * as knowledgeSeed from "../knowledgeSeed.js";
 import type * as messaging from "../messaging.js";
 import type * as sara from "../sara.js";
+import type * as saraAvailability from "../saraAvailability.js";
 import type * as security from "../security.js";
 import type * as settings from "../settings.js";
 import type * as smsConsent from "../smsConsent.js";
@@ -38,6 +39,7 @@ declare const fullApi: ApiFromModules<{
   knowledgeSeed: typeof knowledgeSeed;
   messaging: typeof messaging;
   sara: typeof sara;
+  saraAvailability: typeof saraAvailability;
   security: typeof security;
   settings: typeof settings;
   smsConsent: typeof smsConsent;

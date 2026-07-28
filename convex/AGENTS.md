@@ -16,7 +16,7 @@
 - `security.ts` owns staff and shared server-service authorization checks.
 - `conversations.ts` owns durable web/SMS conversation state, transcripts, agent-run audit records, rate limits, staff inbox queries, human controls, and staff-only conversation cleanup.
 - `knowledge.ts` and `knowledgeSeed.ts` own approved Knowledge retrieval, staff versioned edits, and synchronization of the 42 draft starter entries.
-- `sara.ts` owns one-unit availability, exact client matching, control-fenced quote creation, guest-safe ticket context, immutable Terms presentation/acceptance, payment-instruction authorization, handoff, and ordered SMS consent updates.
+- `sara.ts` and `saraAvailability.ts` own one-unit exact-stay and Hawaii calendar-month range availability, exact client matching, control-fenced quote creation, guest-safe ticket context, immutable Terms presentation/acceptance, payment-instruction authorization, handoff, and ordered SMS consent updates.
 - `termsContract.ts` owns the canonical versioned agreement phrase and near-match classification used only for exact-phrase re-prompts.
 - `smsConsent.ts` owns canonical normalized-phone consent reads and explicit legacy STOP/START recovery.
 - `messaging.ts` owns owned Quo webhook leases, SMS outbox idempotency, final consent/control/policy claims, send attempts, and delivery-state updates.
@@ -41,6 +41,7 @@
 - `knowledge.searchApproved` must return only active, approved, guest-audience entries; drafts and archived entries must never reach Sara.
 - Starter Knowledge synchronization inserts missing entries, refreshes changed non-archived starter entries, and returns changed approved entries to draft for staff review; archived entries remain untouched.
 - All Sara service functions require `SARA_SERVICE_KEY`; OpenAI must receive no direct Convex credential or unrestricted ticket mutation.
+- Sara month availability returns contiguous half-open check-in/check-out ranges, clips the current month to today in Hawaii, excludes entirely past months, and never treats a result as a hold.
 - Sara Terms acceptance must validate the persisted inbound message or authenticated web action against the current presentation, version, full hash, active quote, and payment conflicts; record server time, source, action, and idempotent reservation-event evidence without asking OpenAI to decide agreement.
 - Mutating Sara operations and automated transcript writes must carry the active conversation control version so STOP, ticket changes, or staff takeover fence stale work.
 - Staff-only conversation deletion cascades through messages, agent runs, and message outbox rows; it clears the deleted public conversation ID from the preserved ticket and preserves contacts, SMS consent, reservation events, and webhook records.
@@ -51,6 +52,7 @@
 ## Verification
 
 - Use `npx convex dev` for backend sync/codegen when Convex functions or schema change.
+- Use `npm test` for deterministic Sara calendar-month availability range checks.
 
 ## Child DOX Index
 

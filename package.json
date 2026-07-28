@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "convex:dev": "convex dev",
+    "test": "node --test convex/saraAvailability.test.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"

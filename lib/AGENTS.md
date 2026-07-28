@@ -30,8 +30,8 @@
 - `Providers.jsx` and `query-client.js` own app-wide client context providers outside Convex Auth.
 - `calc.js` owns money formatting and reservation price/date calculations.
 - `utils.js` owns shared utility helpers such as class-name composition.
-- `sara-prompt.js` owns Sara's fixed identity, source hierarchy, booking/payment permissions, unsupported-action restraint, legal-Terms non-interpretation boundary, handoff rules, channel style, and prompt version.
-- `sara-agent-server.js` owns the server-only OpenAI Responses tool loop, strict tool schemas, control-fenced tool execution, deterministic Terms presentation and exact-phrase retry messages, channel formatting, and agent-run completion.
+- `sara-prompt.js` owns Sara's fixed identity, source hierarchy, Hawaii-relative date interpretation, exact-stay versus month-range availability behavior, booking/payment permissions, unsupported-action restraint, legal-Terms non-interpretation boundary, handoff rules, channel style, and prompt version.
+- `sara-agent-server.js` owns the server-only OpenAI Responses tool loop, strict exact-stay and month-availability tool schemas, control-fenced tool execution, deterministic Terms presentation and exact-phrase retry messages, channel formatting, and agent-run completion.
 - `quo-server.js` owns the shared server-only Quo text transport, sender/recipient normalization, timeout, and rejected-versus-ambiguous provider error classification.
 
 ## Local Contracts
@@ -47,6 +47,7 @@
 - Use Convex transcripts and structured state as Sara's durable context; OpenAI Responses must use `store: false`, bounded history, bounded output, and no browser-provided model or system instructions.
 - Keep property facts in approved Knowledge or dynamic settings tools, Terms behind the priced-ticket gate, and payment instructions behind recorded Terms acceptance.
 - Sara may offer or claim an operational action only when an available tool implements it and the tool call succeeds; hotel-controlled services must go to the hotel front desk or a human reservations specialist.
+- Broad calendar-month availability requests must use the month-availability tool and return its contiguous check-in/check-out ranges; do not require exact guest dates before showing those verified options.
 - Keep the published Terms body outside model context. Model-authored text must not quote, summarize, paraphrase, explain, compare, or interpret that legal document; deterministic server copy owns its link and acceptance instructions while approved standalone policy FAQs remain available through Knowledge.
 - Keep default/client payment methods instruction-free; configured instructions may leave the server only through a current Terms-hash and payable-ticket gate.
 - Conversational SMS must use `lib/quo-server.js` and the Convex outbox; do not add another direct Quo transport.
