@@ -245,7 +245,8 @@ function KnowledgePanel() {
     setError("");
     try {
       const result = await seedDrafts({});
-      setNotice(`${result.inserted} draft entries added. ${result.total} starter entries are available for review.`);
+      const reviewNotice = result.returnedToDraft ? ` ${result.returnedToDraft} previously approved entries were returned to draft for review.` : "";
+      setNotice(`${result.inserted} starter entries added and ${result.updated} refreshed.${reviewNotice} ${result.total} starter entries are available.`);
     } catch (seedError) {
       setError(seedError.message || "Failed to seed Knowledge");
     }
@@ -257,10 +258,10 @@ function KnowledgePanel() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-lg font-medium">Knowledge library</h2>
-            <p className="mt-1 text-sm text-[#6c6a64]">Sara retrieves approved guest entries only. Drafts never reach the model.</p>
+            <p className="mt-1 text-sm text-[#6c6a64]">Sara retrieves approved guest entries only. Sync refreshes changed starter copies as drafts; archived entries stay untouched.</p>
           </div>
           <Button type="button" variant="outline" onClick={seed} className="border-[#d9cfc2] bg-[#faf9f5]">
-            <BookOpen className="h-4 w-4" /> Add 42 starter drafts
+            <BookOpen className="h-4 w-4" /> Sync 42 starter drafts
           </Button>
         </div>
         <div className="mt-4 flex items-center gap-2">
@@ -271,7 +272,7 @@ function KnowledgePanel() {
         {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{error}</p>}
         <div className="mt-4 max-h-[680px] space-y-3 overflow-y-auto pr-1">
           {entries === undefined && <div className="flex items-center gap-2 text-sm text-[#6c6a64]"><Loader2 className="h-4 w-4 animate-spin" /> Loading Knowledge</div>}
-          {entries !== undefined && filtered.length === 0 && <p className="rounded-lg bg-[#faf9f5] p-4 text-sm text-[#6c6a64]">No entries match. Seed drafts or create one.</p>}
+          {entries !== undefined && filtered.length === 0 && <p className="rounded-lg bg-[#faf9f5] p-4 text-sm text-[#6c6a64]">No entries match. Sync starter drafts or create one.</p>}
           {filtered.map((entry) => (
             <button key={entry._id} type="button" onClick={() => edit(entry)} className="w-full rounded-xl border border-[#e6dfd8] p-4 text-left transition-colors hover:border-[#cc785c] hover:bg-[#fff8f4]">
               <div className="flex items-start justify-between gap-3">

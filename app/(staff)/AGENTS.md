@@ -36,7 +36,7 @@
 - Sara channels are disabled by default; staff must review and publish Knowledge entries individually, configure Terms, and test the website before enabling Quo SMS.
 - Staff human takeover increments the conversation control version and sets `aiEnabled` false. Web replies persist directly; SMS replies require Convex Auth, stable message IDs, active channel/test policy, and current phone consent, and expose delivery state in the transcript.
 - Staff conversation deletion removes conversation-owned transcripts, agent runs, and SMS outbox records; it detaches but preserves linked reservation tickets and preserves contacts, SMS consent, reservation events, and provider webhook history.
-- The 42 starter Knowledge entries are inserted as drafts only and may not be retrieved by Sara until staff approves them.
+- Syncing the 42 starter Knowledge entries inserts missing drafts and refreshes changed non-archived starter entries; changed approved entries return to draft for staff review, and archived entries remain untouched.
 
 ## Work Guidance
 

@@ -98,25 +98,45 @@ export const seedDrafts = mutation({
     const userId = await requireStaff(ctx);
     const now = new Date().toISOString();
     let inserted = 0;
+    let updated = 0;
+    let returnedToDraft = 0;
     for (const [slug, question, answer, category, source] of KNOWLEDGE_SEED) {
       const existing = await ctx.db.query("knowledgeEntries").withIndex("by_slug", (q) => q.eq("slug", slug)).first();
-      if (existing) continue;
-      await ctx.db.insert("knowledgeEntries", {
-        slug,
+      if (existing?.status === "archived") continue;
+      const values = {
         question,
         answer,
         category,
-        status: "draft",
-        audience: "guest",
-        version: 1,
+        audience: "guest" as const,
         source,
         searchText: searchText(question, answer, category),
+      };
+      if (existing) {
+        const changed = Object.entries(values).some(([key, value]) => existing[key as keyof typeof existing] !== value);
+        if (!changed) continue;
+        await ctx.db.patch(existing._id, {
+          ...values,
+          status: "draft",
+          version: existing.version + 1,
+          approvedBy: undefined,
+          approvedAt: undefined,
+          updatedAt: now,
+        });
+        updated += 1;
+        if (existing.status === "approved") returnedToDraft += 1;
+        continue;
+      }
+      await ctx.db.insert("knowledgeEntries", {
+        slug,
+        ...values,
+        status: "draft",
+        version: 1,
         createdBy: userId,
         createdAt: now,
         updatedAt: now,
       });
       inserted += 1;
     }
-    return { inserted, total: KNOWLEDGE_SEED.length };
+    return { inserted, updated, returnedToDraft, total: KNOWLEDGE_SEED.length };
   },
 });
