@@ -14,6 +14,7 @@
 - Render plain text, preserve guest input during network failures, and never collect card numbers, passwords, or banking credentials.
 - Keep arbitrary transcript URLs as plain text; only the server-described immutable Terms action may render its trusted clickable link, exact agreement label, checkbox, button, and accepted timestamp.
 - Ordinary typed transcript messages never accept Terms; web acceptance requires the server-described checkbox and button action.
+- Open quote ticket links in a new browser tab so the active chat remains available.
 - Clearly display that Sara is AI for an independent private residence service and that human help is available.
 - Hide the widget unless public settings enable `saraWebEnabled`.
 

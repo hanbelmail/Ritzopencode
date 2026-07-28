@@ -277,7 +277,12 @@ export default function GuestChatWidget() {
 
         <div className="border-t border-[#e6dfd8] bg-white px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-3">
           {ticketId && (
-            <a href={`/ticket/${ticketId}`} className="mb-2 block text-xs font-medium text-[#a9583e] hover:underline">
+            <a
+              href={`/ticket/${ticketId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mb-2 block text-xs font-medium text-[#a9583e] hover:underline"
+            >
               Open quote ticket {ticketId.slice(0, 8)}...
             </a>
           )}
