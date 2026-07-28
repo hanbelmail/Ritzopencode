@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { isAutomationKey, requireServiceKey } from "./security";
-import { availableRangesForWindow, monthAvailabilityWindow } from "./saraAvailability";
+import { availableRangesForWindow, isCalendarDate, monthAvailabilityWindow } from "./saraAvailability";
 import { getSmsConsent, normalizeSmsPhone } from "./smsConsent";
 import { isTermsAgreementNearMiss, termsAgreementText } from "./termsContract";
 
@@ -192,9 +192,10 @@ async function available(ctx: any, checkIn: string, checkOut: string, excludeTic
 }
 
 function validateStay(checkInValue: string, checkOutValue: string) {
-  const checkIn = dateStamp(checkInValue);
-  const checkOut = dateStamp(checkOutValue);
-  if (!checkIn || !checkOut || checkIn >= checkOut) throw new Error("Check-out must be after check-in");
+  const checkIn = String(checkInValue || "");
+  const checkOut = String(checkOutValue || "");
+  if (!isCalendarDate(checkIn) || !isCalendarDate(checkOut)) throw new Error("Stay dates must be valid calendar dates in YYYY-MM-DD format");
+  if (checkIn >= checkOut) throw new Error("Check-out must be after check-in");
   if (checkIn < honoluluToday()) throw new Error("Check-in cannot be in the past in Hawaii");
   return { checkIn, checkOut, nights: nightsBetween(checkIn, checkOut) };
 }

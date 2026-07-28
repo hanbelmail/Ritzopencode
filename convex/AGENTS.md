@@ -42,6 +42,7 @@
 - Starter Knowledge synchronization inserts missing entries, refreshes changed non-archived starter entries, and returns changed approved entries to draft for staff review; archived entries remain untouched.
 - All Sara service functions require `SARA_SERVICE_KEY`; OpenAI must receive no direct Convex credential or unrestricted ticket mutation.
 - Sara month availability returns contiguous half-open check-in/check-out ranges, clips the current month to today in Hawaii, excludes entirely past months, and never treats a result as a hold.
+- Sara exact availability and quote creation accept only real Gregorian `YYYY-MM-DD` dates; date-shaped prefixes and impossible dates must fail validation.
 - Sara Terms acceptance must validate the persisted inbound message or authenticated web action against the current presentation, version, full hash, active quote, and payment conflicts; record server time, source, action, and idempotent reservation-event evidence without asking OpenAI to decide agreement.
 - Mutating Sara operations and automated transcript writes must carry the active conversation control version so STOP, ticket changes, or staff takeover fence stale work.
 - Staff-only conversation deletion cascades through messages, agent runs, and message outbox rows; it clears the deleted public conversation ID from the preserved ticket and preserves contacts, SMS consent, reservation events, and webhook records.
@@ -52,7 +53,7 @@
 ## Verification
 
 - Use `npx convex dev` for backend sync/codegen when Convex functions or schema change.
-- Use `npm test` for deterministic Sara calendar-month availability range checks.
+- Use `npm test` for deterministic Sara year/date resolution and calendar-month availability range checks.
 
 ## Child DOX Index
 
