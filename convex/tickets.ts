@@ -3,7 +3,7 @@ import { paginationOptsValidator } from "convex/server";
 import { mutation, query } from "./_generated/server";
 import { isAutomationKey, isStaff, requireStaff, requireStaffOrAutomation } from "./security";
 import { getSmsConsent, normalizeSmsPhone } from "./smsConsent";
-import { termsAgreementText } from "./termsContract";
+import { termsAgreementText, WEB_TERMS_ACCEPTANCE_CONTRACT } from "./termsContract";
 
 const legacyStatusMap: Record<string, string> = {
   QUOTE: "QUOTE REQUESTED",
@@ -402,7 +402,9 @@ export const acceptGuestTerms = mutation({
       termsAcceptedHash: terms.contentHash,
       termsAcceptanceSource: "public_payment_dialog",
       termsAcceptanceAction: "checkbox_button",
+      termsAcceptanceContract: WEB_TERMS_ACCEPTANCE_CONTRACT,
     };
+    delete updated.termsAcceptedNormalizedText;
     await ctx.db.patch(row._id, { data: updated, updatedAt: now, ...ticketIndexFields(updated) });
     const idempotencyKey = `public-terms:${args.id}:${currentVersion}:${ticket.quoteExpiresAt}`;
     const existingEvent = await ctx.db.query("reservationEvents").withIndex("by_idempotencyKey", (q) => q.eq("idempotencyKey", idempotencyKey)).first();
@@ -412,7 +414,7 @@ export const acceptGuestTerms = mutation({
         type: "terms_accepted",
         actorType: "guest",
         idempotencyKey,
-        payload: { termsVersion: currentVersion, termsHash: terms.contentHash, source: "public_payment_dialog", action: "checkbox_button" },
+        payload: { termsVersion: currentVersion, termsHash: terms.contentHash, source: "public_payment_dialog", action: "checkbox_button", acceptanceContract: WEB_TERMS_ACCEPTANCE_CONTRACT },
         createdAt: now,
       });
     }
@@ -759,7 +761,7 @@ export const update = mutation({
     const updated = normalizeTicket({ ...row.data, ...allowedData, id });
 
     if (trusted && quoteInputsChanged && !PAYMENT_BLOCKING_STATUSES.has(currentTicket.status)) {
-      for (const field of ["termsAcceptedAt", "termsVersion", "termsAcceptedText", "termsAcceptedHash", "termsAcceptedMessageId", "termsAcceptanceSource", "termsAcceptanceAction"]) delete updated[field];
+      for (const field of ["termsAcceptedAt", "termsVersion", "termsAcceptedText", "termsAcceptedHash", "termsAcceptedMessageId", "termsAcceptanceSource", "termsAcceptanceAction", "termsAcceptanceContract", "termsAcceptedNormalizedText"]) delete updated[field];
     }
     await ensureFinalStayAvailable(ctx, updated, row._id);
 

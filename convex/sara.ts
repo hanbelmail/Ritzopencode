@@ -3,7 +3,17 @@ import { mutation, query } from "./_generated/server";
 import { isAutomationKey, requireServiceKey } from "./security";
 import { availableRangesForWindow, isCalendarDate, monthAvailabilityWindow } from "./saraAvailability";
 import { getSmsConsent, normalizeSmsPhone } from "./smsConsent";
-import { isTermsAgreementNearMiss, termsAgreementText } from "./termsContract";
+import {
+  classifyTermsReply,
+  isReplyAfterTermsPresentation,
+  isSmsTermsPresentationSendConfirmed,
+  LEGACY_SMS_TERMS_ACCEPTANCE_CONTRACT,
+  normalizeSmsTermsReply,
+  SMS_TERMS_ACCEPTANCE_CONTRACT,
+  SMS_TERMS_AGREEMENT_TEXT,
+  termsAgreementText,
+  WEB_TERMS_ACCEPTANCE_CONTRACT,
+} from "./termsContract";
 
 const FINALIZED_STATUSES = new Set(["PAYMENT VERIFIED", "BOOKING CONFIRMED"]);
 const PAYMENT_BLOCKING_STATUSES = new Set(["PAYMENT SUBMITTED", "PAYMENT VERIFIED", "BOOKING CONFIRMED"]);
@@ -107,6 +117,8 @@ async function persistTermsAcceptance(ctx: any, {
   acceptedText,
   source,
   action,
+  acceptanceContract,
+  normalizedAcceptedText,
 }: {
   conversation: any;
   ticketRow: any;
@@ -115,8 +127,10 @@ async function persistTermsAcceptance(ctx: any, {
   acceptedText: string;
   source: string;
   action: string;
+  acceptanceContract?: string;
+  normalizedAcceptedText?: string;
 }) {
-  const idempotencyKey = `terms:${conversation.ticketId}:${messageId}`;
+  const idempotencyKey = `terms:${conversation.ticketId}:${conversation.termsPresentedMessageId || "missing-presentation"}:${messageId}`;
   const existingEvent = await ctx.db.query("reservationEvents").withIndex("by_idempotencyKey", (q: any) => q.eq("idempotencyKey", idempotencyKey)).first();
   if (existingEvent) {
     return { accepted: true, acceptedAt: existingEvent.createdAt, termsVersion: terms.version, termsHash: terms.contentHash, action };
@@ -132,6 +146,8 @@ async function persistTermsAcceptance(ctx: any, {
     termsAcceptedMessageId: messageId,
     termsAcceptanceSource: source,
     termsAcceptanceAction: action,
+    ...(acceptanceContract ? { termsAcceptanceContract: acceptanceContract } : {}),
+    ...(normalizedAcceptedText ? { termsAcceptedNormalizedText: normalizedAcceptedText } : {}),
   };
   await ctx.db.patch(ticketRow._id, { data: ticket, updatedAt: now, ...ticketIndexFields(ticket) });
   await ctx.db.patch(conversation._id, {
@@ -154,6 +170,8 @@ async function persistTermsAcceptance(ctx: any, {
       channel: conversation.channel,
       source,
       action,
+      ...(acceptanceContract ? { acceptanceContract } : {}),
+      ...(normalizedAcceptedText ? { normalizedAcceptedText } : {}),
       presentedMessageId: conversation.termsPresentedMessageId,
       acceptedMessageId: messageId,
     },
@@ -462,6 +480,8 @@ export const getBookingTerms = query({
       version: terms.version,
       contentHash: terms.contentHash,
       requiredAgreement: termsAgreementText(terms.version),
+      smsRequiredAgreement: SMS_TERMS_AGREEMENT_TEXT,
+      smsAcceptanceContract: SMS_TERMS_ACCEPTANCE_CONTRACT,
     };
   },
 });
@@ -508,29 +528,67 @@ export const processTermsReply = mutation({
     if (!inbound || inbound.conversationId !== conversation._id || inbound.direction !== "inbound") throw new Error("Acceptance must reference the current guest message");
     const actualText = inbound.content.trim();
     const expectedAgreement = termsAgreementText(terms.version);
+    const presented = conversation.termsPresentedMessageId
+      ? await ctx.db.query("messages").withIndex("by_idempotencyKey", (q) => q.eq("idempotencyKey", conversation.termsPresentedMessageId)).first()
+      : null;
+    if (!presented || presented.conversationId !== conversation._id || presented.direction !== "outbound") {
+      throw new Error("Terms presentation message not found");
+    }
+    if (!isReplyAfterTermsPresentation(inbound._creationTime, presented._creationTime)) return { status: "not_applicable" };
     const row = await getTicketRow(ctx, conversation.ticketId);
     const quoteActive = Number.isFinite(Number(row.data?.rateOffered)) && Number(row.data.rateOffered) > 0 && Date.parse(String(row.data?.quoteExpiresAt || "")) > Date.now();
     if (normalizedStatus(row.data.status) !== "PRICE SENT" || !quoteActive || await hasPaymentConflict(ctx, row.data, row.data.id)) {
       return { status: "not_applicable" };
     }
-    if (actualText === expectedAgreement) {
+    let acceptanceContract: string | undefined;
+    let smsPresentationSendConfirmed = true;
+    if (conversation.channel === "sms") {
+      smsPresentationSendConfirmed = isSmsTermsPresentationSendConfirmed(presented.deliveryStatus);
+      const metadataContract = String(presented.metadata?.termsAcceptanceContract || "");
+      if (metadataContract === SMS_TERMS_ACCEPTANCE_CONTRACT && presented.content.includes(SMS_TERMS_AGREEMENT_TEXT)) {
+        acceptanceContract = SMS_TERMS_ACCEPTANCE_CONTRACT;
+      } else if (!metadataContract && presented.content.includes(expectedAgreement)) {
+        acceptanceContract = LEGACY_SMS_TERMS_ACCEPTANCE_CONTRACT;
+      } else {
+        throw new Error("SMS Terms presentation contract is invalid");
+      }
+    }
+    const classification = classifyTermsReply({
+      channel: conversation.channel,
+      actual: actualText,
+      legacyAgreement: expectedAgreement,
+      acceptanceContract,
+    });
+    if (conversation.channel === "sms" && !smsPresentationSendConfirmed && classification !== "not_applicable") {
+      return { status: "terms_presentation_unconfirmed" };
+    }
+    if (classification === "web_control_required") {
+      return { status: "web_control_required" };
+    }
+    if (classification === "accepted_normalized_sms" || classification === "accepted_legacy_sms") {
       if (row.data.termsAcceptedAt && row.data.termsVersion === terms.version && row.data.termsAcceptedHash === terms.contentHash) {
         return { status: "accepted", acceptedAt: row.data.termsAcceptedAt, termsVersion: terms.version, termsHash: terms.contentHash };
       }
-      const source = conversation.channel === "sms" ? "sara_sms" : "sara_web_chat";
       const result = await persistTermsAcceptance(ctx, {
         conversation,
         ticketRow: row,
         terms,
         messageId: args.messageId,
         acceptedText: actualText,
-        source,
-        action: "exact_phrase_reply",
+        source: "sara_sms",
+        action: classification === "accepted_normalized_sms" ? "normalized_sms_phrase_reply_v2" : "legacy_exact_sms_phrase_reply_v1",
+        acceptanceContract,
+        normalizedAcceptedText: classification === "accepted_normalized_sms" ? normalizeSmsTermsReply(actualText) : undefined,
       });
       return { status: "accepted", ...result };
     }
-    if (isTermsAgreementNearMiss(actualText, expectedAgreement)) {
-      return { status: "retry_exact", requiredAgreement: expectedAgreement, termsVersion: terms.version };
+    if (classification === "retry") {
+      return {
+        status: "retry_terms_acceptance",
+        requiredAgreement: acceptanceContract === SMS_TERMS_ACCEPTANCE_CONTRACT ? SMS_TERMS_AGREEMENT_TEXT : expectedAgreement,
+        matchPolicy: acceptanceContract === SMS_TERMS_ACCEPTANCE_CONTRACT ? "case_whitespace" : "exact",
+        termsVersion: terms.version,
+      };
     }
     return { status: "not_applicable" };
   },
@@ -619,6 +677,7 @@ export const acceptWebTerms = mutation({
       acceptedText,
       source: "sara_web_chat",
       action: "checkbox_button",
+      acceptanceContract: WEB_TERMS_ACCEPTANCE_CONTRACT,
     });
   },
 });
@@ -646,8 +705,11 @@ export const recordTermsPresented = mutation({
     if (args.termsVersion !== terms.version) throw new Error("Terms version is not current");
     const presentedExactly = outbound.content.includes(`/terms/${encodeURIComponent(args.termsVersion)}`);
     if (!presentedExactly) throw new Error("Outbound message did not present the published Terms version");
-    if (conversation.channel === "sms" && !outbound.content.includes(termsAgreementText(terms.version))) {
-      throw new Error("Outbound SMS did not include the exact required agreement phrase");
+    if (conversation.channel === "sms" && (
+      outbound.metadata?.termsAcceptanceContract !== SMS_TERMS_ACCEPTANCE_CONTRACT ||
+      !outbound.content.includes(SMS_TERMS_AGREEMENT_TEXT)
+    )) {
+      throw new Error("Outbound SMS did not include the current Terms acceptance contract");
     }
     const now = new Date().toISOString();
     const currentAcceptance = Boolean(row.data.termsAcceptedAt && row.data.termsVersion === terms.version && row.data.termsAcceptedHash === terms.contentHash);

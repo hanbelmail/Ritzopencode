@@ -45,7 +45,7 @@
 - Preserve App Router route group semantics; `(public)` and `(staff)` folders are URL-invisible boundaries.
 - Keep route-level reservation/settings data mutations delegated to Convex-backed hooks in `lib/store.js`.
 - Public Sara chat must reject cross-origin writes, keep the session token HTTP-only, enforce message limits, and use `PUBLIC_APP_URL` for durable guest links when configured.
-- Public Sara Terms actions must revalidate the HTTP-only conversation session, current presentation message, immutable version/hash, and payable quote server-side; browser-provided text, timestamps, and acceptance claims are never authoritative.
+- Public Sara Terms actions must revalidate the HTTP-only conversation session, current presentation message, immutable version/hash, and payable quote server-side; browser-provided text, timestamps, and acceptance claims are never authoritative, and ordinary typed web-chat messages can never record acceptance.
 - Production Quo webhooks must validate `openphone-signature` in `hmac;1;<unix-ms>;<base64-hmac>` format against the Base64-decoded `QUO_WEBHOOK_SECRET`, sign `<timestamp>.<raw-body>`, and enforce a five-minute replay window; `QUO_WEBHOOK_TOKEN` is a development-only local payload fallback.
 - Failed Quo signature checks may log only the rejection reason; never log webhook payloads, header values, signing secrets, or guest data.
 - Quo webhook processing must store disabled or non-allowlisted inbound messages without sending a paid response, and unsupported MMS proof must redirect the guest to the secure ticket upload path.
