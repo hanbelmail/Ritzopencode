@@ -8,8 +8,11 @@ import {
   isReplyAfterTermsPresentation,
   isSmsTermsPresentationSendConfirmed,
   LEGACY_SMS_TERMS_ACCEPTANCE_CONTRACT,
+  normalizeExplicitSmsTermsReply,
   normalizeSmsTermsReply,
+  PRIOR_SMS_TERMS_ACCEPTANCE_CONTRACT,
   SMS_TERMS_ACCEPTANCE_CONTRACT,
+  SMS_TERMS_ACCEPTANCE_INSTRUCTION,
   SMS_TERMS_AGREEMENT_TEXT,
   termsAgreementText,
   WEB_TERMS_ACCEPTANCE_CONTRACT,
@@ -480,7 +483,7 @@ export const getBookingTerms = query({
       version: terms.version,
       contentHash: terms.contentHash,
       requiredAgreement: termsAgreementText(terms.version),
-      smsRequiredAgreement: SMS_TERMS_AGREEMENT_TEXT,
+      smsAcceptanceInstruction: SMS_TERMS_ACCEPTANCE_INSTRUCTION,
       smsAcceptanceContract: SMS_TERMS_ACCEPTANCE_CONTRACT,
     };
   },
@@ -545,8 +548,10 @@ export const processTermsReply = mutation({
     if (conversation.channel === "sms") {
       smsPresentationSendConfirmed = isSmsTermsPresentationSendConfirmed(presented.deliveryStatus);
       const metadataContract = String(presented.metadata?.termsAcceptanceContract || "");
-      if (metadataContract === SMS_TERMS_ACCEPTANCE_CONTRACT && presented.content.includes(SMS_TERMS_AGREEMENT_TEXT)) {
+      if (metadataContract === SMS_TERMS_ACCEPTANCE_CONTRACT && presented.content.includes(SMS_TERMS_ACCEPTANCE_INSTRUCTION)) {
         acceptanceContract = SMS_TERMS_ACCEPTANCE_CONTRACT;
+      } else if (metadataContract === PRIOR_SMS_TERMS_ACCEPTANCE_CONTRACT && presented.content.includes(SMS_TERMS_AGREEMENT_TEXT)) {
+        acceptanceContract = PRIOR_SMS_TERMS_ACCEPTANCE_CONTRACT;
       } else if (!metadataContract && presented.content.includes(expectedAgreement)) {
         acceptanceContract = LEGACY_SMS_TERMS_ACCEPTANCE_CONTRACT;
       } else {
@@ -565,7 +570,7 @@ export const processTermsReply = mutation({
     if (classification === "web_control_required") {
       return { status: "web_control_required" };
     }
-    if (classification === "accepted_normalized_sms" || classification === "accepted_legacy_sms") {
+    if (["accepted_explicit_sms", "accepted_normalized_sms", "accepted_legacy_sms"].includes(classification)) {
       if (row.data.termsAcceptedAt && row.data.termsVersion === terms.version && row.data.termsAcceptedHash === terms.contentHash) {
         return { status: "accepted", acceptedAt: row.data.termsAcceptedAt, termsVersion: terms.version, termsHash: terms.contentHash };
       }
@@ -576,17 +581,33 @@ export const processTermsReply = mutation({
         messageId: args.messageId,
         acceptedText: actualText,
         source: "sara_sms",
-        action: classification === "accepted_normalized_sms" ? "normalized_sms_phrase_reply_v2" : "legacy_exact_sms_phrase_reply_v1",
+        action: classification === "accepted_explicit_sms"
+          ? "explicit_sms_phrase_reply_v3"
+          : classification === "accepted_normalized_sms"
+            ? "normalized_sms_phrase_reply_v2"
+            : "legacy_exact_sms_phrase_reply_v1",
         acceptanceContract,
-        normalizedAcceptedText: classification === "accepted_normalized_sms" ? normalizeSmsTermsReply(actualText) : undefined,
+        normalizedAcceptedText: classification === "accepted_explicit_sms"
+          ? normalizeExplicitSmsTermsReply(actualText)
+          : classification === "accepted_normalized_sms"
+            ? normalizeSmsTermsReply(actualText)
+            : undefined,
       });
       return { status: "accepted", ...result };
     }
     if (classification === "retry") {
       return {
         status: "retry_terms_acceptance",
-        requiredAgreement: acceptanceContract === SMS_TERMS_ACCEPTANCE_CONTRACT ? SMS_TERMS_AGREEMENT_TEXT : expectedAgreement,
-        matchPolicy: acceptanceContract === SMS_TERMS_ACCEPTANCE_CONTRACT ? "case_whitespace" : "exact",
+        requiredAgreement: acceptanceContract === SMS_TERMS_ACCEPTANCE_CONTRACT
+          ? SMS_TERMS_ACCEPTANCE_INSTRUCTION
+          : acceptanceContract === PRIOR_SMS_TERMS_ACCEPTANCE_CONTRACT
+            ? SMS_TERMS_AGREEMENT_TEXT
+            : expectedAgreement,
+        matchPolicy: acceptanceContract === SMS_TERMS_ACCEPTANCE_CONTRACT
+          ? "explicit_allowlist"
+          : acceptanceContract === PRIOR_SMS_TERMS_ACCEPTANCE_CONTRACT
+            ? "case_whitespace"
+            : "exact",
         termsVersion: terms.version,
       };
     }
@@ -707,7 +728,7 @@ export const recordTermsPresented = mutation({
     if (!presentedExactly) throw new Error("Outbound message did not present the published Terms version");
     if (conversation.channel === "sms" && (
       outbound.metadata?.termsAcceptanceContract !== SMS_TERMS_ACCEPTANCE_CONTRACT ||
-      !outbound.content.includes(SMS_TERMS_AGREEMENT_TEXT)
+      !outbound.content.includes(SMS_TERMS_ACCEPTANCE_INSTRUCTION)
     )) {
       throw new Error("Outbound SMS did not include the current Terms acceptance contract");
     }

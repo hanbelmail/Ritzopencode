@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { api } from "@/convex/_generated/api";
 import { getConvexClient, getConvexServiceKey, jsonError } from "@/lib/convex-server";
 import { DEFAULT_SETTINGS } from "@/lib/defaults";
-import { runSaraAgent } from "@/lib/sara-agent-server";
+import { runSaraAgent, sendAcceptedPaymentInstructions } from "@/lib/sara-agent-server";
 
 export const runtime = "nodejs";
 
@@ -330,12 +330,53 @@ export async function PATCH(request) {
       termsHash,
       presentedMessageId,
     });
+    const acceptanceMessageId = `web-terms-accept:${presentedMessageId}`;
+    let payment;
+    try {
+      payment = await sendAcceptedPaymentInstructions({
+        client,
+        publicId: session.publicId,
+        accessTokenHash: session.accessTokenHash,
+        inboundMessageId: acceptanceMessageId,
+        origin: publicOrigin(request),
+      });
+    } catch (paymentError) {
+      const paymentContext = await client.query(api.conversations.getContext, {
+        serviceKey,
+        publicId: session.publicId,
+        accessTokenHash: session.accessTokenHash,
+      });
+      if (paymentContext?.conversation?.aiEnabled) {
+        const controlVersion = paymentContext.conversation.controlVersion || 0;
+        await client.mutation(api.sara.handoff, {
+          serviceKey,
+          publicId: session.publicId,
+          reason: `Payment instructions unavailable after Terms acceptance: ${String(paymentError.message || "unknown").slice(0, 300)}`,
+          expectedControlVersion: controlVersion,
+        });
+        const reply = `Your Terms acceptance is recorded, but payment instructions are currently unavailable. A reservations specialist will continue with you.`;
+        const outboundMessageId = `sara-fallback:${acceptanceMessageId}`;
+        const message = await client.mutation(api.conversations.appendOutbound, {
+          serviceKey,
+          publicId: session.publicId,
+          messageId: outboundMessageId,
+          content: reply,
+          authorType: "system",
+          replyToMessageId: acceptanceMessageId,
+          metadata: { deterministic: true, degraded: true, action: "payment_instructions_handoff" },
+          expectedControlVersion: controlVersion,
+        });
+        payment = { skipped: false, reply, message, outboundMessageId, handedOff: true, degraded: true };
+      } else {
+        payment = { skipped: true, reason: "Sara was paused by the reservations team" };
+      }
+    }
     const current = await client.query(api.conversations.getContext, {
       serviceKey,
       publicId: session.publicId,
       accessTokenHash: session.accessTokenHash,
     });
-    return NextResponse.json({ acceptance, ...(await chatState(client, serviceKey, current)) });
+    return NextResponse.json({ acceptance, payment, ...(await chatState(client, serviceKey, current)) });
   } catch (error) {
     const message = error.message || "Terms acceptance failed";
     const status = /access denied/i.test(message)

@@ -19,7 +19,7 @@
 - `api/payment-submitted-alerts/` owns independent server-side payment-submitted staff email and guest SMS delivery, including payment proof screenshot attachments from R2 when present.
 - `api/booking-request-hotel-alerts/` owns independent server-side payment-verified booking request hotel email and guest SMS delivery, with the fixed `1609E` email subject.
 - `api/booking-confirmed-hotel-alerts/` owns independent server-side booking-confirmed hotel email and guest SMS delivery, with the reservation confirmation number in the email subject.
-- `api/sara/chat/` owns the public web-chat adapter, opaque HTTP-only conversation sessions, origin checks, Sara execution, safe transcript responses, and version/hash-bound Terms acceptance actions.
+- `api/sara/chat/` owns the public web-chat adapter, opaque HTTP-only conversation sessions, origin checks, Sara execution, safe transcript responses, version/hash-bound Terms acceptance actions, and immediate deterministic payment-instruction replies after acceptance.
 - `api/sara/staff-reply/` owns authenticated staff-only, stable-ID Quo reply dispatch after the staff reply and takeover are persisted in Convex.
 - `api/webhooks/quo/` owns Quo message ingestion, webhook-token validation, event deduplication, SMS allowlist/test-mode enforcement, STOP/START processing, Sara execution, and outbound delivery tracking.
 - `(public)/AGENTS.md` owns public guest pages and ticket lookup routes.
@@ -46,6 +46,7 @@
 - Keep route-level reservation/settings data mutations delegated to Convex-backed hooks in `lib/store.js`.
 - Public Sara chat must reject cross-origin writes, keep the session token HTTP-only, enforce message limits, and use `PUBLIC_APP_URL` for durable guest links when configured.
 - Public Sara Terms actions must revalidate the HTTP-only conversation session, current presentation message, immutable version/hash, and payable quote server-side; browser-provided text, timestamps, and acceptance claims are never authoritative, and ordinary typed web-chat messages can never record acceptance.
+- After web Terms acceptance is recorded, the chat route must return the current authorized payment instructions and secure ticket link in the refreshed transcript; unavailable instructions must preserve acceptance and hand off to staff rather than report acceptance as failed.
 - Production Quo webhooks must validate `openphone-signature` in `hmac;1;<unix-ms>;<base64-hmac>` format against the Base64-decoded `QUO_WEBHOOK_SECRET`, sign `<timestamp>.<raw-body>`, and enforce a five-minute replay window; `QUO_WEBHOOK_TOKEN` is a development-only local payload fallback.
 - Failed Quo signature checks may log only the rejection reason; never log webhook payloads, header values, signing secrets, or guest data.
 - Quo webhook processing must store disabled or non-allowlisted inbound messages without sending a paid response, and unsupported MMS proof must redirect the guest to the secure ticket upload path.

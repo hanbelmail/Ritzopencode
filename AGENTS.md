@@ -86,6 +86,9 @@ Default section order:
 
 When the user requests a durable behavior change, record it here or in the relevant child AGENTS.md
 
+- After current Terms acceptance, Sara must immediately send authorized payment instructions on web and SMS; guests may request the instructions again later, and repeat delivery is allowed.
+- SMS Terms acceptance must allow explicit whole-message agree/accept phrases, ignore capitalization, surrounding whitespace, and trailing periods, commas, or exclamation marks, and reject ambiguous, negative, questioning, or malformed replies; web acceptance remains checkbox/button only.
+
 ## Work Guidance
 
 - Use `@/` imports for project paths, matching `jsconfig.json`.
@@ -101,8 +104,8 @@ When the user requests a durable behavior change, record it here or in the relev
 - Keep `SARA_SERVICE_KEY` and `N8N_API_KEY` separate; Sara's key authenticates only Sara domains, while the same `N8N_API_KEY` value in Next.js and Convex authenticates existing ticket automation and delivery-stamp operations.
 - Keep `saraWebEnabled` and `saraSmsEnabled` off until OpenAI, approved Knowledge, Terms, channel credentials, and staff handoff operations are ready; Quo must remain allowlist-only while `saraSmsTestMode` is active.
 - Sara represents an independent private residence reservation service, identifies itself as AI, and must not imply it is the official Ritz-Carlton hotel reservations desk.
-- Payment instructions require an active positive-price quote and acceptance of the current immutable Terms hash; public `PAYMENT SUBMITTED` requires a server-confirmed, unexpired R2 upload receipt.
-- Terms acceptance is deterministic rather than model-interpreted: web chat accepts only its version/hash-bound checkbox and button action; current SMS presentations accept only the complete `I AGREE` reply with case and whitespace normalization, reject `I accept` and other alternatives, and bind legacy exact phrases only to legacy presentation messages; Sara must never summarize or interpret the published legal Terms document, while separate staff-approved policy FAQs may still be answered from Knowledge.
+- Payment instructions require an active positive-price quote and acceptance of the current immutable Terms hash; after acceptance Sara sends them deterministically with the secure ticket link on web and SMS, while public `PAYMENT SUBMITTED` requires a server-confirmed, unexpired R2 upload receipt.
+- Terms acceptance is deterministic rather than model-interpreted: web chat accepts only its version/hash-bound checkbox and button action; current SMS presentations accept the explicit whole-message allowlist `I AGREE`, `AGREE`, `I ACCEPT`, `ACCEPT`, `I AGREE TO THE TERMS`, `I ACCEPT THE TERMS`, `YES, I AGREE`, and `YES, I ACCEPT`, with case, whitespace, and safe trailing punctuation normalization; prior and legacy phrases remain bound to their presentation contracts, and Sara must never summarize or interpret the published legal Terms document while separate staff-approved policy FAQs may still be answered from Knowledge.
 - Public staff registration defaults to disabled; `NEXT_PUBLIC_STAFF_REGISTRATION_ENABLED=true` is an explicit bootstrap/admin exception, not a production default.
 
 ## Verification
