@@ -538,7 +538,7 @@ export const submitGuestPayment = mutation({
         await ctx.db.patch(conversation._id, {
           stage: "payment_submitted",
           status: smsOptedOut ? "closed" : "waiting_for_staff",
-          aiEnabled: false,
+          aiEnabled: !smsOptedOut && conversation.aiEnabled,
           controlVersion: (conversation.controlVersion || 0) + 1,
           updatedAt: now,
         });

@@ -48,6 +48,7 @@
 - Staff-only conversation deletion cascades through messages, agent runs, and message outbox rows; it clears the deleted public conversation ID from the preserved ticket and preserves contacts, SMS consent, reservation events, and webhook records.
 - Treat normalized-phone SMS consent as authoritative; queue checks are advisory and every paid SMS path must recheck consent and current policy immediately before provider delivery.
 - Ticket lifecycle SMS claims are a closed event set for `PRICE SENT`, `PAYMENT SUBMITTED`, `PAYMENT VERIFIED`, and `BOOKING CONFIRMED`; final confirmation must reject ticket, phone, consent-version, settings, enablement, test-mode, or allowlist changes and successful completion stamps at most one provider acceptance per ticket/status.
+- Guest payment submission and later paid/confirmed status synchronization must preserve the conversation's existing active Sara state; they must not resume an already paused conversation or override STOP, staff control, handoff, cancellation, or consent gates.
 - Finalizing a ticket as `PAYMENT VERIFIED` or `BOOKING CONFIRMED` must atomically reject overlapping one-unit stays while preserving same-day checkout/check-in turnover.
 
 ## Verification

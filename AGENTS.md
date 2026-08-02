@@ -88,6 +88,7 @@ When the user requests a durable behavior change, record it here or in the relev
 
 - After current Terms acceptance, Sara must immediately send authorized payment instructions on web and SMS; guests may request the instructions again later, and repeat delivery is allowed.
 - SMS Terms acceptance must allow explicit whole-message agree/accept phrases, ignore capitalization, surrounding whitespace, and trailing periods, commas, or exclamation marks, and reject ambiguous, negative, questioning, or malformed replies; web acceptance remains checkbox/button only.
+- Payment submission and later paid/confirmed ticket statuses must preserve an active Sara conversation; only STOP, explicit staff control or reply, handoff, cancellation, or another existing safety gate may pause it.
 
 ## Work Guidance
 
