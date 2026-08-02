@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   Check,
   CheckCircle2,
   ChevronLeft,
+  ChevronRight,
   Copy,
   CreditCard,
   ImagePlus,
@@ -29,6 +30,7 @@ const STEPS = [
 
 export default function PayDialog({ open, onOpenChange, onAcceptTerms, onConfirmPayment, paymentOptions, amount }) {
   const activeMethods = paymentOptions?.methods || [];
+  const contentRef = useRef(null);
   const [step, setStep] = useState("terms");
   const [agreed, setAgreed] = useState(false);
   const [method, setMethod] = useState("");
@@ -60,6 +62,10 @@ export default function PayDialog({ open, onOpenChange, onAcceptTerms, onConfirm
     const timeout = setTimeout(() => setCopyState("idle"), 2000);
     return () => clearTimeout(timeout);
   }, [copyState]);
+
+  useEffect(() => {
+    if (open && contentRef.current) contentRef.current.scrollTop = 0;
+  }, [open, step]);
 
   const reset = () => {
     setStep("terms");
@@ -158,7 +164,7 @@ export default function PayDialog({ open, onOpenChange, onAcceptTerms, onConfirm
         const current = index === currentStepIndex;
         return (
           <div key={item.id} className="text-center">
-            <div className={`mx-auto flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${complete ? "bg-[#b48a4f] text-white" : current ? "bg-[#25211d] text-white" : "bg-[#eee7dc] text-[#9a8f80]"}`}>
+            <div className={`mx-auto flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold sm:h-7 sm:w-7 sm:text-xs ${complete ? "bg-[#b48a4f] text-white" : current ? "bg-[#25211d] text-white" : "bg-[#eee7dc] text-[#9a8f80]"}`}>
               {complete ? <Check className="h-3.5 w-3.5" /> : index + 1}
             </div>
             <p className={`mt-1 text-[10px] font-bold uppercase tracking-[0.12em] ${current || complete ? "text-[#6f4b27]" : "text-[#a59a8d]"}`}>{item.label}</p>
@@ -208,9 +214,9 @@ export default function PayDialog({ open, onOpenChange, onAcceptTerms, onConfirm
           </div>
         ) : (
           <>
-            <div className="shrink-0 border-b border-[#eadfce] bg-white px-5 pb-4 pt-5 pr-14 sm:px-6 sm:pr-14">
+            <div className="shrink-0 border-b border-[#eadfce] bg-white px-4 pb-3 pt-4 pr-14 sm:px-6 sm:pb-4 sm:pt-5 sm:pr-14">
               <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#25211d] text-[#f5d9a6]">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#25211d] text-[#f5d9a6] sm:h-10 sm:w-10">
                   <ShieldCheck className="h-5 w-5" />
                 </span>
                 <div className="min-w-0">
@@ -218,15 +224,15 @@ export default function PayDialog({ open, onOpenChange, onAcceptTerms, onConfirm
                   <p className="mt-0.5 text-lg font-semibold">{fmtMoney(amount)}</p>
                 </div>
               </div>
-              <div className="mt-4">{renderProgress()}</div>
+              <div className="mt-3 sm:mt-4">{renderProgress()}</div>
             </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6">
+            <div ref={contentRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6 sm:py-5">
               {step === "terms" && (
                 <div className="space-y-4">
                   <div>
-                    <DialogTitle className="text-2xl">First, review and agree</DialogTitle>
-                    <DialogDescription className="mt-2 leading-relaxed text-[#766b5f]">
+                    <DialogTitle className="text-xl sm:text-2xl">First, review and agree</DialogTitle>
+                    <DialogDescription className="mt-1.5 leading-relaxed text-[#766b5f] sm:mt-2">
                       Read the exact booking agreement below before continuing to payment.
                     </DialogDescription>
                   </div>
@@ -235,7 +241,7 @@ export default function PayDialog({ open, onOpenChange, onAcceptTerms, onConfirm
                     Open Terms version {paymentOptions?.termsVersion} in a new tab
                   </Link>
 
-                  <div className="max-h-56 overflow-y-auto whitespace-pre-wrap rounded-2xl border border-[#ddd5c9] bg-white px-4 py-4 text-xs leading-relaxed text-[#4d443b] shadow-inner">
+                  <div className="whitespace-pre-wrap rounded-2xl border border-[#ddd5c9] bg-white px-4 py-4 text-xs leading-relaxed text-[#4d443b]">
                     {paymentOptions?.termsContent || "Published Terms are unavailable. Please contact the reservations team."}
                   </div>
 
@@ -243,21 +249,6 @@ export default function PayDialog({ open, onOpenChange, onAcceptTerms, onConfirm
                     <Info className="mt-0.5 h-4 w-4 shrink-0" />
                     <p>A {fmtMoney(paymentOptions?.cleaningFee || 0)} cleaning fee is paid directly to the Ritz at check-in and is not included in your {fmtMoney(amount)} private rate.</p>
                   </div>
-
-                  <label htmlFor="payment-terms-agreement" className={`flex cursor-pointer items-start gap-3 rounded-2xl border-2 bg-white px-4 py-4 transition-colors ${agreed ? "border-[#8a5c2e] bg-[#fff8ec]" : "border-[#ddd5c9] hover:border-[#c9ad83]"}`}>
-                    <Checkbox
-                      id="payment-terms-agreement"
-                      checked={agreed}
-                      onCheckedChange={(checked) => setAgreed(checked === true)}
-                      className="mt-0.5 h-5 w-5 border-[#8a5c2e] data-[state=checked]:border-[#8a5c2e] data-[state=checked]:bg-[#8a5c2e]"
-                    />
-                    <span>
-                      <span className="block text-sm font-semibold text-[#25211d]">I have read and agree</span>
-                      <span className="mt-1 block text-xs leading-relaxed text-[#766b5f]">
-                        {paymentOptions?.agreementText || `I agree to the Terms (${paymentOptions?.termsVersion}).`}
-                      </span>
-                    </span>
-                  </label>
                 </div>
               )}
 
@@ -371,9 +362,26 @@ export default function PayDialog({ open, onOpenChange, onAcceptTerms, onConfirm
 
             <div className="shrink-0 border-t border-[#eadfce] bg-white px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-4 sm:px-6 sm:pb-5">
               {step === "terms" && (
-                <Button className="h-12 w-full rounded-full bg-[#25211d] text-white hover:bg-[#3a3028]" disabled={!agreed || accepting || !paymentOptions?.termsContent} onClick={acceptTerms}>
-                  {accepting ? <><Loader2 className="h-4 w-4 animate-spin" /> Recording agreement...</> : <>I agree, continue <CreditCard className="h-4 w-4" /></>}
-                </Button>
+                <>
+                  <label htmlFor="payment-terms-agreement" className={`flex cursor-pointer items-start gap-3 rounded-xl border-2 px-3 py-3 transition-colors ${agreed ? "border-[#8a5c2e] bg-[#fff8ec]" : "border-[#ddd5c9] bg-white hover:border-[#c9ad83]"}`}>
+                    <Checkbox
+                      id="payment-terms-agreement"
+                      checked={agreed}
+                      onCheckedChange={(checked) => setAgreed(checked === true)}
+                      className="mt-0.5 h-5 w-5 shrink-0 border-[#8a5c2e] data-[state=checked]:border-[#8a5c2e] data-[state=checked]:bg-[#8a5c2e]"
+                    />
+                    <span className="text-xs font-medium leading-relaxed text-[#4d443b]">
+                      {paymentOptions?.agreementText || `I agree to the Terms (${paymentOptions?.termsVersion}).`}
+                    </span>
+                  </label>
+                  <Button className="mt-3 h-12 w-full rounded-full bg-[#25211d] text-white hover:bg-[#3a3028]" disabled={!agreed || accepting || !paymentOptions?.termsContent} onClick={acceptTerms}>
+                    {accepting
+                      ? <><Loader2 className="h-4 w-4 animate-spin" /> Recording agreement...</>
+                      : agreed
+                        ? <>I agree, continue <ChevronRight className="h-4 w-4" /></>
+                        : "Check the box to continue"}
+                  </Button>
+                </>
               )}
 
               {step === "method" && (
