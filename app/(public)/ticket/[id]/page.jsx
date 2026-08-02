@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import {
   ArrowLeft,
   BadgeCheck,
@@ -42,6 +42,15 @@ const FLOW_STEPS = [
   { status: "PAYMENT VERIFIED", label: "Payment verified", description: "Your payment has cleared." },
   { status: "BOOKING CONFIRMED", label: "Booking confirmed", description: "Your stay is finalized." },
 ];
+
+async function responseError(response, fallback) {
+  try {
+    const data = await response.json();
+    return new Error(data.error || fallback);
+  } catch {
+    return new Error(fallback);
+  }
+}
 
 function Field({ label, value }) {
   return (
@@ -216,10 +225,22 @@ export default function TicketPage() {
   const paymentOptions = usePublicPaymentOptions(id);
   const { acceptGuestTerms, submitGuestPayment } = useGuestPaymentActions();
   const [payOpen, setPayOpen] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(false);
+  const [guideShown, setGuideShown] = useState(false);
   const [paymentProofUrl, setPaymentProofUrl] = useState(null);
   const [retailScreenshotUrl, setRetailScreenshotUrl] = useState(null);
   const [enlargedImage, setEnlargedImage] = useState(null);
   const [imageZoom, setImageZoom] = useState(1);
+
+  useEffect(() => {
+    const hasPrice = ticket?.rateOffered !== null && ticket?.rateOffered !== undefined;
+    const isPayable = ticket && getPaymentState(ticket, hasPrice).canPay && paymentOptions?.available === true;
+
+    if (isPayable && !guideShown) {
+      setGuideOpen(true);
+      setGuideShown(true);
+    }
+  }, [guideShown, paymentOptions?.available, ticket]);
 
   const openImage = (image) => {
     setImageZoom(1);
@@ -322,6 +343,20 @@ export default function TicketPage() {
   const guestList = (ticket.guests || []).filter(Boolean).join(", ");
   const paymentState = getPaymentState(ticket, hasPrice);
   const canPay = paymentState.canPay && paymentOptions?.available === true;
+  const paymentOptionsLoading = paymentState.canPay && paymentOptions === undefined;
+  const paymentUnavailable = paymentState.canPay && paymentOptions && paymentOptions.available !== true;
+  const paymentActionTitle = paymentOptionsLoading
+    ? "Preparing secure payment"
+    : paymentUnavailable
+      ? "Payment temporarily unavailable"
+      : paymentState.title;
+  const paymentActionDescription = paymentOptionsLoading
+    ? "Please wait while we prepare your payment options."
+    : paymentUnavailable
+      ? paymentOptions.reason || "Please contact the reservations team for help."
+      : paymentOptions?.termsAccepted
+        ? "Your Terms acceptance is recorded. Choose how to pay, then upload your payment proof."
+        : paymentState.description;
   const isPaymentSubmitted = ticket.status === "PAYMENT SUBMITTED";
   const isPaymentVerified = ticket.status === "PAYMENT VERIFIED";
   const isBookingConfirmed = ticket.status === "BOOKING CONFIRMED";
@@ -339,7 +374,7 @@ export default function TicketPage() {
     });
 
     if (!uploadUrlResponse.ok) {
-      throw new Error("Failed to prepare payment proof upload");
+      throw await responseError(uploadUrlResponse, "Failed to prepare payment proof upload");
     }
 
     const { key, uploadUrl } = await uploadUrlResponse.json();
@@ -358,7 +393,7 @@ export default function TicketPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ticketId: ticket.id, key }),
     });
-    if (!confirmResponse.ok) throw new Error("Failed to verify the uploaded payment proof");
+    if (!confirmResponse.ok) throw await responseError(confirmResponse, "Failed to verify the uploaded payment proof");
 
     return key;
   };
@@ -379,6 +414,11 @@ export default function TicketPage() {
     }
   };
 
+  const openPaymentFlow = () => {
+    setGuideOpen(false);
+    setPayOpen(true);
+  };
+
   return (
     <div className="min-h-screen bg-[#f7f1e8] text-[#25211d]">
       <header className="border-b border-[#eadfce] bg-[#fffaf3]/90 backdrop-blur-xl md:sticky md:top-0 md:z-30">
@@ -394,9 +434,10 @@ export default function TicketPage() {
       </header>
 
       {canPay && (
-        <div className="fixed inset-x-0 top-0 z-40 border-b border-[#eadfce] bg-[#fffaf3]/95 p-3 shadow-[0_12px_30px_rgba(74,47,29,0.12)] backdrop-blur md:hidden">
-          <Button size="lg" className="h-12 w-full rounded-full bg-[#25211d] text-white hover:bg-[#3a3028]" onClick={() => setPayOpen(true)}>
-            <CreditCard className="mr-2 h-4 w-4" /> Secure for {fmtMoney(ticket.rateOffered)}
+        <div className="fixed inset-x-0 top-0 z-40 border-b border-[#eadfce] bg-[#fffaf3]/95 px-3 pb-3 pt-2 shadow-[0_12px_30px_rgba(74,47,29,0.12)] backdrop-blur md:hidden">
+          <p className="mb-1 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-[#8a5c2e]">Next step: reserve your stay</p>
+          <Button size="lg" className="relative h-12 w-full rounded-full bg-[#25211d] text-white hover:bg-[#3a3028] motion-safe:animate-pulse [animation-iteration-count:3]" onClick={openPaymentFlow}>
+            <CreditCard className="mr-2 h-4 w-4" /> Secure reservation · {fmtMoney(ticket.rateOffered)}
           </Button>
         </div>
       )}
@@ -499,23 +540,32 @@ export default function TicketPage() {
             <section className="rounded-[1.75rem] border border-[#e8dfd2] bg-white p-5 shadow-sm shadow-[#4a2f1d]/5">
               <div className="flex items-start gap-3">
                 <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#f1e6d6] text-[#8a5c2e]">
-                  {canPay ? <ShieldCheck className="h-5 w-5" /> : isPaymentSubmitted ? <Loader2 className="h-5 w-5 animate-spin" /> : <BadgeCheck className="h-5 w-5" />}
+                  {canPay ? <ShieldCheck className="h-5 w-5" /> : isPaymentSubmitted || paymentOptionsLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <BadgeCheck className="h-5 w-5" />}
                 </span>
                 <div>
-                  <h2 className="text-lg font-semibold text-[#25211d]">{paymentState.title}</h2>
-                  <p className="mt-1 text-sm leading-relaxed text-[#766b5f]">{paymentState.description}</p>
+                  {canPay && <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[#9a6b36]">Your next step</p>}
+                  <h2 className="text-lg font-semibold text-[#25211d]">{paymentActionTitle}</h2>
+                  <p className="mt-1 text-sm leading-relaxed text-[#766b5f]">{paymentActionDescription}</p>
                 </div>
               </div>
 
               {canPay && (
-                <Button size="lg" className="mt-5 hidden h-12 w-full rounded-full bg-[#25211d] text-white hover:bg-[#3a3028] md:flex" onClick={() => setPayOpen(true)}>
-                  <CreditCard className="mr-2 h-4 w-4" /> Secure for {fmtMoney(ticket.rateOffered)}
-                </Button>
+                <>
+                  <div className="mt-4 grid grid-cols-3 gap-2 text-center text-[10px] font-semibold text-[#766b5f]">
+                    <span className="rounded-xl bg-[#faf6ef] px-2 py-2">1. {paymentOptions?.termsAccepted ? "Agreed" : "Agree"}</span>
+                    <span className="rounded-xl bg-[#faf6ef] px-2 py-2">2. Pay</span>
+                    <span className="rounded-xl bg-[#faf6ef] px-2 py-2">3. Upload</span>
+                  </div>
+                  <Button size="lg" className="mt-4 hidden h-12 w-full rounded-full bg-[#25211d] text-white hover:bg-[#3a3028] md:flex motion-safe:animate-pulse [animation-iteration-count:3]" onClick={openPaymentFlow}>
+                    <CreditCard className="mr-2 h-4 w-4" /> Secure reservation · {fmtMoney(ticket.rateOffered)}
+                  </Button>
+                  <p className="mt-3 text-center text-xs text-[#8a7e70]">Usually takes about 2 minutes.</p>
+                </>
               )}
 
               {(isPaymentSubmitted || isPaymentVerified || isBookingConfirmed) && (
                 <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm leading-relaxed text-emerald-800">
-                  {isPaymentSubmitted && `Payment received via ${ticket.paymentMethod || "your selected method"}${ticket.paymentDate ? ` on ${fmtDate(ticket.paymentDate)}` : ""}.`}
+                  {isPaymentSubmitted && `Payment proof submitted for ${ticket.paymentMethod || "your selected method"}${ticket.paymentDate ? ` on ${fmtDate(ticket.paymentDate)}` : ""}.`}
                   {isPaymentVerified && "Your payment has been verified. The final booking confirmation is next."}
                   {isBookingConfirmed && `Your booking is finalized. We look forward to welcoming you at ${settings.hotelName}.`}
                 </div>
@@ -638,12 +688,54 @@ export default function TicketPage() {
           </DialogContent>
         </Dialog>
 
+        <Dialog open={guideOpen} onOpenChange={setGuideOpen}>
+          <DialogContent className="max-w-[calc(100%-2rem)] overflow-hidden rounded-[1.75rem] border-[#dbc7a8] bg-[#fffaf3] p-0 shadow-2xl sm:max-w-md">
+            <div className="bg-[#211b17] px-6 pb-6 pt-8 text-center text-white">
+              <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#f5d9a6] text-[#25211d] shadow-lg motion-safe:animate-bounce [animation-iteration-count:2]">
+                <ShieldCheck className="h-7 w-7" />
+              </span>
+              <p className="mt-4 text-[11px] font-bold uppercase tracking-[0.2em] text-[#d7c2a3]">Your quote is ready</p>
+              <DialogTitle className="mt-2 text-2xl leading-tight">Ready to reserve your stay?</DialogTitle>
+              <DialogDescription className="mt-2 text-sm leading-relaxed text-white/70">
+                Follow these three simple steps. It usually takes about 2 minutes.
+              </DialogDescription>
+            </div>
+
+            <div className="space-y-3 px-5 py-5">
+              {[
+                paymentOptions?.termsAccepted
+                  ? ["1", "Terms accepted", "Your current booking agreement is already recorded."]
+                  : ["1", "Agree to the Terms", "Read the booking agreement and check the box."],
+                ["2", "Send your payment", "Choose a method and follow the instructions."],
+                ["3", "Upload your screenshot", "Send your receipt so our team can verify it."],
+              ].map(([number, title, description]) => (
+                <div key={number} className="flex items-center gap-3 rounded-2xl border border-[#eadfce] bg-white px-3 py-3">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f1e6d6] text-sm font-bold text-[#8a5c2e]">{number}</span>
+                  <div>
+                    <p className="text-sm font-semibold text-[#25211d]">{title}</p>
+                    <p className="mt-0.5 text-xs leading-relaxed text-[#766b5f]">{description}</p>
+                  </div>
+                </div>
+              ))}
+
+              <Button size="lg" className="mt-2 h-[3.25rem] w-full rounded-full bg-[#25211d] text-white hover:bg-[#3a3028]" onClick={openPaymentFlow}>
+                <CreditCard className="mr-2 h-4 w-4" /> Secure reservation · {fmtMoney(ticket.rateOffered)}
+              </Button>
+              <button type="button" className="w-full py-1 text-sm font-medium text-[#766b5f] underline-offset-4 hover:underline" onClick={() => setGuideOpen(false)}>
+                Not now, view reservation details
+              </button>
+              <p className="text-center text-[11px] leading-relaxed text-[#8a7e70]">Your reservation is finalized only after payment is verified.</p>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         <PayDialog
           open={payOpen}
           onOpenChange={setPayOpen}
           onAcceptTerms={(termsVersion, termsHash) => acceptGuestTerms(ticket.id, termsVersion, termsHash)}
           onConfirmPayment={handlePayment}
           paymentOptions={paymentOptions}
+          amount={ticket.rateOffered}
         />
       </main>
     </div>
