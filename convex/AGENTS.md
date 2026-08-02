@@ -9,7 +9,7 @@
 - `auth.ts` owns Convex Auth provider configuration, including Resend-backed password reset email delivery.
 - `auth.config.ts` owns Convex Auth client trust configuration.
 - `http.ts` owns Convex HTTP routes, including auth endpoints.
-- `schema.ts` owns Convex database schema tables, including Auth, tickets/settings/dashboard preferences, contacts, conversations, messages, Knowledge, immutable Terms, payment-upload receipts, phone-level SMS consent, reservation events, agent runs, SMS outbox, and webhook events.
+- `schema.ts` owns Convex database schema tables, including Auth, tickets/settings/dashboard preferences, contacts, conversations, messages, Knowledge, immutable Terms, payment-upload receipts, phone-level SMS consent, reservation events, quote-webhook deliveries, agent runs, SMS outbox, and webhook events.
 - `tickets.ts` owns reservation ticket queries, public Terms/payment gates, confirmed proof-receipt consumption, paginated/filterable dashboard queries, export queries, mutations, persisted status normalization, lifecycle guest-SMS claim/confirm/finish fencing, searchable ticket index fields, index-field backfill, and legacy ticket import.
 - `settings.ts` owns shared app settings query and mutation, including email alert settings stored in the main settings document.
 - `dashboardPreferences.ts` owns per-authenticated-user dashboard preference reads and upserts keyed by Convex Auth user ID.
@@ -20,6 +20,7 @@
 - `termsContract.ts` owns the canonical versioned web agreement label, current explicit agree/accept SMS allowlist, deterministic case/whitespace/safe-trailing-punctuation normalization, presentation-bound prior/legacy classifiers, and acceptance-attempt classification.
 - `smsConsent.ts` owns canonical normalized-phone consent reads and explicit legacy STOP/START recovery.
 - `messaging.ts` owns owned Quo webhook leases, SMS outbox idempotency, final consent/control/policy claims, send attempts, and delivery-state updates.
+- `quoteWebhook.ts` owns idempotent quote-webhook enqueueing, authoritative persisted-ticket payloads, delivery leases, bounded retries, and response/error records.
 - `terms.ts` owns public immutable Terms-version reads.
 - `tsconfig.json` owns TypeScript settings for Convex backend files.
 
@@ -50,6 +51,7 @@
 - Ticket lifecycle SMS claims are a closed event set for `PRICE SENT`, `PAYMENT SUBMITTED`, `PAYMENT VERIFIED`, and `BOOKING CONFIRMED`; final confirmation must reject ticket, phone, consent-version, settings, enablement, test-mode, or allowlist changes and successful completion stamps at most one provider acceptance per ticket/status.
 - Guest payment submission and later paid/confirmed status synchronization must preserve the conversation's existing active Sara state; they must not resume an already paused conversation or override STOP, staff control, handoff, cancellation, or consent gates.
 - Finalizing a ticket as `PAYMENT VERIFIED` or `BOOKING CONFIRMED` must atomically reject overlapping one-unit stays while preserving same-day checkout/check-in turnover.
+- Operational creation of a `QUOTE REQUESTED` ticket through `tickets.create` or `sara.createQuoteRequest` must enqueue exactly one `quote-created:<ticketId>` delivery; legacy imports do not replay historical quote webhooks.
 
 ## Verification
 

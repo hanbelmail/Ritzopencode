@@ -4,6 +4,7 @@ import { mutation, query } from "./_generated/server";
 import { isAutomationKey, isStaff, requireStaff, requireStaffOrAutomation } from "./security";
 import { getSmsConsent, normalizeSmsPhone } from "./smsConsent";
 import { termsAgreementText, WEB_TERMS_ACCEPTANCE_CONTRACT } from "./termsContract";
+import { queueQuoteWebhook } from "./quoteWebhook";
 
 const legacyStatusMap: Record<string, string> = {
   QUOTE: "QUOTE REQUESTED",
@@ -714,6 +715,7 @@ export const create = mutation({
       updatedAt: now,
       ...ticketIndexFields(ticket),
     });
+    await queueQuoteWebhook(ctx, ticket);
 
     return ticket;
   },

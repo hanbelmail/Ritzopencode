@@ -14,7 +14,7 @@
 - `api/payment-proof/` owns private Cloudflare R2 signed upload, server-side upload confirmation, and signed view URL endpoints for payment screenshots.
 - `api/retail-price-screenshot/` owns private Cloudflare R2 signed upload and signed view URL endpoints for Ritz website retail price screenshots.
 - `api/booking-confirmed-hotel-alert-attachments/` owns private Cloudflare R2 signed upload URLs for the two PDF attachments configured for booking-confirmed hotel email alerts.
-- `api/quote-webhook/` owns server-side forwarding of public quote tickets to the configured external webhook.
+- `api/quote-webhook/` preserves manual forwarding to the configured external webhook; normal ticket creation uses the durable Convex quote-webhook outbox instead.
 - `api/quote-alerts/` owns server-side new quote staff email alerts through Resend and stamps tickets after successful delivery.
 - `api/payment-submitted-alerts/` owns independent server-side payment-submitted staff email and guest SMS delivery, including payment proof screenshot attachments from R2 when present.
 - `api/booking-request-hotel-alerts/` owns independent server-side payment-verified booking request hotel email and guest SMS delivery, with the fixed `1609E` email subject.
@@ -36,7 +36,7 @@
 - Price-sent notification API routes must send guest emails server-side through Resend when `priceSentGuestEmailEnabled` is active, attach the retail price screenshot from R2 when `retailPriceScreenshotKey` is present, optionally send the same email and attachment to active staff recipients when the disabled-by-default staff copy setting is enabled, and stamp tickets only after each successful delivery.
 - Price-sent notification API routes must send Quo guest SMS when `priceSentSmsEnabled` is active and the ticket has an E.164 phone number, render the selected `priceSentSmsTemplates` entry with quote pricing placeholders, and stamp `priceSentSmsSentAt` only after Quo accepts delivery.
 - Ticket API updates that change price or stay-date inputs must recalculate derived pricing fields with `lib/calc.js` and Convex-backed settings.
-- Quote webhook forwarding must read `webhookUrl` and `webhookEnabled` from Convex-backed settings before calling any external URL.
+- Automatic quote webhook forwarding must be queued by Convex from persisted `QUOTE REQUESTED` tickets, use the current Convex-backed `webhookUrl` and `webhookEnabled` settings, and not depend on a browser request; the manual compatibility route must also read those settings before forwarding.
 - Quote alert delivery must read email alert settings and active staff recipients from Convex-backed settings, send through server-side Resend credentials, and stamp `quoteAlertEmailSentAt` only after successful delivery.
 - Payment-submitted alert delivery must read email alert settings and active staff recipients from Convex-backed settings, attach the private payment proof screenshot from R2 when `paymentScreenshotKey` is present, and stamp `paymentSubmittedStaffEmailSentAt` only after successful delivery.
 - Booking requests hotel alert delivery must read email alert settings and active hotel recipients from Convex-backed settings after `PAYMENT VERIFIED`, use the fixed `1609E` subject, and stamp `bookingRequestHotelEmailSentAt` only after successful delivery.

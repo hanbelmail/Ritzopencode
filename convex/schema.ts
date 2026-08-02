@@ -175,6 +175,29 @@ export default defineSchema({
   })
     .index("by_ticket_createdAt", ["ticketId", "createdAt"])
     .index("by_idempotencyKey", ["idempotencyKey"]),
+  quoteWebhookDeliveries: defineTable({
+    ticketId: v.string(),
+    idempotencyKey: v.string(),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("sending"),
+      v.literal("sent"),
+      v.literal("failed"),
+      v.literal("skipped")
+    ),
+    attempts: v.number(),
+    retryable: v.optional(v.boolean()),
+    responseStatus: v.optional(v.number()),
+    lastError: v.optional(v.string()),
+    claimToken: v.optional(v.string()),
+    leaseExpiresAt: v.optional(v.string()),
+    createdAt: v.string(),
+    updatedAt: v.string(),
+    sentAt: v.optional(v.string()),
+  })
+    .index("by_ticketId", ["ticketId"])
+    .index("by_idempotencyKey", ["idempotencyKey"])
+    .index("by_status", ["status"]),
   agentRuns: defineTable({
     conversationId: v.id("conversations"),
     inboundMessageId: v.string(),

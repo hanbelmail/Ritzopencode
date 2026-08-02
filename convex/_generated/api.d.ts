@@ -15,6 +15,7 @@ import type * as http from "../http.js";
 import type * as knowledge from "../knowledge.js";
 import type * as knowledgeSeed from "../knowledgeSeed.js";
 import type * as messaging from "../messaging.js";
+import type * as quoteWebhook from "../quoteWebhook.js";
 import type * as sara from "../sara.js";
 import type * as saraAvailability from "../saraAvailability.js";
 import type * as security from "../security.js";
@@ -38,6 +39,7 @@ declare const fullApi: ApiFromModules<{
   knowledge: typeof knowledge;
   knowledgeSeed: typeof knowledgeSeed;
   messaging: typeof messaging;
+  quoteWebhook: typeof quoteWebhook;
   sara: typeof sara;
   saraAvailability: typeof saraAvailability;
   security: typeof security;

@@ -89,13 +89,6 @@ export default function QuoteForm() {
       rateOffered: null,
       costPerNight: null,
     });
-    fetch("/api/quote-webhook", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ticket }),
-    }).catch((error) => {
-      console.error("Failed to send quote webhook", error);
-    });
     fetch("/api/quote-alerts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

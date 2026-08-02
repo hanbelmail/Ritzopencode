@@ -3,6 +3,7 @@ import { mutation, query } from "./_generated/server";
 import { isAutomationKey, requireServiceKey } from "./security";
 import { availableRangesForWindow, isCalendarDate, monthAvailabilityWindow } from "./saraAvailability";
 import { getSmsConsent, normalizeSmsPhone } from "./smsConsent";
+import { queueQuoteWebhook } from "./quoteWebhook";
 import {
   classifyTermsReply,
   isReplyAfterTermsPresentation,
@@ -408,6 +409,7 @@ export const createQuoteRequest = mutation({
       updatedAt: now,
       ...ticketIndexFields(ticket),
     });
+    await queueQuoteWebhook(ctx, ticket);
     await ctx.db.insert("reservationEvents", {
       ticketId: ticket.id,
       conversationId: conversation._id,
