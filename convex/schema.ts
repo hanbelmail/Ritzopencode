@@ -104,6 +104,9 @@ export default defineSchema({
     lastMessageAt: v.string(),
     lastInboundAt: v.optional(v.string()),
     lastAgentReplyAt: v.optional(v.string()),
+    smsInitialDisclosureAt: v.optional(v.string()),
+    smsInitialDisclosurePendingMessageId: v.optional(v.string()),
+    smsInitialDisclosurePendingAt: v.optional(v.string()),
     messageCount: v.number(),
     createdAt: v.string(),
     updatedAt: v.string(),
@@ -211,6 +214,7 @@ export default defineSchema({
     createdAt: v.string(),
     completedAt: v.optional(v.string()),
     controlVersion: v.optional(v.number()),
+    smsInitialDisclosureClaimed: v.optional(v.boolean()),
   })
     .index("by_conversation_createdAt", ["conversationId", "createdAt"])
     .index("by_inboundMessageId", ["inboundMessageId"]),

@@ -30,9 +30,10 @@
 - `Providers.jsx` and `query-client.js` own app-wide client context providers outside Convex Auth.
 - `calc.js` owns money formatting and reservation price/date calculations.
 - `utils.js` owns shared utility helpers such as class-name composition.
-- `sara-date-resolver.js` owns deterministic Hawaii-current-date, explicit guest-year preservation, next-future date/month inference, and December-to-January stay rollover before Sara tools execute.
-- `sara-prompt.js` owns Sara's fixed identity, source hierarchy, Hawaii-relative date interpretation, exact-stay versus month-range availability behavior, booking/payment permissions, unsupported-action restraint, legal-Terms non-interpretation boundary, handoff rules, channel style, and prompt version.
-- `sara-agent-server.js` owns the server-only OpenAI Responses tool loop, strict exact-stay and month-availability tool schemas, control-fenced tool execution, deterministic channel-specific Terms presentation and acceptance retry messages, channel formatting, and agent-run completion.
+- `defaults.js` also owns Sona's code-controlled display name, exact approved website opening message, adaptive SMS identity disclosure, and normalization over persisted legacy branding values.
+- `sara-date-resolver.js` owns deterministic Hawaii-current-date, explicit guest-year preservation, next-future date/month inference, and December-to-January stay rollover before Sona tools execute.
+- `sara-prompt.js` owns Sona's fixed identity, source hierarchy, Hawaii-relative date interpretation, exact-stay versus month-range availability behavior, booking/payment permissions, unsupported-action restraint, legal-Terms non-interpretation boundary, handoff rules, channel style, and prompt version.
+- `sara-agent-server.js` owns the server-only OpenAI Responses tool loop, strict exact-stay and month-availability tool schemas, control-fenced tool execution, provider-confirmed deterministic first-SMS disclosure without truncating authorized payment instructions, deterministic channel-specific Terms presentation and acceptance retry messages, channel formatting, and agent-run completion.
 - `sara-payment-instructions.js` owns deterministic immediate and repeat payment replies containing configured methods, the secure ticket link, and the staff-verification notice without model rewriting or SMS truncation.
 - `quo-server.js` owns the shared server-only Quo text transport, sender/recipient normalization, timeout, and rejected-versus-ambiguous provider error classification.
 
@@ -46,11 +47,11 @@
 - Keep R2 credentials server-only; client components must use API routes for signed payment proof, retail price screenshot, and booking-confirmed alert PDF upload URLs.
 - Do not duplicate status, payment method, settings, or ticket schema constants in route or component files.
 - `normalizePhone()` converts formatted 10-digit US/Canada numbers and 11-digit North American numbers beginning with `1` to persisted `+1` E.164 values while preserving already international `+` numbers.
-- Use Convex transcripts and structured state as Sara's durable context; OpenAI Responses must use `store: false`, bounded history, bounded output, and no browser-provided model or system instructions.
+- Use Convex transcripts and structured state as Sona's durable context; OpenAI Responses must use `store: false`, bounded history, bounded output, and no browser-provided model or system instructions.
 - Keep property facts in approved Knowledge or dynamic settings tools, Terms behind the priced-ticket gate, and payment instructions behind recorded Terms acceptance.
-- Sara may offer or claim an operational action only when an available tool implements it and the tool call succeeds; hotel-controlled services must go to the hotel front desk or a human reservations specialist.
+- Sona may offer or claim an operational action only when an available tool implements it and the tool call succeeds; hotel-controlled services must go to the hotel front desk or a human reservations specialist.
 - Broad calendar-month availability requests must use the month-availability tool and return its contiguous check-in/check-out ranges; do not require exact guest dates before showing those verified options.
-- Sara must preserve the latest non-conflicting year explicitly supplied in guest date context; without one, resolve the next non-past Hawaii occurrence and December-to-January checkout rollover deterministically before availability or quote tools run. Do not ask for a year unless the guest supplied conflicting years.
+- Sona must preserve the latest non-conflicting year explicitly supplied in guest date context; without one, resolve the next non-past Hawaii occurrence and December-to-January checkout rollover deterministically before availability or quote tools run. Do not ask for a year unless the guest supplied conflicting years.
 - Keep the published Terms body outside model context. Model-authored text must not quote, summarize, paraphrase, explain, compare, or interpret that legal document; deterministic server copy owns its link and acceptance instructions while approved standalone policy FAQs remain available through Knowledge.
 - Web transcript text never records Terms acceptance; current SMS presentations invite an explicit agree or accept reply, while deterministic Convex classification owns the approved phrase allowlist, case/whitespace/safe-trailing-punctuation normalization, rejection retries, and presentation-bound prior/legacy compatibility.
 - Keep default/client payment methods instruction-free; configured instructions may leave the server only through a current Terms-hash and payable-ticket gate.
@@ -66,9 +67,10 @@
 ## Verification
 
 - Run `npm run build` after provider, auth, persistence, or calculation changes when feasible.
-- Run `npm test` after changing Sara date/year resolution.
-- Run `npm test` after changing Sara Terms presentation or acceptance handling.
-- Run `npm test` after changing deterministic Sara payment-instruction formatting or delivery behavior.
+- Run `npm test` after changing Sona branding, prompt identity, or first-response behavior.
+- Run `npm test` after changing Sona date/year resolution.
+- Run `npm test` after changing Sona Terms presentation or acceptance handling.
+- Run `npm test` after changing deterministic Sona payment-instruction formatting or delivery behavior.
 
 ## Child DOX Index
 

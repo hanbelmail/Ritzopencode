@@ -26,7 +26,7 @@ export async function POST(request) {
     const context = await client.query(api.conversations.getContext, { serviceKey, publicId });
     if (!context || context.conversation.channel !== "sms" || !context.conversation.externalParticipant) return jsonError("SMS conversation not found", 404);
     const settings = { ...DEFAULT_SETTINGS, ...((await client.query(api.settings.get, { serviceKey })) || {}) };
-    if (!settings.saraSmsEnabled) return jsonError("Sara SMS is disabled", 409);
+    if (!settings.saraSmsEnabled) return jsonError("Sona SMS is disabled", 409);
     const to = normalizePhone(context.conversation.externalParticipant);
     if (settings.saraSmsTestMode && !(settings.saraSmsAllowlist || []).some((phone) => normalizePhone(phone) === to)) {
       return jsonError("Recipient is not on the SMS test allowlist", 403);

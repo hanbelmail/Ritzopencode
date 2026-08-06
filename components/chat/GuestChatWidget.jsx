@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { SONA_AGENT_NAME, SONA_INITIAL_MESSAGE } from "@/lib/defaults";
 import { useSettings } from "@/lib/store";
 
 function newMessageId() {
@@ -106,7 +107,8 @@ export default function GuestChatWidget() {
   const [acceptingTerms, setAcceptingTerms] = useState(false);
   const [termsError, setTermsError] = useState("");
   const transcriptRef = useRef(null);
-  const agentName = settings?.saraAgentName || "Sara";
+  const agentName = settings?.saraAgentName || SONA_AGENT_NAME;
+  const initialMessage = settings?.saraInitialMessage || SONA_INITIAL_MESSAGE;
   const enabled = Boolean(settings?.saraWebEnabled);
 
   useEffect(() => {
@@ -248,8 +250,7 @@ export default function GuestChatWidget() {
         <div ref={transcriptRef} role="log" aria-live="polite" aria-relevant="additions" className="flex-1 space-y-4 overflow-y-auto px-4 py-5">
           {messages.length === 0 && (
             <div className="rounded-2xl border border-[#e6dfd8] bg-white p-4 text-sm leading-relaxed text-[#4d4b46]">
-              <p className="font-medium text-[#252523]">Aloha, I&apos;m {agentName}.</p>
-              <p className="mt-2">I can answer approved property questions, check dates, and collect the details for a private quote. What check-in and check-out dates are you considering?</p>
+              <p>{initialMessage}</p>
             </div>
           )}
           {messages.map((message) => (

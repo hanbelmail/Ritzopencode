@@ -2,7 +2,7 @@ import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { api } from "@/convex/_generated/api";
 import { getConvexClient, getConvexServiceKey, jsonError } from "@/lib/convex-server";
-import { DEFAULT_SETTINGS } from "@/lib/defaults";
+import { DEFAULT_SETTINGS, withDefaultSettings } from "@/lib/defaults";
 import { runSaraAgent, sendAcceptedPaymentInstructions } from "@/lib/sara-agent-server";
 
 export const runtime = "nodejs";
@@ -75,7 +75,7 @@ function requestRateKey(request, serviceKey) {
 }
 
 async function saraSettings(client, serviceKey) {
-  return { ...DEFAULT_SETTINGS, ...((await client.query(api.settings.get, { serviceKey })) || {}) };
+  return withDefaultSettings(await client.query(api.settings.get, { serviceKey }));
 }
 
 async function termsAction(client, serviceKey, context) {
@@ -162,7 +162,7 @@ export async function GET(request) {
       ...(await chatState(client, serviceKey, context)),
     });
   } catch (error) {
-    return jsonError(error.message || "Failed to load Sara", 503);
+    return jsonError(error.message || "Failed to load Sona", 503);
   }
 }
 
@@ -179,7 +179,7 @@ export async function POST(request) {
     const client = getConvexClient();
     const serviceKey = getConvexServiceKey();
     const settings = await saraSettings(client, serviceKey);
-    if (!settings.saraWebEnabled) return jsonError("Sara web chat is not enabled", 503);
+    if (!settings.saraWebEnabled) return jsonError("Sona web chat is not enabled", 503);
     const rate = await client.mutation(api.conversations.consumeWebRateLimit, {
       serviceKey,
       key: requestRateKey(request, serviceKey),
@@ -241,7 +241,7 @@ export async function POST(request) {
         });
         const response = NextResponse.json({
           skipped: true,
-          reason: errorMessage.includes("already processing") ? "Sara is still processing the previous message" : "Sara was paused by the reservations team",
+          reason: errorMessage.includes("already processing") ? "Sona is still processing the previous message" : "Sona was paused by the reservations team",
           ...(await chatState(client, serviceKey, context)),
         }, { status: 202 });
         if (isNewSession) setSessionCookie(response, session);
@@ -253,7 +253,7 @@ export async function POST(request) {
         accessTokenHash: session.accessTokenHash,
       });
       if (!current?.conversation?.aiEnabled) {
-        result = { skipped: true, reason: "Sara was paused by the reservations team" };
+        result = { skipped: true, reason: "Sona was paused by the reservations team" };
       } else {
         const controlVersion = current.conversation.controlVersion || 0;
         await client.mutation(api.sara.handoff, {
@@ -289,7 +289,7 @@ export async function POST(request) {
     if (isNewSession) setSessionCookie(response, session);
     return response;
   } catch (error) {
-    const message = error.message || "Sara could not process the message";
+    const message = error.message || "Sona could not process the message";
     const status = /limit|between|Invalid|not allowed/i.test(message) ? 400 : 500;
     return jsonError(message, status);
   }
@@ -314,7 +314,7 @@ export async function PATCH(request) {
     const client = getConvexClient();
     const serviceKey = getConvexServiceKey();
     const settings = await saraSettings(client, serviceKey);
-    if (!settings.saraWebEnabled) return jsonError("Sara web chat is not enabled", 503);
+    if (!settings.saraWebEnabled) return jsonError("Sona web chat is not enabled", 503);
     const context = await client.query(api.conversations.getContext, {
       serviceKey,
       publicId: session.publicId,
@@ -368,7 +368,7 @@ export async function PATCH(request) {
         });
         payment = { skipped: false, reply, message, outboundMessageId, handedOff: true, degraded: true };
       } else {
-        payment = { skipped: true, reason: "Sara was paused by the reservations team" };
+        payment = { skipped: true, reason: "Sona was paused by the reservations team" };
       }
     }
     const current = await client.query(api.conversations.getContext, {

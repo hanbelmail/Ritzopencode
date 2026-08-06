@@ -17,7 +17,7 @@ const drawerItems = [
   { to: "/clients", label: "Clients", description: "Guest records", icon: Users },
   { to: "/email-dashboard", label: "Email", description: "Alerts and recipients", icon: Mail },
   { to: "/sms-dashboard", label: "SMS", description: "Quote message alerts", icon: MessageSquare },
-  { to: "/sara-dashboard", label: "Sara AI", description: "Concierge and knowledge", icon: Bot },
+  { to: "/sara-dashboard", label: "Sona AI", description: "Concierge and knowledge", icon: Bot },
   { to: "/api-dashboard", label: "API", description: "Integrations and docs", icon: Code },
   { to: "/settings", label: "Settings", description: "Workspace preferences", icon: Settings },
   { to: "#", label: "Automations", description: "Coming soon", icon: Workflow, disabled: true },
@@ -32,7 +32,7 @@ const sideItems = [
   { to: "/clients", label: "Clients", icon: Users },
   { to: "/email-dashboard", label: "Email Dashboard", icon: Mail },
   { to: "/sms-dashboard", label: "SMS Dashboard", icon: MessageSquare },
-  { to: "/sara-dashboard", label: "Sara AI Concierge", icon: Bot },
+  { to: "/sara-dashboard", label: "Sona AI Concierge", icon: Bot },
   { to: "/api-dashboard", label: "API Dashboard", icon: Code },
   { to: "/settings", label: "Settings", icon: Settings },
 ];

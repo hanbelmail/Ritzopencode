@@ -11,13 +11,13 @@
 - `home/` owns public-home-specific quote components.
 - `ticket/` owns single-ticket preview and payment-dialog components.
 - `tickets/` owns staff reservation list, card, table, stats, status badge components, reservation confirmation number table display, and quick editing in the ticket dialog.
-- `chat/AGENTS.md` owns the public Sara chat launcher, dialog, transcript, composer, and web-chat transport behavior.
+- `chat/AGENTS.md` owns the public Sona chat launcher, dialog, transcript, composer, and web-chat transport behavior.
 - `ui/AGENTS.md` owns shadcn-style UI primitives and toast helpers.
 
 ## Local Contracts
 
 - Components must not introduce new persistence contracts; route mutations and storage live in `lib/`.
-- `PublicLayout.jsx` must not mount the Sara guest chat widget on `/ticket` or `/ticket/*` reservation pages.
+- `PublicLayout.jsx` must not mount the Sona guest chat widget on `/ticket` or `/ticket/*` reservation pages.
 - `components/home/QuoteForm.jsx` creates Convex quote tickets through `lib/store.js`; Convex owns quote-webhook delivery after persistence so the browser must not dispatch it.
 - `components/home/QuoteForm.jsx` requires at least one guest name, check-in, check-out, room name, and a valid email before creating a public quote ticket.
 - `components/home/QuoteForm.jsx` auto-selects the only visible room type from settings for public quote requests.
@@ -25,7 +25,7 @@
 - `components/home/QuoteForm.jsx` accepts familiar US/Canada phone formatting, displays the normalized E.164 value after blur, and persists that normalized value.
 - `components/home/QuoteForm.jsx` limits public quote requests to 4 guest names, including children; `components/forms/GuestNamesInput.jsx` accepts optional `maxGuests` for callers that need a cap.
 - `components/forms/ReservationDatePicker.jsx` marks finalized reservations (`PAYMENT VERIFIED`, `BOOKING CONFIRMED`) and must preserve same-day checkout/check-in turnover behavior.
-- `components/ticket/PayDialog.jsx` guides guests through separate Terms, payment-method, and image-proof steps; it displays the exact immutable Terms content and version in the dialog's single content scroller, keeps the version-bound agreement checkbox visible with the Terms action, records acceptance before revealing configured payment instructions, honors an already-current Sara acceptance without overwriting its evidence, validates proof images before upload, and labels completion as proof submitted pending verification.
+- `components/ticket/PayDialog.jsx` guides guests through separate Terms, payment-method, and image-proof steps; it displays the exact immutable Terms content and version in the dialog's single content scroller, keeps the version-bound agreement checkbox visible with the Terms action, records acceptance before revealing configured payment instructions, honors an already-current Sona acceptance without overwriting its evidence, validates proof images before upload, and labels completion as proof submitted pending verification.
 - Keep shared components route-agnostic unless they are in a domain folder such as `home/`, `ticket/`, or `tickets/`.
 - Preserve `@/components/ui/*` import paths for UI primitives.
 
@@ -41,4 +41,4 @@
 ## Child DOX Index
 
 - `ui/AGENTS.md` owns reusable UI primitive components generated or maintained in shadcn style.
-- `chat/AGENTS.md` owns Sara guest chat components.
+- `chat/AGENTS.md` owns Sona guest chat components.

@@ -14,7 +14,7 @@
 - `sms-dashboard/` owns tabbed guest lifecycle SMS settings for `PRICE SENT`, `PAYMENT SUBMITTED`, `PAYMENT VERIFIED`, and `BOOKING CONFIRMED`; each status has an independent disabled-by-default switch and active editable Quo template selection, with three price-sent templates and two templates for each later status.
 - `new/` owns reservation creation and edit saves, the optional staff-entered `reservationConfirmationNumber`, optional retail price screenshot upload to R2, warning before `PRICE SENT` saves without that screenshot, and status-driven email alert triggering after saves.
 - `calendar/`, `clients/`, and `settings/` own their respective staff management views; `settings/` includes hotel info and the persisted app name used for the browser/tab title.
-- `sara-dashboard/` owns Sara web/SMS activation, model and quote-validity settings, approved Terms and workflow messages, SMS test allowlists, Knowledge draft/approval management, conversation review, human pause/resume controls, and confirmed conversation deletion for testing cleanup.
+- `sara-dashboard/` owns Sona web/SMS activation, the code-controlled Sona name and initial disclosure display, model and quote-validity settings, approved Terms and editable handoff messaging, SMS test allowlists, Knowledge draft/approval management, conversation review, human pause/resume controls, and confirmed conversation deletion for testing cleanup.
 
 ## Local Contracts
 
@@ -33,11 +33,11 @@
 - `BOOKING CONFIRMED` saves or updates should trigger the booking confirmed hotel alert API after Convex persistence; the alert sends the hotel confirmation template and up to two configured PDFs to active hotel recipients with subject `Ritz Confirmation #: <reservation confirmation number>` and stamps `bookingConfirmedHotelEmailSentAt`.
 - The same three status notification calls must independently attempt the enabled guest SMS and preserve one successful Quo acceptance per ticket/status; missing or invalid guest data skips SMS without rolling back the reservation status or suppressing staff/hotel email.
 - Public quote creation triggers the new quote staff alert API after Convex persistence; delivery is skipped unless email alerts, the new quote alert, and at least one active staff recipient are configured.
-- Creating a `QUOTE REQUESTED` reservation automatically queues the same durable Convex quote webhook used by public and Sara quote creation; staff pages do not dispatch that webhook themselves.
-- Sara channels are disabled by default; staff must review and publish Knowledge entries individually, configure Terms, and test the website before enabling Quo SMS.
+- Creating a `QUOTE REQUESTED` reservation automatically queues the same durable Convex quote webhook used by public and Sona quote creation; staff pages do not dispatch that webhook themselves.
+- Sona channels are disabled by default; staff must review and publish Knowledge entries individually, configure Terms, and test the website before enabling Quo SMS.
 - Staff human takeover increments the conversation control version and sets `aiEnabled` false. Web replies persist directly; SMS replies require Convex Auth, stable message IDs, active channel/test policy, and current phone consent, and expose delivery state in the transcript.
 - Staff conversation deletion removes conversation-owned transcripts, agent runs, and SMS outbox records; it detaches but preserves linked reservation tickets and preserves contacts, SMS consent, reservation events, and provider webhook history.
-- Syncing the 42 starter Knowledge entries inserts missing drafts and refreshes changed non-archived starter entries; changed approved entries return to draft for staff review, and archived entries remain untouched.
+- Syncing the 42 starter Knowledge entries inserts missing drafts and refreshes changed non-archived starter entries; Sona-only branding migrations preserve approval, other changed approved entries return to draft for staff review, and archived entries remain untouched.
 
 ## Work Guidance
 

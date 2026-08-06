@@ -2,7 +2,7 @@
 
 ## Purpose
 
-- Next.js 15 reservations app for Ritz-Carlton private room quotes, public ticket lookup, staff reservation management, Convex Auth-backed staff authentication, and the shared Sara AI concierge for public web chat and Quo SMS.
+- Next.js 15 reservations app for Ritz-Carlton private room quotes, public ticket lookup, staff reservation management, Convex Auth-backed staff authentication, and the shared Sona AI concierge for public web chat and Quo SMS.
 - Source is JavaScript/JSX with the App Router, Tailwind CSS, shadcn-style UI primitives, Convex backend files, Convex Auth, and Convex-backed reservation/settings persistence.
 - Generated outputs and installed dependencies are present in the workspace but are not source-of-truth work areas.
 
@@ -86,9 +86,10 @@ Default section order:
 
 When the user requests a durable behavior change, record it here or in the relevant child AGENTS.md
 
-- After current Terms acceptance, Sara must immediately send authorized payment instructions on web and SMS; guests may request the instructions again later, and repeat delivery is allowed.
+- After current Terms acceptance, Sona must immediately send authorized payment instructions on web and SMS; guests may request the instructions again later, and repeat delivery is allowed.
 - SMS Terms acceptance must allow explicit whole-message agree/accept phrases, ignore capitalization, surrounding whitespace, and trailing periods, commas, or exclamation marks, and reject ambiguous, negative, questioning, or malformed replies; web acceptance remains checkbox/button only.
-- Payment submission and later paid/confirmed ticket statuses must preserve an active Sara conversation; only STOP, explicit staff control or reply, handoff, cancellation, or another existing safety gate may pause it.
+- Payment submission and later paid/confirmed ticket statuses must preserve an active Sona conversation; only STOP, explicit staff control or reply, handoff, cancellation, or another existing safety gate may pause it.
+- Sona is the guest- and staff-visible concierge name. Web chat must display the approved exact Sona/Mike/private-condo opening message before guest input; the first SMS reply must disclose the same identity and independent-service status while acting on dates already provided. Keep compatibility-sensitive internal `sara*` routes, files, settings, environment variables, cookies, source tags, and function names unchanged.
 
 ## Work Guidance
 
@@ -97,17 +98,17 @@ When the user requests a durable behavior change, record it here or in the relev
 - Treat `lib/store.js` constants and Convex tables as reservation/settings data contracts, including the public home page variant, versioned Terms acceptance, confirmed payment-upload receipts, durable quote-webhook deliveries, email/SMS alert settings, per-status guest SMS templates and delivery stamps, and R2 object-key fields such as `paymentScreenshotKey` and `retailPriceScreenshotKey`; legacy `ritz_*` localStorage keys are read only for one-time browser data migration.
 - Keep public guest flows, staff-authenticated flows, reusable components, and storage/business logic separated by their owning child DOX files.
 - `middleware.js` protects staff routes, including `/email-dashboard` and `/sms-dashboard`, with Convex Auth, skips automatic Convex Auth `code` handling on `/reset-password` so password-reset links keep their verification code, and allows protected API access for `/api/tickets(.*)`, `/api/retail-price-screenshot/upload-url`, and `/api/booking-confirmed-hotel-alert-attachments/upload-url` through either Convex Auth or a server-side `N8N_API_KEY` sent as `Authorization: Bearer <key>` or `x-api-key`.
-- `/api/sara/staff-reply` is Convex Auth staff-only; `N8N_API_KEY` never grants staff reply or Sara control authority.
+- `/api/sara/staff-reply` is Convex Auth staff-only; `N8N_API_KEY` never grants staff reply or Sona control authority.
 - Quo guest SMS delivery is server-only through `QUO_API_KEY` and `QUO_FROM`; `QUO_FROM` must be an E.164 number or Quo `PN...` identifier and guest recipients must use E.164 format.
-- SMS consent is canonical per normalized phone; every conversational, staff, and ticket-lifecycle provider call must pass a final Convex claim that rechecks STOP/START state, channel policy, test allowlist, and current control/message versions.
-- Sara uses one server-side OpenAI Responses tool loop for web and SMS; the browser and model receive no direct Convex mutation credentials, and all CRM actions must remain constrained by `lib/sara-agent-server.js` and `convex/sara.ts`.
-- `SARA_SERVICE_KEY` must use the same secret in the Next.js and Convex environments; it authenticates narrow server-to-Convex Sara operations and must never use a `NEXT_PUBLIC_` name.
-- Keep `SARA_SERVICE_KEY` and `N8N_API_KEY` separate; Sara's key authenticates only Sara domains, while the same `N8N_API_KEY` value in Next.js and Convex authenticates existing ticket automation and delivery-stamp operations.
+- SMS consent is canonical per normalized phone; every conversational, staff, and ticket-lifecycle provider call must pass a final Convex claim that rechecks STOP/START state, channel policy, test allowlist, and current control/message versions. The first Sona SMS disclosure uses one leased conversation claim, remains pending while queued, is released after failed or suppressed delivery, and is durably complete only after provider acceptance or delivery.
+- Sona uses one server-side OpenAI Responses tool loop for web and SMS; the browser and model receive no direct Convex mutation credentials, and all CRM actions must remain constrained by `lib/sara-agent-server.js` and `convex/sara.ts`.
+- `SARA_SERVICE_KEY` must use the same secret in the Next.js and Convex environments; it authenticates narrow server-to-Convex Sona operations and must never use a `NEXT_PUBLIC_` name.
+- Keep `SARA_SERVICE_KEY` and `N8N_API_KEY` separate; Sona's key authenticates only Sona domains, while the same `N8N_API_KEY` value in Next.js and Convex authenticates existing ticket automation and delivery-stamp operations.
 - Keep `saraWebEnabled` and `saraSmsEnabled` off until OpenAI, approved Knowledge, Terms, channel credentials, and staff handoff operations are ready; Quo must remain allowlist-only while `saraSmsTestMode` is active.
-- Sara represents an independent private residence reservation service, identifies itself as AI, and must not imply it is the official Ritz-Carlton hotel reservations desk.
-- Payment instructions require an active positive-price quote and acceptance of the current immutable Terms hash; after acceptance Sara sends them deterministically with the secure ticket link on web and SMS, while public `PAYMENT SUBMITTED` requires a server-confirmed, unexpired R2 upload receipt.
-- Every newly created `QUOTE REQUESTED` ticket from the public form, staff workflow, or Sara must enqueue one Convex-owned quote webhook delivery keyed by ticket ID; delivery reads the persisted ticket and webhook settings, records outcomes, and retries transient failures without depending on the browser.
-- Terms acceptance is deterministic rather than model-interpreted: web chat accepts only its version/hash-bound checkbox and button action; current SMS presentations accept the explicit whole-message allowlist `I AGREE`, `AGREE`, `I ACCEPT`, `ACCEPT`, `I AGREE TO THE TERMS`, `I ACCEPT THE TERMS`, `YES, I AGREE`, and `YES, I ACCEPT`, with case, whitespace, and safe trailing punctuation normalization; prior and legacy phrases remain bound to their presentation contracts, and Sara must never summarize or interpret the published legal Terms document while separate staff-approved policy FAQs may still be answered from Knowledge.
+- Sona represents an independent private residence reservation service, identifies itself as AI, and must not imply it is the official Ritz-Carlton hotel reservations desk.
+- Payment instructions require an active positive-price quote and acceptance of the current immutable Terms hash; after acceptance Sona sends them deterministically with the secure ticket link on web and SMS, while public `PAYMENT SUBMITTED` requires a server-confirmed, unexpired R2 upload receipt.
+- Every newly created `QUOTE REQUESTED` ticket from the public form, staff workflow, or Sona must enqueue one Convex-owned quote webhook delivery keyed by ticket ID; delivery reads the persisted ticket and webhook settings, records outcomes, and retries transient failures without depending on the browser.
+- Terms acceptance is deterministic rather than model-interpreted: web chat accepts only its version/hash-bound checkbox and button action; current SMS presentations accept the explicit whole-message allowlist `I AGREE`, `AGREE`, `I ACCEPT`, `ACCEPT`, `I AGREE TO THE TERMS`, `I ACCEPT THE TERMS`, `YES, I AGREE`, and `YES, I ACCEPT`, with case, whitespace, and safe trailing punctuation normalization; prior and legacy phrases remain bound to their presentation contracts, and Sona must never summarize or interpret the published legal Terms document while separate staff-approved policy FAQs may still be answered from Knowledge.
 - Public staff registration defaults to disabled; `NEXT_PUBLIC_STAFF_REGISTRATION_ENABLED=true` is an explicit bootstrap/admin exception, not a production default.
 
 ## Verification

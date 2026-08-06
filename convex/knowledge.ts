@@ -11,12 +11,33 @@ function searchText(question: string, answer: string, category: string) {
   return `${question} ${answer} ${category}`.trim();
 }
 
+const SONA_BRANDING_SLUGS: Set<string> = new Set(
+  KNOWLEDGE_SEED.filter(([, , answer]) => /\bSona\b/.test(answer)).map(([slug]) => slug)
+);
+
+function sonaText(value: string | undefined) {
+  return value?.replace(/\bSara\b/g, "Sona");
+}
+
+function sonaEntry<T extends { slug: string; question: string; answer: string; source?: string; searchText?: string }>(entry: T) {
+  if (!SONA_BRANDING_SLUGS.has(entry.slug)) return entry;
+  return {
+    ...entry,
+    question: sonaText(entry.question) || "",
+    answer: sonaText(entry.answer) || "",
+    source: sonaText(entry.source),
+    searchText: sonaText(entry.searchText),
+  };
+}
+
 export const listForStaff = query({
   args: {},
   handler: async (ctx) => {
     await requireStaff(ctx);
     const rows = await ctx.db.query("knowledgeEntries").collect();
-    return rows.sort((a, b) => a.category.localeCompare(b.category) || a.question.localeCompare(b.question));
+    return rows
+      .map(sonaEntry)
+      .sort((a, b) => a.category.localeCompare(b.category) || a.question.localeCompare(b.question));
   },
 });
 
@@ -27,16 +48,31 @@ export const searchApproved = query({
     const now = new Date().toISOString();
     const limit = Math.min(12, Math.max(1, args.limit || 6));
     const search = args.search.trim();
-    const rows = search
-      ? await ctx.db
-          .query("knowledgeEntries")
-          .withSearchIndex("search_text", (q) => q.search("searchText", search).eq("status", "approved").eq("audience", "guest"))
-          .take(limit * 2)
-      : await ctx.db.query("knowledgeEntries").withIndex("by_status", (q) => q.eq("status", "approved")).take(limit * 2);
+    let rows;
+    if (search) {
+      const directRows = await ctx.db
+        .query("knowledgeEntries")
+        .withSearchIndex("search_text", (q) => q.search("searchText", search).eq("status", "approved").eq("audience", "guest"))
+        .take(limit * 2);
+      const legacySearch = /\bSona\b/i.test(search) ? search.replace(/\bSona\b/gi, "Sara") : "";
+      const legacyRows = legacySearch && legacySearch !== search
+        ? await ctx.db
+            .query("knowledgeEntries")
+            .withSearchIndex("search_text", (q) => q.search("searchText", legacySearch).eq("status", "approved").eq("audience", "guest"))
+            .take(limit * 2)
+        : [];
+      const seen = new Set(directRows.map((entry) => entry._id));
+      rows = [...directRows, ...legacyRows.filter((entry) => SONA_BRANDING_SLUGS.has(entry.slug) && !seen.has(entry._id))];
+    } else {
+      rows = await ctx.db.query("knowledgeEntries").withIndex("by_status", (q) => q.eq("status", "approved")).take(limit * 2);
+    }
     return rows
       .filter((entry) => entry.audience === "guest" && (!entry.effectiveAt || entry.effectiveAt <= now) && (!entry.expiresAt || entry.expiresAt > now))
       .slice(0, limit)
-      .map(({ slug, question, answer, category, version, source }) => ({ slug, question, answer, category, version, source }));
+      .map(({ slug, question, answer, category, version, source }) => {
+        const entry = sonaEntry({ slug, question, answer, source });
+        return { slug, question: entry.question, answer: entry.answer, category, version, source: entry.source };
+      });
   },
 });
 
@@ -56,8 +92,9 @@ export const save = mutation({
   handler: async (ctx, args) => {
     const userId = await requireStaff(ctx);
     const slug = clean(args.slug.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""), 100);
-    const question = clean(args.question, 500);
-    const answer = clean(args.answer, 5000);
+    const normalizeBranding = SONA_BRANDING_SLUGS.has(slug);
+    const question = clean(normalizeBranding ? sonaText(args.question) || "" : args.question, 500);
+    const answer = clean(normalizeBranding ? sonaText(args.answer) || "" : args.answer, 5000);
     const category = clean(args.category, 100);
     if (!slug || !question || !answer || !category) throw new Error("Slug, question, answer, and category are required");
 
@@ -73,7 +110,7 @@ export const save = mutation({
       status: args.status,
       audience: args.audience,
       version: current ? current.version + 1 : 1,
-      source: clean(args.source || "", 500) || undefined,
+      source: clean(normalizeBranding ? sonaText(args.source) || "" : args.source || "", 500) || undefined,
       effectiveAt: args.effectiveAt || undefined,
       expiresAt: args.expiresAt || undefined,
       searchText: searchText(question, answer, category),
@@ -114,7 +151,13 @@ export const seedDrafts = mutation({
       if (existing) {
         const changed = Object.entries(values).some(([key, value]) => existing[key as keyof typeof existing] !== value);
         if (!changed) continue;
-        await ctx.db.patch(existing._id, {
+        const brandedExisting = sonaEntry(existing);
+        const brandingOnly = Object.entries(values).every(([key, value]) => brandedExisting[key as keyof typeof brandedExisting] === value);
+        await ctx.db.patch(existing._id, brandingOnly ? {
+          ...values,
+          version: existing.version + 1,
+          updatedAt: now,
+        } : {
           ...values,
           status: "draft",
           version: existing.version + 1,
@@ -123,7 +166,7 @@ export const seedDrafts = mutation({
           updatedAt: now,
         });
         updated += 1;
-        if (existing.status === "approved") returnedToDraft += 1;
+        if (!brandingOnly && existing.status === "approved") returnedToDraft += 1;
         continue;
       }
       await ctx.db.insert("knowledgeEntries", {

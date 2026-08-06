@@ -14,9 +14,9 @@
 - `settings.ts` owns shared app settings query and mutation, including email alert settings stored in the main settings document.
 - `dashboardPreferences.ts` owns per-authenticated-user dashboard preference reads and upserts keyed by Convex Auth user ID.
 - `security.ts` owns staff and shared server-service authorization checks.
-- `conversations.ts` owns durable web/SMS conversation state, transcripts, agent-run audit records, rate limits, staff inbox queries, human controls, and staff-only conversation cleanup.
+- `conversations.ts` owns durable web/SMS conversation state, including provider-confirmed first-SMS disclosure completion, transcripts, agent-run audit records, rate limits, staff inbox queries, human controls, and staff-only conversation cleanup.
 - `knowledge.ts` and `knowledgeSeed.ts` own approved Knowledge retrieval, staff versioned edits, and synchronization of the 42 draft starter entries.
-- `sara.ts` and `saraAvailability.ts` own one-unit exact-stay and Hawaii calendar-month range availability, exact client matching, control-fenced quote creation, guest-safe ticket context, immutable Terms presentation/acceptance, payment-instruction authorization, handoff, and ordered SMS consent updates.
+- `sara.ts` and `saraAvailability.ts` own Sona's one-unit exact-stay and Hawaii calendar-month range availability, exact client matching, control-fenced quote creation, guest-safe ticket context, immutable Terms presentation/acceptance, payment-instruction authorization, handoff, and ordered SMS consent updates.
 - `termsContract.ts` owns the canonical versioned web agreement label, current explicit agree/accept SMS allowlist, deterministic case/whitespace/safe-trailing-punctuation normalization, presentation-bound prior/legacy classifiers, and acceptance-attempt classification.
 - `smsConsent.ts` owns canonical normalized-phone consent reads and explicit legacy STOP/START recovery.
 - `messaging.ts` owns owned Quo webhook leases, SMS outbox idempotency, final consent/control/policy claims, send attempts, and delivery-state updates.
@@ -39,24 +39,24 @@
 - Keep `dashboardPreferences.ts` aligned with dashboard preference normalization and hooks in `lib/store.js`.
 - Keep `tickets.ts` create/update/import paths syncing top-level ticket search/filter fields used by paginated dashboard queries.
 - Keep anonymous ticket access limited to validated quote creation, opaque-ID ticket reads, finalized date ranges, deterministic current-Terms acceptance, and the confirmed-proof `PRICE SENT` to `PAYMENT SUBMITTED` transition; staff/service credentials own listing, exports, arbitrary updates, and deletion.
-- `knowledge.searchApproved` must return only active, approved, guest-audience entries; drafts and archived entries must never reach Sara.
-- Starter Knowledge synchronization inserts missing entries, refreshes changed non-archived starter entries, and returns changed approved entries to draft for staff review; archived entries remain untouched.
-- All Sara service functions require `SARA_SERVICE_KEY`; OpenAI must receive no direct Convex credential or unrestricted ticket mutation.
-- Sara month availability returns contiguous half-open check-in/check-out ranges, clips the current month to today in Hawaii, excludes entirely past months, and never treats a result as a hold.
-- Sara exact availability and quote creation accept only real Gregorian `YYYY-MM-DD` dates; date-shaped prefixes and impossible dates must fail validation.
-- Sara Terms acceptance must validate the persisted inbound SMS or authenticated web action against the current presentation, version, full hash, active quote, and payment conflicts; current provider-accepted or delivered SMS presentations accept only the explicit whole-message agree/accept allowlist after case, whitespace, and trailing `.`, `,`, or `!` normalization, reject questioning, negative, ambiguous, and malformed replies, preserve prior/legacy presentation rules, and record server time, source, action, acceptance contract, and an idempotent reservation event without asking OpenAI to decide agreement; typed web text never accepts.
-- Mutating Sara operations and automated transcript writes must carry the active conversation control version so STOP, ticket changes, or staff takeover fence stale work.
+- `knowledge.searchApproved` must return only active, approved, guest-audience entries; drafts and archived entries must never reach Sona.
+- Starter Knowledge synchronization inserts missing entries, refreshes changed non-archived starter entries, preserves approval for Sona-only branding migrations, and returns other changed approved entries to draft for staff review; archived entries remain untouched. Known starter-entry reads normalize legacy Sara mentions to Sona until persisted rows are synchronized without rewriting unrelated custom Knowledge.
+- All Sona service functions require `SARA_SERVICE_KEY`; OpenAI must receive no direct Convex credential or unrestricted ticket mutation.
+- Sona month availability returns contiguous half-open check-in/check-out ranges, clips the current month to today in Hawaii, excludes entirely past months, and never treats a result as a hold.
+- Sona exact availability and quote creation accept only real Gregorian `YYYY-MM-DD` dates; date-shaped prefixes and impossible dates must fail validation.
+- Sona Terms acceptance must validate the persisted inbound SMS or authenticated web action against the current presentation, version, full hash, active quote, and payment conflicts; current provider-accepted or delivered SMS presentations accept only the explicit whole-message agree/accept allowlist after case, whitespace, and trailing `.`, `,`, or `!` normalization, reject questioning, negative, ambiguous, and malformed replies, preserve prior/legacy presentation rules, and record server time, source, action, acceptance contract, and an idempotent reservation event without asking OpenAI to decide agreement; typed web text never accepts.
+- Mutating Sona operations and automated transcript writes must carry the active conversation control version so STOP, ticket changes, or staff takeover fence stale work.
 - Staff-only conversation deletion cascades through messages, agent runs, and message outbox rows; it clears the deleted public conversation ID from the preserved ticket and preserves contacts, SMS consent, reservation events, and webhook records.
 - Treat normalized-phone SMS consent as authoritative; queue checks are advisory and every paid SMS path must recheck consent and current policy immediately before provider delivery.
 - Ticket lifecycle SMS claims are a closed event set for `PRICE SENT`, `PAYMENT SUBMITTED`, `PAYMENT VERIFIED`, and `BOOKING CONFIRMED`; final confirmation must reject ticket, phone, consent-version, settings, enablement, test-mode, or allowlist changes and successful completion stamps at most one provider acceptance per ticket/status.
-- Guest payment submission and later paid/confirmed status synchronization must preserve the conversation's existing active Sara state; they must not resume an already paused conversation or override STOP, staff control, handoff, cancellation, or consent gates.
+- Guest payment submission and later paid/confirmed status synchronization must preserve the conversation's existing active Sona state; they must not resume an already paused conversation or override STOP, staff control, handoff, cancellation, or consent gates.
 - Finalizing a ticket as `PAYMENT VERIFIED` or `BOOKING CONFIRMED` must atomically reject overlapping one-unit stays while preserving same-day checkout/check-in turnover.
 - Operational creation of a `QUOTE REQUESTED` ticket through `tickets.create` or `sara.createQuoteRequest` must enqueue exactly one `quote-created:<ticketId>` delivery; legacy imports do not replay historical quote webhooks.
 
 ## Verification
 
 - Use `npx convex dev` for backend sync/codegen when Convex functions or schema change.
-- Use `npm test` for deterministic Sara year/date resolution, Terms acceptance classification, and calendar-month availability range checks.
+- Use `npm test` for deterministic Sona branding, prompt identity, year/date resolution, Terms acceptance classification, and calendar-month availability range checks.
 
 ## Child DOX Index
 

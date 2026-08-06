@@ -19,13 +19,13 @@
 - Public pages must not require staff authentication.
 - Ticket lookup, quote, and payment submission flows use Convex-backed reservation data through `lib/store.js`.
 - Quote requests may trigger the configured server-side quote webhook after the Convex ticket is created.
-- Guest payment submissions require an active positive-price quote without an overlapping payment hold, server-validated acceptance of the current immutable Terms hash from either the current Sara flow or payment dialog, and a server-confirmed private R2 proof receipt before updating tickets to `PAYMENT SUBMITTED`; successful persistence awaits the independent staff payment-submitted email and enabled guest payment-received SMS attempts without rolling back payment submission if notification delivery fails.
+- Guest payment submissions require an active positive-price quote without an overlapping payment hold, server-validated acceptance of the current immutable Terms hash from either the current Sona flow or payment dialog, and a server-confirmed private R2 proof receipt before updating tickets to `PAYMENT SUBMITTED`; successful persistence awaits the independent staff payment-submitted email and enabled guest payment-received SMS attempts without rolling back payment submission if notification delivery fails.
 - Every visit to a currently payable public ticket presents the reservation onboarding guide; dismissing it lasts only for that mounted visit, while the fixed mobile CTA and desktop next-step card remain available.
 - Keep guest-facing money, cleaning fee, room type, discount, reservation confirmation number, and retail price screenshot displays consistent with Convex-backed settings from `lib/store.js`, R2 object keys on tickets, and `lib/calc.js` formatting/calculations.
 - `/ticket/[id]/retail-price-image` must validate the ticket's stored screenshot key before redirecting to a short-lived private R2 URL; the durable redirect URL follows the same opaque-ticket-ID access model as the public ticket page.
 - Public `/` must render the Convex-backed `homePageVariant`, defaulting to the classic home page for existing settings.
-- Public chat must use `/api/sara/chat`; it must not call OpenAI or Sara CRM mutations directly from the browser.
-- The Sara launcher must remain above the fixed mobile navigation, while the open dialog uses safe-area padding and keeps staff/auth routes outside its scope.
+- Public chat must use `/api/sara/chat`; it must not call OpenAI or Sona CRM mutations directly from the browser.
+- The Sona launcher must remain above the fixed mobile navigation, while the open dialog uses safe-area padding and keeps staff/auth routes outside its scope.
 
 ## Work Guidance
 

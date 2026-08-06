@@ -3,6 +3,27 @@ import { mutation } from "./_generated/server";
 import { requireServiceKey } from "./security";
 import { getSmsConsent, normalizeSmsPhone } from "./smsConsent";
 
+async function updateInitialDisclosureState(ctx: any, message: any, status: string, now: string) {
+  if (message?.metadata?.initialDisclosure !== true) return;
+  const conversation = await ctx.db.get(message.conversationId);
+  if (!conversation) return;
+  const ownsPendingClaim = conversation.smsInitialDisclosurePendingMessageId === message.messageId;
+  if (["accepted", "delivered"].includes(status)) {
+    await ctx.db.patch(conversation._id, {
+      smsInitialDisclosureAt: now,
+      smsInitialDisclosurePendingMessageId: ownsPendingClaim ? undefined : conversation.smsInitialDisclosurePendingMessageId,
+      smsInitialDisclosurePendingAt: ownsPendingClaim ? undefined : conversation.smsInitialDisclosurePendingAt,
+      updatedAt: now,
+    });
+  } else if (["failed", "suppressed"].includes(status) && ownsPendingClaim) {
+    await ctx.db.patch(conversation._id, {
+      smsInitialDisclosurePendingMessageId: undefined,
+      smsInitialDisclosurePendingAt: undefined,
+      updatedAt: now,
+    });
+  }
+}
+
 async function conversationByPublicId(ctx: any, publicId: string) {
   const conversation = await ctx.db.query("conversations").withIndex("by_publicId", (q: any) => q.eq("publicId", publicId)).first();
   if (!conversation) throw new Error("Conversation not found");
@@ -158,12 +179,13 @@ export const claimSms = mutation({
     else if (consent.optedOut) blockedReason = "SMS recipient opted out";
     else if ((outbox.consentVersion ?? 0) !== consent.version) blockedReason = "SMS consent changed after this message was queued";
     else if ((outbox.controlVersion ?? 0) !== (conversation.controlVersion || 0)) blockedReason = "Conversation control changed after this message was queued";
-    else if (!settings.saraSmsEnabled) blockedReason = "Sara SMS is disabled";
+    else if (!settings.saraSmsEnabled) blockedReason = "Sona SMS is disabled";
     else if (settings.saraSmsTestMode !== false && !allowlisted) blockedReason = "SMS recipient is not on the test allowlist";
     if (blockedReason) {
       const suppressedAt = new Date().toISOString();
       await ctx.db.patch(outbox._id, { status: "suppressed", retryable: false, lastError: blockedReason, updatedAt: suppressedAt });
       await ctx.db.patch(outbox.messageId, { deliveryStatus: "suppressed" });
+      await updateInitialDisclosureState(ctx, await ctx.db.get(outbox.messageId), "suppressed", suppressedAt);
       return { claimed: false, status: "suppressed", reason: blockedReason, outbox: await ctx.db.get(outbox._id) };
     }
     const now = new Date().toISOString();
@@ -198,10 +220,12 @@ export const markSms = mutation({
       updatedAt: now,
     });
     const deliveryStatus: "accepted" | "delivered" | "failed" | "suppressed" = args.status;
+    const message = await ctx.db.get(outbox.messageId);
     await ctx.db.patch(outbox.messageId, {
       providerMessageId: args.providerMessageId || undefined,
       deliveryStatus,
     });
+    await updateInitialDisclosureState(ctx, message, args.status, now);
     return ctx.db.get(outbox._id);
   },
 });
@@ -219,7 +243,10 @@ export const applyDeliveryEvent = mutation({
     const message = await ctx.db.query("messages").withIndex("by_providerMessageId", (q) => q.eq("providerMessageId", args.providerMessageId)).first();
     const status = args.delivered ? "delivered" : "failed";
     if (outbox) await ctx.db.patch(outbox._id, { status, lastError: args.error, updatedAt: new Date().toISOString() });
-    if (message) await ctx.db.patch(message._id, { deliveryStatus: status });
+    if (message) {
+      await ctx.db.patch(message._id, { deliveryStatus: status });
+      await updateInitialDisclosureState(ctx, message, status, new Date().toISOString());
+    }
     return { matched: Boolean(outbox || message) };
   },
 });

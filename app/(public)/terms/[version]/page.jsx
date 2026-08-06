@@ -22,7 +22,7 @@ export default function TermsVersionPage() {
           </header>
           <div className="p-6 md:p-8">
             {terms === undefined && <div className="flex items-center gap-2 text-sm text-[#6c6a64]"><Loader2 className="h-4 w-4 animate-spin" /> Loading published Terms...</div>}
-            {terms === null && <p className="rounded-xl bg-red-50 p-4 text-sm text-red-800">This Terms version is not published. Ask Sara or a reservations specialist for the current version.</p>}
+            {terms === null && <p className="rounded-xl bg-red-50 p-4 text-sm text-red-800">This Terms version is not published. Ask Sona or a reservations specialist for the current version.</p>}
             {terms && (
               <>
                 <div className="flex items-start gap-2 rounded-xl border border-[#e6dfd8] bg-[#faf9f5] p-3 text-xs leading-relaxed text-[#6c6a64]"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#cc785c]" /> These are immutable published Terms for an independent private residence reservation service, not the official hotel reservations desk.</div>

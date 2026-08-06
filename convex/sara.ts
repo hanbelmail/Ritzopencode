@@ -82,7 +82,7 @@ async function getTicketRow(ctx: any, ticketId: string) {
 }
 
 function assertControlVersion(conversation: any, expectedControlVersion: number) {
-  if ((conversation.controlVersion || 0) !== expectedControlVersion) throw new Error("Sara was paused while this action was being prepared");
+  if ((conversation.controlVersion || 0) !== expectedControlVersion) throw new Error("Sona was paused while this action was being prepared");
 }
 
 function assertActiveQuote(ticket: any) {
@@ -630,7 +630,7 @@ export const acceptWebTerms = mutation({
     requireServiceKey(args.serviceKey);
     const conversation = await getConversation(ctx, args.publicId);
     if (conversation.channel !== "web" || conversation.accessTokenHash !== args.accessTokenHash) throw new Error("Conversation access denied");
-    if (!conversation.aiEnabled || ["human_required", "closed"].includes(conversation.status)) throw new Error("Sara is paused for this conversation");
+    if (!conversation.aiEnabled || ["human_required", "closed"].includes(conversation.status)) throw new Error("Sona is paused for this conversation");
     if (!conversation.ticketId) throw new Error("A quote ticket is required before accepting Terms");
     const { terms } = await getCurrentTerms(ctx);
     if (
@@ -840,6 +840,8 @@ export const setSmsOptOut = mutation({
           } : {}),
           aiEnabled: false,
           status: "closed",
+          smsInitialDisclosurePendingMessageId: undefined,
+          smsInitialDisclosurePendingAt: undefined,
           controlVersion,
           updatedAt: now,
         });

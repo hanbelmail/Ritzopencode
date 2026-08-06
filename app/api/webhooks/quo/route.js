@@ -1,7 +1,7 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { api } from "@/convex/_generated/api";
-import { DEFAULT_SETTINGS } from "@/lib/defaults";
+import { DEFAULT_SETTINGS, buildSmsInitialDisclosure, withDefaultSettings } from "@/lib/defaults";
 import { getConvexClient, getConvexServiceKey, jsonError } from "@/lib/convex-server";
 import { normalizePhone } from "@/lib/phone";
 import { getQuoFrom, sendQuoText } from "@/lib/quo-server";
@@ -56,6 +56,13 @@ function eventResource(payload) {
 
 function messageText(resource) {
   return String(resource?.text ?? resource?.body ?? resource?.content ?? "").trim();
+}
+
+function withInitialSmsDisclosure(content, initialDisclosure) {
+  return {
+    content: initialDisclosure ? `${buildSmsInitialDisclosure()}\n\n${content}` : content,
+    initialDisclosure,
+  };
 }
 
 function eventType(payload) {
@@ -243,7 +250,7 @@ export async function POST(request) {
       providerEventId: eventId,
       providerMessageId: messageId || undefined,
     });
-    const settings = { ...DEFAULT_SETTINGS, ...((await client.query(api.settings.get, { serviceKey })) || {}) };
+    const settings = withDefaultSettings(await client.query(api.settings.get, { serviceKey }));
     if (!settings.saraSmsEnabled || !isAllowlisted(settings, participant)) {
       await client.mutation(api.messaging.finishWebhook, { serviceKey, eventId, claimToken, status: "ignored" });
       return NextResponse.json({ received: true, replySkipped: true, reason: settings.saraSmsEnabled ? "not_allowlisted" : "sms_disabled" });
@@ -263,10 +270,17 @@ export async function POST(request) {
           expectedControlVersion: controlVersion,
         });
         const ticketUrl = context.conversation.ticketId ? new URL(`/ticket/${context.conversation.ticketId}`, canonicalOrigin(request)).toString() : null;
-        const reply = ticketUrl
+        const replyBody = ticketUrl
           ? `I can't securely read SMS attachments. Please upload payment proof through your ticket: ${ticketUrl}. A reservations team member can also help.`
           : settings.saraHandoffMessage;
         const outboundMessageId = `sara-media:${messageId || eventId}`;
+        const disclosureClaim = await client.mutation(api.conversations.claimSmsInitialDisclosure, {
+          serviceKey,
+          publicId,
+          messageId: outboundMessageId,
+        });
+        const preparedReply = withInitialSmsDisclosure(replyBody, disclosureClaim.claimed);
+        const reply = preparedReply.content;
         await client.mutation(api.conversations.appendOutbound, {
           serviceKey,
           publicId,
@@ -274,6 +288,7 @@ export async function POST(request) {
           content: reply,
           authorType: "system",
           replyToMessageId: messageId || undefined,
+          metadata: preparedReply.initialDisclosure ? { initialDisclosure: true } : undefined,
           expectedControlVersion: controlVersion,
         });
         result = { reply, outboundMessageId, handedOff: true };
@@ -293,8 +308,17 @@ export async function POST(request) {
           } else {
             const controlVersion = current.conversation.controlVersion || 0;
             await client.mutation(api.sara.handoff, { serviceKey, publicId, reason: `Agent runtime failure: ${errorMessage.slice(0, 300)}`, expectedControlVersion: controlVersion });
-            const reply = settings.saraHandoffMessage || DEFAULT_SETTINGS.saraHandoffMessage;
             const outboundMessageId = `sara-fallback:${messageId || eventId}`;
+            const disclosureClaim = await client.mutation(api.conversations.claimSmsInitialDisclosure, {
+              serviceKey,
+              publicId,
+              messageId: outboundMessageId,
+            });
+            const preparedReply = withInitialSmsDisclosure(
+              settings.saraHandoffMessage || DEFAULT_SETTINGS.saraHandoffMessage,
+              disclosureClaim.claimed
+            );
+            const reply = preparedReply.content;
             await client.mutation(api.conversations.appendOutbound, {
               serviceKey,
               publicId,
@@ -302,6 +326,7 @@ export async function POST(request) {
               content: reply,
               authorType: "system",
               replyToMessageId: messageId || undefined,
+              metadata: preparedReply.initialDisclosure ? { initialDisclosure: true } : undefined,
               expectedControlVersion: controlVersion,
             });
             result = { reply, outboundMessageId, handedOff: true };

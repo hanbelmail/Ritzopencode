@@ -68,7 +68,7 @@ function ControlsPanel() {
     event.preventDefault();
     setError("");
     if (settings.saraSmsEnabled && settings.saraSmsTestMode && !(settings.saraSmsAllowlist || []).length) {
-      setError("Add at least one E.164 test number before enabling Sara SMS test mode.");
+      setError("Add at least one E.164 test number before enabling Sona SMS test mode.");
       return;
     }
     const invalidAllowlist = (settings.saraSmsAllowlist || []).find((phone) => !isE164Phone(normalizePhone(phone)));
@@ -82,14 +82,14 @@ function ControlsPanel() {
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (saveError) {
-      setError(saveError.message || "Failed to save Sara settings");
+      setError(saveError.message || "Failed to save Sona settings");
     } finally {
       setSaving(false);
     }
   }
 
   if (savedSettings === undefined) {
-    return <div className="flex items-center gap-2 rounded-[14px] border border-[#e6dfd8] bg-white p-5 text-sm text-[#6c6a64]"><Loader2 className="h-4 w-4 animate-spin" /> Loading Sara settings...</div>;
+    return <div className="flex items-center gap-2 rounded-[14px] border border-[#e6dfd8] bg-white p-5 text-sm text-[#6c6a64]"><Loader2 className="h-4 w-4 animate-spin" /> Loading Sona settings...</div>;
   }
 
   return (
@@ -99,9 +99,9 @@ function ControlsPanel() {
           <div className="flex items-center justify-between gap-4">
             <div>
               <p className="text-sm font-medium">Website concierge</p>
-              <p className="mt-1 text-xs leading-relaxed text-[#6c6a64]">Show Sara on all public pages and allow live CRM tools.</p>
+              <p className="mt-1 text-xs leading-relaxed text-[#6c6a64]">Show Sona on all public pages and allow live CRM tools.</p>
             </div>
-            <Switch checked={settings.saraWebEnabled} onCheckedChange={(value) => set("saraWebEnabled", value)} aria-label="Enable Sara website chat" />
+            <Switch checked={settings.saraWebEnabled} onCheckedChange={(value) => set("saraWebEnabled", value)} aria-label="Enable Sona website chat" />
           </div>
           <Badge className={`mt-4 ${settings.saraWebEnabled ? "bg-[#5db872] text-white" : "bg-[#efe9de] text-[#6c6a64]"}`}>
             {settings.saraWebEnabled ? "Web enabled" : "Web disabled"}
@@ -113,7 +113,7 @@ function ControlsPanel() {
               <p className="text-sm font-medium">Quo conversational SMS</p>
               <p className="mt-1 text-xs leading-relaxed text-[#6c6a64]">Keep disabled until webhook verification and allowlist testing pass.</p>
             </div>
-            <Switch checked={settings.saraSmsEnabled} onCheckedChange={(value) => set("saraSmsEnabled", value)} aria-label="Enable Sara SMS" />
+            <Switch checked={settings.saraSmsEnabled} onCheckedChange={(value) => set("saraSmsEnabled", value)} aria-label="Enable Sona SMS" />
           </div>
           <div className="mt-4 flex items-center justify-between rounded-lg bg-[#faf9f5] px-3 py-2">
             <Label htmlFor="sms-test-mode" className="text-xs text-[#4d4b46]">Allowlist-only test mode</Label>
@@ -127,8 +127,8 @@ function ControlsPanel() {
         <p className="mt-1 text-sm text-[#6c6a64]">Safety and CRM permissions remain code-controlled. These fields configure approved business content.</p>
         <div className="mt-5 grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="agent-name">Agent name</Label>
-            <Input id="agent-name" value={settings.saraAgentName} onChange={(event) => set("saraAgentName", event.target.value)} className="border-[#e6dfd8] bg-[#faf9f5]" />
+            <Label htmlFor="agent-name">Agent name (code-controlled)</Label>
+            <Input id="agent-name" value={settings.saraAgentName} readOnly className="border-[#e6dfd8] bg-[#f3f0ea]" />
           </div>
           <div className="space-y-2">
             <Label htmlFor="agent-model">OpenAI model override</Label>
@@ -145,8 +145,8 @@ function ControlsPanel() {
         </div>
         <div className="mt-4 space-y-2">
           <Label htmlFor="terms-content">Approved Terms and Conditions</Label>
-          <Textarea id="terms-content" value={settings.saraTermsContent || ""} onChange={(event) => set("saraTermsContent", event.target.value)} placeholder="Sara hands off instead of sending payment instructions while this is empty." className="min-h-52 border-[#e6dfd8] bg-[#faf9f5]" />
-          {!settings.saraTermsContent?.trim() && <p className="text-xs font-medium text-amber-700">No Terms are published. Sara can qualify guests but will hand off before payment.</p>}
+          <Textarea id="terms-content" value={settings.saraTermsContent || ""} onChange={(event) => set("saraTermsContent", event.target.value)} placeholder="Sona hands off instead of sending payment instructions while this is empty." className="min-h-52 border-[#e6dfd8] bg-[#faf9f5]" />
+          {!settings.saraTermsContent?.trim() && <p className="text-xs font-medium text-amber-700">No Terms are published. Sona can qualify guests but will hand off before payment.</p>}
         </div>
       </section>
 
@@ -154,8 +154,8 @@ function ControlsPanel() {
         <h2 className="text-lg font-medium">Workflow messages</h2>
         <div className="mt-4 space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="initial-message">Initial disclosure and information message</Label>
-            <Textarea id="initial-message" value={settings.saraInitialMessage} onChange={(event) => set("saraInitialMessage", event.target.value)} className="min-h-40 border-[#e6dfd8] bg-[#faf9f5]" />
+            <Label htmlFor="initial-message">Initial disclosure and information message (code-controlled)</Label>
+            <Textarea id="initial-message" value={settings.saraInitialMessage} readOnly className="min-h-40 border-[#e6dfd8] bg-[#f3f0ea]" />
           </div>
           <div className="space-y-2">
             <Label htmlFor="handoff-message">Human handoff message</Label>
@@ -183,7 +183,7 @@ function ControlsPanel() {
         </Link>
         <Button type="submit" disabled={saving} className="rounded-lg bg-[#cc785c] text-white hover:bg-[#a9583e]">
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : saved ? <Check className="h-4 w-4" /> : <Save className="h-4 w-4" />}
-          {saved ? "Saved" : "Save Sara settings"}
+          {saved ? "Saved" : "Save Sona settings"}
         </Button>
       </div>
     </form>
@@ -258,7 +258,7 @@ function KnowledgePanel() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-lg font-medium">Knowledge library</h2>
-            <p className="mt-1 text-sm text-[#6c6a64]">Sara retrieves approved guest entries only. Sync refreshes changed starter copies as drafts; archived entries stay untouched.</p>
+            <p className="mt-1 text-sm text-[#6c6a64]">Sona retrieves approved guest entries only. Sync refreshes changed starter copies as drafts; archived entries stay untouched.</p>
           </div>
           <Button type="button" variant="outline" onClick={seed} className="border-[#d9cfc2] bg-[#faf9f5]">
             <BookOpen className="h-4 w-4" /> Sync 42 starter drafts
@@ -339,7 +339,7 @@ function InboxPanel() {
         status: enabled ? "open" : "human_required",
       });
     } catch (controlError) {
-      setActionError(controlError.message || "Failed to update Sara control");
+      setActionError(controlError.message || "Failed to update Sona control");
     }
   }
 
@@ -391,7 +391,7 @@ function InboxPanel() {
       <aside className="border-b border-[#e6dfd8] lg:border-b-0 lg:border-r">
         <div className="border-b border-[#e6dfd8] p-4">
           <h2 className="font-medium">Conversation inbox</h2>
-          <p className="mt-1 text-xs text-[#6c6a64]">Human-required conversations pause Sara automatically.</p>
+          <p className="mt-1 text-xs text-[#6c6a64]">Human-required conversations pause Sona automatically.</p>
         </div>
         <div className="max-h-[590px] overflow-y-auto">
           {conversations === undefined && <p className="p-4 text-sm text-[#6c6a64]">Loading conversations...</p>}
@@ -421,7 +421,7 @@ function InboxPanel() {
               </div>
               <div className="flex items-center gap-2">
                 <Button type="button" variant="outline" disabled={Boolean(detail.smsConsent?.optedOut && !detail.conversation.aiEnabled)} onClick={() => toggleAi(detail.conversation, !detail.conversation.aiEnabled)} className="border-[#d9cfc2]">
-                  {detail.conversation.aiEnabled ? <><Pause className="h-4 w-4" /> Pause Sara</> : <><Play className="h-4 w-4" /> Resume Sara</>}
+                  {detail.conversation.aiEnabled ? <><Pause className="h-4 w-4" /> Pause Sona</> : <><Play className="h-4 w-4" /> Resume Sona</>}
                 </Button>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
@@ -433,7 +433,7 @@ function InboxPanel() {
                     <AlertDialogHeader>
                       <AlertDialogTitle>Delete this conversation?</AlertDialogTitle>
                       <AlertDialogDescription>
-                        This permanently deletes the transcript and Sara run history. Linked reservation tickets, contacts, and SMS consent are kept.
+                        This permanently deletes the transcript and Sona run history. Linked reservation tickets, contacts, and SMS consent are kept.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -459,7 +459,7 @@ function InboxPanel() {
             </div>
             <form onSubmit={sendReply} className="border-t border-[#e6dfd8] p-4">
               {actionError && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700" role="alert">{actionError}</p>}
-              {detail.smsConsent?.optedOut && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">This phone opted out. SMS replies and Sara resume are blocked until the guest sends START.</p>}
+              {detail.smsConsent?.optedOut && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">This phone opted out. SMS replies and Sona resume are blocked until the guest sends START.</p>}
               {detail.conversation.channel === "sms" && <p className="mb-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">This reply is sent through Quo and may incur SMS charges. Keep test mode on during validation.</p>}
               <div className="flex items-end gap-2">
                 <label htmlFor="staff-sara-reply" className="sr-only">Reply as the reservations team</label>
@@ -484,14 +484,14 @@ export default function SaraDashboardPage() {
           <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
             <div>
               <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.16em] text-[#a09d96]"><Bot className="h-4 w-4 text-[#cc785c]" /> AI concierge operations</p>
-              <h1 className={`${serif} mt-3 text-5xl font-medium leading-none tracking-[-0.04em] md:text-6xl`}>Sara</h1>
+              <h1 className={`${serif} mt-3 text-5xl font-medium leading-none tracking-[-0.04em] md:text-6xl`}>Sona</h1>
               <p className="mt-4 max-w-2xl text-sm leading-relaxed text-[#b8b4ac]">One governed reservations agent for website chat and Quo SMS, with approved Knowledge, constrained CRM tools, and human handoff.</p>
             </div>
             <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.06] px-3 py-2 text-xs text-[#d8d2c9]"><ShieldCheck className="h-4 w-4 text-[#f0a48a]" /> Assisted booking mode</div>
           </div>
         </section>
 
-        <nav className="mt-5 flex gap-2 overflow-x-auto rounded-xl border border-[#e6dfd8] bg-white p-2" aria-label="Sara dashboard sections">
+        <nav className="mt-5 flex gap-2 overflow-x-auto rounded-xl border border-[#e6dfd8] bg-white p-2" aria-label="Sona dashboard sections">
           {tabs.map(({ id, label, icon: Icon }) => (
             <button key={id} type="button" onClick={() => setActiveTab(id)} className={`flex min-w-fit items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors ${activeTab === id ? "bg-[#252320] text-white" : "text-[#6c6a64] hover:bg-[#efe9de] hover:text-[#252523]"}`}>
               <Icon className="h-4 w-4" /> {label}

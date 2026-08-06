@@ -3,6 +3,8 @@ import { mutation, query } from "./_generated/server";
 import { isAutomationKey, isServiceKey, isStaff, requireStaff } from "./security";
 
 const SETTINGS_KEY = "main";
+const SONA_AGENT_NAME = "Sona";
+const SONA_INITIAL_MESSAGE = "Aloha! I’m Sona, Mike’s AI reservations assistant for his privately owned Ritz-Carlton condo in Waikiki. I can help you check availability and receive a private, discounted quote based on current retail rates. Dates are not held until payment is verified. What are your check-in and check-out dates?";
 
 const PUBLIC_SETTING_KEYS = new Set([
   "appName",
@@ -15,11 +17,16 @@ const PUBLIC_SETTING_KEYS = new Set([
   "roomTypes",
   "saraWebEnabled",
   "saraAgentName",
+  "saraInitialMessage",
 ]);
 
 function publicSettings(settings: any) {
   if (!settings || typeof settings !== "object") return settings;
-  return Object.fromEntries(Object.entries(settings).filter(([key]) => PUBLIC_SETTING_KEYS.has(key)));
+  return {
+    ...Object.fromEntries(Object.entries(settings).filter(([key]) => PUBLIC_SETTING_KEYS.has(key))),
+    saraAgentName: SONA_AGENT_NAME,
+    saraInitialMessage: SONA_INITIAL_MESSAGE,
+  };
 }
 
 async function contentHash(content: string) {
@@ -84,7 +91,7 @@ export const saveSara = mutation({
   handler: async (ctx, args) => {
     const userId = await requireStaff(ctx);
     if (args.saraSmsAllowlist.some((phone) => !/^\+[1-9]\d{1,14}$/.test(phone.trim()))) {
-      throw new Error("Sara SMS allowlist numbers must use E.164 format");
+      throw new Error("Sona SMS allowlist numbers must use E.164 format");
     }
     const now = new Date().toISOString();
     const row = await ctx.db.query("settings").withIndex("by_key", (q) => q.eq("key", SETTINGS_KEY)).first();
@@ -93,7 +100,7 @@ export const saveSara = mutation({
     const nextTermsContent = args.saraTermsContent.trim();
     if (nextTermsContent && !nextTermsVersion) throw new Error("Terms version is required when Terms content is published");
     if ((args.saraWebEnabled || args.saraSmsEnabled) && (!nextTermsVersion || !nextTermsContent)) {
-      throw new Error("Publish versioned Terms before enabling Sara channels");
+      throw new Error("Publish versioned Terms before enabling Sona channels");
     }
     if (current.saraTermsVersion === nextTermsVersion && current.saraTermsContent && current.saraTermsContent !== nextTermsContent) {
       throw new Error("Change the Terms version before changing published Terms content");
@@ -113,7 +120,7 @@ export const saveSara = mutation({
       }
     }
     const saraSettings = {
-      saraAgentName: args.saraAgentName.trim() || "Sara",
+      saraAgentName: SONA_AGENT_NAME,
       saraWebEnabled: args.saraWebEnabled,
       saraSmsEnabled: args.saraSmsEnabled,
       saraSmsTestMode: args.saraSmsTestMode,
@@ -123,7 +130,7 @@ export const saveSara = mutation({
       saraMaxMessagesPerHour: Math.min(100, Math.max(5, Math.round(args.saraMaxMessagesPerHour))),
       saraTermsVersion: nextTermsVersion,
       saraTermsContent: nextTermsContent,
-      saraInitialMessage: args.saraInitialMessage.trim(),
+      saraInitialMessage: SONA_INITIAL_MESSAGE,
       saraHandoffMessage: args.saraHandoffMessage.trim(),
     };
     const settings = { ...current, ...saraSettings };

@@ -25,10 +25,41 @@ const conversationStage = v.union(
 );
 
 const channel = v.union(v.literal("web"), v.literal("sms"));
+const SMS_INITIAL_DISCLOSURE_LEASE_MS = 10 * 60_000;
 
 async function findByPublicId(ctx: any, publicId: string) {
   return ctx.db.query("conversations").withIndex("by_publicId", (q: any) => q.eq("publicId", publicId)).first();
 }
+
+function canClaimSmsInitialDisclosure(conversation: any, messageId: string, now: Date) {
+  if (conversation.channel !== "sms" || conversation.smsInitialDisclosureAt) return false;
+  if (!conversation.smsInitialDisclosurePendingMessageId || conversation.smsInitialDisclosurePendingMessageId === messageId) return true;
+  const pendingAt = Date.parse(String(conversation.smsInitialDisclosurePendingAt || ""));
+  return !Number.isFinite(pendingAt) || pendingAt <= now.getTime() - SMS_INITIAL_DISCLOSURE_LEASE_MS;
+}
+
+export const claimSmsInitialDisclosure = mutation({
+  args: {
+    serviceKey: v.string(),
+    publicId: v.string(),
+    messageId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    requireServiceKey(args.serviceKey);
+    const conversation = await findByPublicId(ctx, args.publicId);
+    if (!conversation) throw new Error("Conversation not found");
+    const now = new Date();
+    const claimed = canClaimSmsInitialDisclosure(conversation, args.messageId, now);
+    if (claimed) {
+      await ctx.db.patch(conversation._id, {
+        smsInitialDisclosurePendingMessageId: args.messageId,
+        smsInitialDisclosurePendingAt: now.toISOString(),
+        updatedAt: now.toISOString(),
+      });
+    }
+    return { claimed };
+  },
+});
 
 async function conversationBundle(ctx: any, conversation: any, messageLimit = 40) {
   const messages = await ctx.db
@@ -273,7 +304,7 @@ export const appendOutbound = mutation({
     }
     if (["assistant", "system"].includes(args.authorType)) {
       if (args.expectedControlVersion === undefined || args.expectedControlVersion !== (conversation.controlVersion || 0)) {
-        throw new Error("Sara was paused while this reply was being generated");
+        throw new Error("Sona was paused while this reply was being generated");
       }
       if (conversation.channel === "sms" && conversation.externalParticipant && (await getSmsConsent(ctx, conversation.externalParticipant)).optedOut) {
         throw new Error("SMS recipient opted out");
@@ -349,7 +380,7 @@ export const startRun = mutation({
     requireServiceKey(args.serviceKey);
     const conversation = await findByPublicId(ctx, args.publicId);
     if (!conversation) throw new Error("Conversation not found");
-    if (!conversation.aiEnabled || ["human_required", "closed"].includes(conversation.status)) throw new Error("Sara is paused for this conversation");
+    if (!conversation.aiEnabled || ["human_required", "closed"].includes(conversation.status)) throw new Error("Sona is paused for this conversation");
     if (conversation.channel === "sms" && conversation.externalParticipant && (await getSmsConsent(ctx, conversation.externalParticipant)).optedOut) {
       throw new Error("SMS recipient opted out");
     }
@@ -357,14 +388,25 @@ export const startRun = mutation({
     if (existing && ["completed", "handoff"].includes(existing.status)) return existing;
     const sameRunIsFresh = existing?.status === "running" && conversation.activeRunMessageId === args.inboundMessageId &&
       conversation.activeRunStartedAt && conversation.activeRunStartedAt > new Date(Date.now() - 600_000).toISOString();
-    if (sameRunIsFresh) throw new Error("Sara is already processing this message");
+    if (sameRunIsFresh) throw new Error("Sona is already processing this message");
     const activeIsFresh = conversation.activeRunMessageId && conversation.activeRunMessageId !== args.inboundMessageId &&
       conversation.activeRunStartedAt && conversation.activeRunStartedAt > new Date(Date.now() - 600_000).toISOString();
-    if (activeIsFresh) throw new Error("Sara is already processing another message in this conversation");
+    if (activeIsFresh) throw new Error("Sona is already processing another message in this conversation");
     const now = new Date().toISOString();
+    const disclosureMessageId = `sara:${args.inboundMessageId}`;
+    const smsInitialDisclosureClaimed = canClaimSmsInitialDisclosure(conversation, disclosureMessageId, new Date(now));
+    const conversationPatch = {
+      activeRunMessageId: args.inboundMessageId,
+      activeRunStartedAt: now,
+      updatedAt: now,
+      ...(smsInitialDisclosureClaimed ? {
+        smsInitialDisclosurePendingMessageId: disclosureMessageId,
+        smsInitialDisclosurePendingAt: now,
+      } : {}),
+    };
     if (existing) {
-      await ctx.db.patch(existing._id, { status: "running", toolCalls: [], error: undefined, completedAt: undefined, controlVersion: conversation.controlVersion || 0 });
-      await ctx.db.patch(conversation._id, { activeRunMessageId: args.inboundMessageId, activeRunStartedAt: now, updatedAt: now });
+      await ctx.db.patch(existing._id, { status: "running", toolCalls: [], error: undefined, completedAt: undefined, controlVersion: conversation.controlVersion || 0, smsInitialDisclosureClaimed });
+      await ctx.db.patch(conversation._id, conversationPatch);
       return ctx.db.get(existing._id);
     }
     const id = await ctx.db.insert("agentRuns", {
@@ -375,9 +417,10 @@ export const startRun = mutation({
       promptVersion: args.promptVersion,
       toolCalls: [],
       controlVersion: conversation.controlVersion || 0,
+      smsInitialDisclosureClaimed,
       createdAt: now,
     });
-    await ctx.db.patch(conversation._id, { activeRunMessageId: args.inboundMessageId, activeRunStartedAt: now, updatedAt: now });
+    await ctx.db.patch(conversation._id, conversationPatch);
     return ctx.db.get(id);
   },
 });
@@ -406,7 +449,17 @@ export const finishRun = mutation({
     });
     const conversation = await ctx.db.get(run.conversationId);
     if (conversation?.activeRunMessageId === run.inboundMessageId) {
-      await ctx.db.patch(conversation._id, { activeRunMessageId: undefined, activeRunStartedAt: undefined, updatedAt: new Date().toISOString() });
+      const disclosureMessageId = `sara:${run.inboundMessageId}`;
+      const releaseDisclosure = args.status === "failed" && conversation.smsInitialDisclosurePendingMessageId === disclosureMessageId;
+      await ctx.db.patch(conversation._id, {
+        activeRunMessageId: undefined,
+        activeRunStartedAt: undefined,
+        ...(releaseDisclosure ? {
+          smsInitialDisclosurePendingMessageId: undefined,
+          smsInitialDisclosurePendingAt: undefined,
+        } : {}),
+        updatedAt: new Date().toISOString(),
+      });
     }
   },
 });
