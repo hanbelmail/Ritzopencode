@@ -132,7 +132,7 @@ function ControlsPanel() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="agent-model">OpenAI model override</Label>
-            <Input id="agent-model" value={settings.saraModel || ""} onChange={(event) => set("saraModel", event.target.value)} placeholder="Uses OPENAI_MODEL or gpt-4.1-mini" className="border-[#e6dfd8] bg-[#faf9f5]" />
+            <Input id="agent-model" value={settings.saraModel || ""} onChange={(event) => set("saraModel", event.target.value)} placeholder="Uses OPENAI_MODEL or gpt-5.6-luna" className="border-[#e6dfd8] bg-[#faf9f5]" />
           </div>
           <div className="space-y-2">
             <Label htmlFor="quote-days">Quote validity days</Label>

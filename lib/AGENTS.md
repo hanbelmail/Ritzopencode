@@ -48,6 +48,7 @@
 - Do not duplicate status, payment method, settings, or ticket schema constants in route or component files.
 - `normalizePhone()` converts formatted 10-digit US/Canada numbers and 11-digit North American numbers beginning with `1` to persisted `+1` E.164 values while preserving already international `+` numbers.
 - Use Convex transcripts and structured state as Sona's durable context; OpenAI Responses must use `store: false`, bounded history, bounded output, and no browser-provided model or system instructions.
+- Select Sona's OpenAI model from the staff CRM override first, then `OPENAI_MODEL`, then the `gpt-5.6-luna` code default so an intentional CRM value takes effect without redeployment.
 - Keep property facts in approved Knowledge or dynamic settings tools, Terms behind the priced-ticket gate, and payment instructions behind recorded Terms acceptance.
 - Sona may offer or claim an operational action only when an available tool implements it and the tool call succeeds; hotel-controlled services must go to the hotel front desk or a human reservations specialist.
 - Broad calendar-month availability requests must use the month-availability tool and return its contiguous check-in/check-out ranges; do not require exact guest dates before showing those verified options.
