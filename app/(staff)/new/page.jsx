@@ -192,6 +192,8 @@ export default function NewReservation() {
     const email = form.email.trim();
     const phone = normalizePhone(form.phone);
     const retailPrice = form.retailPrice === "" || form.retailPrice == null ? null : Number(form.retailPrice);
+    const confirmationNumber = form.reservationConfirmationNumber.trim();
+    const savedConfirmationNumber = String(existing?.reservationConfirmationNumber || "").trim();
     const nextErrors = {};
 
     if (!guestNames.length) nextErrors.guests = "Add at least one guest name.";
@@ -212,6 +214,13 @@ export default function NewReservation() {
     } else if (phone && !isE164Phone(phone)) {
       nextErrors.phone = "Enter a valid US or Canada phone number.";
     }
+    if (form.status === "BOOKING CONFIRMED") {
+      if (existing?.status === "BOOKING CONFIRMED") {
+        if (!confirmationNumber) nextErrors.reservationConfirmationNumber = "Enter the confirmation number for this confirmed booking.";
+      } else if (!savedConfirmationNumber || confirmationNumber !== savedConfirmationNumber) {
+        nextErrors.reservationConfirmationNumber = "Save this confirmation number before marking the booking confirmed.";
+      }
+    }
 
     if (Object.keys(nextErrors).length) {
       setErrors(nextErrors);
@@ -231,7 +240,7 @@ export default function NewReservation() {
       email,
       phone,
       guests: guestNames,
-      reservationConfirmationNumber: form.reservationConfirmationNumber.trim(),
+      reservationConfirmationNumber: confirmationNumber,
       retailPrice,
       adjustment: form.adjustment === "" ? 0 : Number(form.adjustment),
       ...computeTicket(form, settings),
@@ -240,6 +249,9 @@ export default function NewReservation() {
           ? new Date().toISOString().slice(0, 10)
           : existing?.confirmationDate || null,
     };
+    if (form.status === "BOOKING CONFIRMED" && existing?.status !== "BOOKING CONFIRMED") {
+      delete data.reservationConfirmationNumber;
+    }
     try {
       let ticket = existing ? await updateTicket(existing.id, data) : await createTicket(data);
 
@@ -381,8 +393,12 @@ export default function NewReservation() {
              </div>
            </div>
            <div className="space-y-2">
-             <Label>Reservation confirmation number <span className="text-muted-foreground font-normal">(optional, added by staff)</span></Label>
-             <Input value={form.reservationConfirmationNumber} onChange={(e) => set("reservationConfirmationNumber", e.target.value)} placeholder="Enter hotel confirmation number" />
+             <Label>Reservation confirmation number <span className="text-muted-foreground font-normal">(required before booking confirmation)</span></Label>
+              <Input aria-invalid={Boolean(errors.reservationConfirmationNumber)} value={form.reservationConfirmationNumber} onChange={(e) => set("reservationConfirmationNumber", e.target.value)} placeholder="Enter hotel confirmation number" />
+              {errors.reservationConfirmationNumber && <p className="text-xs font-medium text-red-600">{errors.reservationConfirmationNumber}</p>}
+              {form.status !== "BOOKING CONFIRMED" && form.reservationConfirmationNumber.trim() && form.reservationConfirmationNumber.trim() !== String(existing?.reservationConfirmationNumber || "").trim() && (
+                <p className="text-xs text-amber-700">Save this reservation before changing its status to BOOKING CONFIRMED.</p>
+              )}
            </div>
            <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -397,7 +413,7 @@ export default function NewReservation() {
                   <span className={form.status ? "" : "text-muted-foreground"}>{form.status || "Select status"}</span>
                 </SelectTrigger>
                 <SelectContent>
-                  {statusOptions.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  {statusOptions.map((s) => <SelectItem key={s} value={s} disabled={s === "BOOKING CONFIRMED" && form.status !== "BOOKING CONFIRMED" && !String(existing?.reservationConfirmationNumber || "").trim()}>{s}</SelectItem>)}
                 </SelectContent>
               </Select>
               {errors.status && <p className="text-xs font-medium text-red-600">{errors.status}</p>}

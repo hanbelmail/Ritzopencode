@@ -93,6 +93,8 @@ export default function TicketTable({ tickets, selectedIds, onSelectedIdsChange,
   const guests = (selectedTicket?.guests || []).filter(Boolean);
   const primaryGuest = guests[0] || "Unnamed guest";
   const pendingStatusAction = statusToConfirm ? statusActions[statusToConfirm] : null;
+  const persistedConfirmationNumber = String(selectedTicket?.reservationConfirmationNumber || "").trim();
+  const confirmationNumberIsSaved = confirmationNumberSaved || (Boolean(persistedConfirmationNumber) && confirmationNumber.trim() === persistedConfirmationNumber);
 
   useEffect(() => {
     setConfirmationNumber(selectedTicket?.reservationConfirmationNumber || "");
@@ -145,6 +147,7 @@ export default function TicketTable({ tickets, selectedIds, onSelectedIdsChange,
 
   const confirmStatusChange = () => {
     if (!selectedTicket || !statusToConfirm || typeof onStatusChange !== "function") return;
+    if (statusToConfirm === "BOOKING CONFIRMED" && !confirmationNumberIsSaved) return;
     onStatusChange(selectedTicket.id, statusToConfirm);
     closeTicketDialog();
   };
@@ -154,8 +157,9 @@ export default function TicketTable({ tickets, selectedIds, onSelectedIdsChange,
     setSavingConfirmationNumber(true);
     setConfirmationNumberSaved(false);
     try {
-      await onTicketUpdate(selectedTicket.id, { reservationConfirmationNumber: confirmationNumber.trim() });
-      setConfirmationNumberSaved(true);
+      const normalizedConfirmationNumber = confirmationNumber.trim();
+      await onTicketUpdate(selectedTicket.id, { reservationConfirmationNumber: normalizedConfirmationNumber });
+      setConfirmationNumberSaved(Boolean(normalizedConfirmationNumber));
     } finally {
       setSavingConfirmationNumber(false);
     }
@@ -297,7 +301,7 @@ export default function TicketTable({ tickets, selectedIds, onSelectedIdsChange,
                         type="button"
                         size="sm"
                         onClick={saveConfirmationNumber}
-                        disabled={savingConfirmationNumber || typeof onTicketUpdate !== "function"}
+                        disabled={savingConfirmationNumber || typeof onTicketUpdate !== "function" || (selectedTicket.status === "BOOKING CONFIRMED" && !confirmationNumber.trim())}
                         className={`h-9 min-w-[92px] shrink-0 rounded-[8px] px-4 text-white transition-all duration-200 ${confirmationNumberSaved ? "bg-emerald-600 hover:bg-emerald-600" : "bg-[#25211d] hover:bg-[#3a3028]"}`}
                       >
                         <span key={savingConfirmationNumber ? "saving" : confirmationNumberSaved ? "saved" : "save"} className="inline-flex animate-in items-center gap-1.5 fade-in zoom-in-95 duration-200" aria-live="polite">
@@ -311,6 +315,9 @@ export default function TicketTable({ tickets, selectedIds, onSelectedIdsChange,
                         </span>
                       </Button>
                     </div>
+                    {!confirmationNumberIsSaved && (
+                      <p className="mt-2 text-xs text-amber-700">Save a confirmation number before marking this booking confirmed.</p>
+                    )}
                   </div>
                 </div>
                 <div className="grid gap-2 sm:grid-cols-2">
@@ -363,6 +370,11 @@ export default function TicketTable({ tickets, selectedIds, onSelectedIdsChange,
                     No retail price screenshot is attached. The PRICE SENT email will send without that attachment unless you edit the reservation first.
                   </span>
                 )}
+                {statusToConfirm === "BOOKING CONFIRMED" && !confirmationNumberIsSaved && (
+                  <span className="mt-2 block rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-amber-800">
+                    Save the reservation confirmation number first, then mark the booking confirmed.
+                  </span>
+                )}
               </AlertDialogDescription>
             </AlertDialogHeader>
           </div>
@@ -370,7 +382,7 @@ export default function TicketTable({ tickets, selectedIds, onSelectedIdsChange,
             <AlertDialogCancel className="mt-0 rounded-[8px] border-[#d8d0c7] bg-[#faf9f5] text-[#252523] hover:bg-[#efe9de]">
               Cancel
             </AlertDialogCancel>
-            <AlertDialogAction onClick={confirmStatusChange} className={`rounded-[8px] text-white ${statusToConfirm === "CANCELLED" ? "bg-[#b84f34] hover:bg-[#963f2a]" : "bg-[#cc785c] hover:bg-[#a9583e]"}`}>
+            <AlertDialogAction disabled={statusToConfirm === "BOOKING CONFIRMED" && !confirmationNumberIsSaved} onClick={confirmStatusChange} className={`rounded-[8px] text-white ${statusToConfirm === "CANCELLED" ? "bg-[#b84f34] hover:bg-[#963f2a]" : "bg-[#cc785c] hover:bg-[#a9583e]"}`}>
               {pendingStatusAction?.label}
             </AlertDialogAction>
           </AlertDialogFooter>

@@ -364,11 +364,16 @@
           <span class="step-number">5</span>
           <div>
             <h3>Confirm the booking</h3>
-            <p>After the hotel reservation is finalized, set the ticket status to <code class="inline">BOOKING CONFIRMED</code> with its confirmation number. This independently sends the enabled hotel confirmation email and selected guest confirmation SMS.</p>
+            <p>After the hotel reservation is finalized, save its confirmation number first. Only after that request succeeds, mark the ticket <code class="inline">BOOKING CONFIRMED</code>. The status update independently sends the enabled hotel confirmation email and selected guest confirmation SMS.</p>
             <pre>curl -X PATCH "https://your-domain.com/api/tickets/8d4b6b3e-4a66-48b0-8a0d-fd8f28a07000" \
   -H "Authorization: Bearer $N8N_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{ "status": "BOOKING CONFIRMED", "reservationConfirmationNumber": "RC-123456" }'</pre>
+  -d '{ "reservationConfirmationNumber": "RC-123456" }'
+
+curl -X PATCH "https://your-domain.com/api/tickets/8d4b6b3e-4a66-48b0-8a0d-fd8f28a07000" \
+  -H "Authorization: Bearer $N8N_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "status": "BOOKING CONFIRMED" }'</pre>
             <p>Each accepted email or SMS delivery is stamped independently so later saves and status re-entry do not send duplicates.</p>
           </div>
         </div>

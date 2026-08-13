@@ -7,6 +7,7 @@ import { sendPriceSentNotifications } from "@/lib/price-sent-notifications-serve
 import { sendPaymentSubmittedNotifications } from "@/lib/payment-submitted-notifications-server";
 import { sendPaymentVerifiedNotifications } from "@/lib/payment-verified-notifications-server";
 import { sendBookingConfirmedNotifications } from "@/lib/booking-confirmed-notifications-server";
+import { BOOKING_CONFIRMATION_CLEAR_ERROR, BOOKING_CONFIRMATION_SEQUENCE_ERROR } from "@/convex/ticketConfirmation";
 
 const pricingInputFields = new Set(["retailPrice", "adjustment", "checkIn", "checkOut"]);
 
@@ -140,7 +141,13 @@ export async function PATCH(request, { params }) {
     return NextResponse.json({ ticket, priceSentEmail, priceSentSms, paymentSubmittedAlert, bookingRequestHotelAlert, bookingConfirmedHotelAlert });
   } catch (error) {
     const message = error.message || "Failed to update ticket";
-    if (message === "Invalid JSON body" || message.includes("must be a number")) {
+    if (
+      message === "Invalid JSON body" ||
+      message.includes("must be a number") ||
+      message.includes("must be a string") ||
+      message.includes(BOOKING_CONFIRMATION_SEQUENCE_ERROR) ||
+      message.includes(BOOKING_CONFIRMATION_CLEAR_ERROR)
+    ) {
       return jsonError(message, 400);
     }
     return jsonError(message, message.includes("not found") ? 404 : 500);

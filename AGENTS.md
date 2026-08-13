@@ -90,6 +90,7 @@ When the user requests a durable behavior change, record it here or in the relev
 - SMS Terms acceptance must allow explicit whole-message agree/accept phrases, ignore capitalization, surrounding whitespace, and trailing periods, commas, or exclamation marks, and reject ambiguous, negative, questioning, or malformed replies; web acceptance remains checkbox/button only.
 - Payment submission and later paid/confirmed ticket statuses must preserve an active Sona conversation; only STOP, explicit staff control or reply, handoff, cancellation, or another existing safety gate may pause it.
 - Sona is the guest- and staff-visible concierge name. Web chat must display the approved exact Sona/Mike/private-condo opening message before guest input; the first SMS reply must disclose the same identity and independent-service status while acting on dates already provided. Keep compatibility-sensitive internal `sara*` routes, files, settings, environment variables, cookies, source tags, and function names unchanged.
+- Staff and automation must save a nonblank reservation confirmation number in a separate successful mutation before changing a ticket to `BOOKING CONFIRMED`; confirmed tickets must retain a confirmation number, while legacy confirmed records without one remain repairable by adding it.
 
 ## Work Guidance
 

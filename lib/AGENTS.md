@@ -40,6 +40,7 @@
 ## Local Contracts
 
 - Treat Convex `tickets` and `settings` tables as the live persistence contract for reservation/settings data, including app name, public home page variant, quote webhook URL/enabled settings, email/SMS alert settings and staff/hotel recipients, `bookingConfirmedHotelAlertAttachments`, `reservationConfirmationNumber`, lifecycle `*SmsEnabled`, `*SmsTemplates`, `*SmsTemplateId`, and `*SmsSentAt` fields, email delivery stamps, and R2 object-key fields such as `paymentScreenshotKey` and `retailPriceScreenshotKey`.
+- Booking-confirmed hotel email delivery requires a nonblank reservation confirmation number and must never substitute placeholder copy for a missing number.
 - Treat legacy `ritz_*` localStorage keys as import-only compatibility contracts for existing browser data.
 - Keep dashboard paginated ticket hook arguments aligned with `convex/tickets.ts` pagination and filter query args.
 - Keep dashboard preference hooks aligned with `convex/dashboardPreferences.ts`; validate saved view mode, status filters, date filters, page size, and visible columns before writing them.

@@ -11,6 +11,7 @@
 - `http.ts` owns Convex HTTP routes, including auth endpoints.
 - `schema.ts` owns Convex database schema tables, including Auth, tickets/settings/dashboard preferences, contacts, conversations, messages, Knowledge, immutable Terms, payment-upload receipts, phone-level SMS consent, reservation events, quote-webhook deliveries, agent runs, SMS outbox, and webhook events.
 - `tickets.ts` owns reservation ticket queries, public Terms/payment gates, confirmed proof-receipt consumption, paginated/filterable dashboard queries, export queries, mutations, persisted status normalization, lifecycle guest-SMS claim/confirm/finish fencing, searchable ticket index fields, index-field backfill, and legacy ticket import.
+- `ticketConfirmation.ts` owns the booking-confirmation sequencing invariant and confirmation-number patch normalization.
 - `settings.ts` owns shared app settings query and mutation, including email alert settings stored in the main settings document.
 - `dashboardPreferences.ts` owns per-authenticated-user dashboard preference reads and upserts keyed by Convex Auth user ID.
 - `security.ts` owns staff and shared server-service authorization checks.
@@ -51,6 +52,7 @@
 - Ticket lifecycle SMS claims are a closed event set for `PRICE SENT`, `PAYMENT SUBMITTED`, `PAYMENT VERIFIED`, and `BOOKING CONFIRMED`; final confirmation must reject ticket, phone, consent-version, settings, enablement, test-mode, or allowlist changes and successful completion stamps at most one provider acceptance per ticket/status.
 - Guest payment submission and later paid/confirmed status synchronization must preserve the conversation's existing active Sona state; they must not resume an already paused conversation or override STOP, staff control, handoff, cancellation, or consent gates.
 - Finalizing a ticket as `PAYMENT VERIFIED` or `BOOKING CONFIRMED` must atomically reject overlapping one-unit stays while preserving same-day checkout/check-in turnover.
+- Creating a ticket as `BOOKING CONFIRMED` is prohibited. A transition to `BOOKING CONFIRMED` requires the same nonblank confirmation number to exist on the persisted ticket before the transition mutation; the transition must not submit that field, and confirmed tickets must not clear it. Legacy confirmed records without a number may add one as a repair.
 - Operational creation of a `QUOTE REQUESTED` ticket through `tickets.create` or `sara.createQuoteRequest` must enqueue exactly one `quote-created:<ticketId>` delivery; legacy imports do not replay historical quote webhooks.
 
 ## Verification

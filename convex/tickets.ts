@@ -5,6 +5,7 @@ import { isAutomationKey, isStaff, requireStaff, requireStaffOrAutomation } from
 import { getSmsConsent, normalizeSmsPhone } from "./smsConsent";
 import { termsAgreementText, WEB_TERMS_ACCEPTANCE_CONTRACT } from "./termsContract";
 import { queueQuoteWebhook } from "./quoteWebhook";
+import { ensureBookingConfirmationSequence, normalizeReservationConfirmationNumberPatch } from "./ticketConfirmation";
 
 const legacyStatusMap: Record<string, string> = {
   QUOTE: "QUOTE REQUESTED",
@@ -696,7 +697,9 @@ export const create = mutation({
   handler: async (ctx, { data, serviceKey }) => {
     const now = new Date().toISOString();
     const trusted = isAutomationKey(serviceKey) || await isStaff(ctx);
-    const normalizedData = trusted ? normalizeTicket(data) : await publicQuote(ctx, data);
+    const normalizedData = trusted
+      ? normalizeTicket(normalizeReservationConfirmationNumberPatch(data))
+      : await publicQuote(ctx, data);
     let ticket = {
       ...normalizedData,
       id: crypto.randomUUID(),
@@ -705,6 +708,7 @@ export const create = mutation({
     if (ticket.status === "PRICE SENT" && (!Number.isFinite(Number(ticket.rateOffered)) || Number(ticket.rateOffered) <= 0)) {
       throw new Error("PRICE SENT requires a positive offered price");
     }
+    ensureBookingConfirmationSequence(null, ticket, true);
     if (ticket.status === "PRICE SENT" && !ticket.quoteExpiresAt) ticket = { ...ticket, quoteExpiresAt: await quoteExpiry(ctx) };
     await ensureFinalStayAvailable(ctx, ticket);
 
@@ -736,7 +740,7 @@ export const update = mutation({
     const serviceRequest = isAutomationKey(serviceKey);
     const trusted = serviceRequest || await isStaff(ctx);
     if (!trusted) throw new Error("Guest updates must use the ticket-scoped payment operation");
-    let allowedData = data;
+    let allowedData = normalizeReservationConfirmationNumberPatch(data);
     const currentTicket = normalizeTicket(row.data);
     const numericQuoteFields = new Set(["retailPrice", "adjustment", "rateOffered", "discountPct"]);
     const quoteInputsChanged = ["retailPrice", "adjustment", "rateOffered", "discountPct", "checkIn", "checkOut", "roomType"].some((field) => {
@@ -745,8 +749,8 @@ export const update = mutation({
       if (numericQuoteFields.has(field)) return Number(data[field] ?? 0) !== Number(currentTicket[field] ?? 0);
       return String(data[field] || "") !== String(currentTicket[field] || "");
     });
-    const targetStatus = normalizeTicket({ ...row.data, ...data })?.status;
-    const targetTicket = normalizeTicket({ ...row.data, ...data });
+    const targetStatus = normalizeTicket({ ...row.data, ...allowedData })?.status;
+    const targetTicket = normalizeTicket({ ...row.data, ...allowedData });
     if (targetStatus === "PRICE SENT" && (!Number.isFinite(Number(targetTicket.rateOffered)) || Number(targetTicket.rateOffered) <= 0)) {
       throw new Error("PRICE SENT requires a positive offered price");
     }
@@ -765,6 +769,12 @@ export const update = mutation({
     if (trusted && quoteInputsChanged && !PAYMENT_BLOCKING_STATUSES.has(currentTicket.status)) {
       for (const field of ["termsAcceptedAt", "termsVersion", "termsAcceptedText", "termsAcceptedHash", "termsAcceptedMessageId", "termsAcceptanceSource", "termsAcceptanceAction", "termsAcceptanceContract", "termsAcceptedNormalizedText"]) delete updated[field];
     }
+    ensureBookingConfirmationSequence(
+      currentTicket,
+      updated,
+      false,
+      Object.prototype.hasOwnProperty.call(data || {}, "reservationConfirmationNumber")
+    );
     await ensureFinalStayAvailable(ctx, updated, row._id);
 
     const now = new Date().toISOString();

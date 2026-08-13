@@ -40,9 +40,11 @@ export default function TicketCard({ ticket, onDelete, onStatusChange }) {
   const guests = (ticket.guests || []).filter(Boolean);
   const [primary, ...others] = guests;
   const pendingStatusAction = statusToConfirm ? statusActions[statusToConfirm] : null;
+  const hasConfirmationNumber = Boolean(String(ticket.reservationConfirmationNumber || "").trim());
 
   const confirmStatusChange = () => {
     if (!statusToConfirm) return;
+    if (statusToConfirm === "BOOKING CONFIRMED" && !hasConfirmationNumber) return;
     onStatusChange(ticket.id, statusToConfirm);
     setStatusToConfirm(null);
   };
@@ -126,6 +128,11 @@ export default function TicketCard({ ticket, onDelete, onStatusChange }) {
                         No retail price screenshot is attached. The PRICE SENT email will send without that attachment unless you edit the reservation first.
                       </span>
                     )}
+                    {statusToConfirm === "BOOKING CONFIRMED" && !hasConfirmationNumber && (
+                      <span className="mt-2 block rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-amber-800">
+                        Edit this reservation and save its confirmation number first. Then return here to mark the booking confirmed.
+                      </span>
+                    )}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
               </div>
@@ -133,7 +140,7 @@ export default function TicketCard({ ticket, onDelete, onStatusChange }) {
                 <AlertDialogCancel className="mt-0 rounded-[8px] border-[#d8d0c7] bg-[#faf9f5] text-[#252523] hover:bg-[#efe9de]">
                   Cancel
                 </AlertDialogCancel>
-                <AlertDialogAction onClick={confirmStatusChange} className={`rounded-[8px] text-white ${statusToConfirm === "CANCELLED" ? "bg-[#b84f34] hover:bg-[#963f2a]" : "bg-[#cc785c] hover:bg-[#a9583e]"}`}>
+                <AlertDialogAction disabled={statusToConfirm === "BOOKING CONFIRMED" && !hasConfirmationNumber} onClick={confirmStatusChange} className={`rounded-[8px] text-white ${statusToConfirm === "CANCELLED" ? "bg-[#b84f34] hover:bg-[#963f2a]" : "bg-[#cc785c] hover:bg-[#a9583e]"}`}>
                   {pendingStatusAction?.label}
                 </AlertDialogAction>
               </AlertDialogFooter>

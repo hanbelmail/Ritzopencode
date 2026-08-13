@@ -25,6 +25,7 @@
 - `components/home/QuoteForm.jsx` accepts familiar US/Canada phone formatting, displays the normalized E.164 value after blur, and persists that normalized value.
 - `components/home/QuoteForm.jsx` limits public quote requests to 4 guest names, including children; `components/forms/GuestNamesInput.jsx` accepts optional `maxGuests` for callers that need a cap.
 - `components/forms/ReservationDatePicker.jsx` marks finalized reservations (`PAYMENT VERIFIED`, `BOOKING CONFIRMED`) and must preserve same-day checkout/check-in turnover behavior.
+- Staff ticket quick actions must disable `BOOKING CONFIRMED` until the reservation confirmation number has completed its separate save.
 - `components/ticket/PayDialog.jsx` guides guests through separate Terms, payment-method, and image-proof steps; it displays the exact immutable Terms content and version in the dialog's single content scroller, keeps the version-bound agreement checkbox visible with the Terms action, records acceptance before revealing configured payment instructions, honors an already-current Sona acceptance without overwriting its evidence, validates proof images before upload, and labels completion as proof submitted pending verification.
 - Keep shared components route-agnostic unless they are in a domain folder such as `home/`, `ticket/`, or `tickets/`.
 - Preserve `@/components/ui/*` import paths for UI primitives.
