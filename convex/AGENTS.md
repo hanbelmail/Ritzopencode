@@ -12,7 +12,7 @@
 - `schema.ts` owns Convex database schema tables, including Auth, tickets/settings/dashboard preferences, contacts, conversations, messages, Knowledge, immutable Terms, payment-upload receipts, phone-level SMS consent, reservation events, quote-webhook deliveries, agent runs, SMS outbox, and webhook events.
 - `tickets.ts` owns reservation ticket queries, public Terms/payment gates, confirmed proof-receipt consumption, paginated/filterable dashboard queries, export queries, mutations, persisted status normalization, lifecycle guest-SMS claim/confirm/finish fencing, searchable ticket index fields, index-field backfill, and legacy ticket import.
 - `ticketConfirmation.ts` owns the booking-confirmation sequencing invariant and confirmation-number patch normalization.
-- `settings.ts` owns shared app settings query and mutation, including email alert settings stored in the main settings document.
+- `settings.ts` owns shared app settings query and mutation, including the global desktop table Columns-button visibility and email alert settings stored in the main settings document.
 - `dashboardPreferences.ts` owns per-authenticated-user dashboard preference reads and upserts keyed by Convex Auth user ID.
 - `security.ts` owns staff and shared server-service authorization checks.
 - `conversations.ts` owns durable web/SMS conversation state, including provider-confirmed first-SMS disclosure completion, transcripts, agent-run audit records, rate limits, staff inbox queries, human controls, and staff-only conversation cleanup.

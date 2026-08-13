@@ -6,7 +6,7 @@
 
 ## Ownership
 
-- `defaults.js` owns server-safe default settings, including the default app name, public home page variant, quote webhook defaults, email/SMS alert defaults, and payment method constants shared by client hooks and API routes.
+- `defaults.js` owns server-safe default settings, including the default app name, dashboard desktop Columns-button visibility, public home page variant, quote webhook defaults, email/SMS alert defaults, and payment method constants shared by client hooks and API routes.
 - `convex-server.js` owns server-side Convex HTTP client creation and JSON error helpers for App Router API routes.
 - `r2.js` owns server-side Cloudflare R2 S3 client setup, signed URL helpers, payment-proof object inspection, key validation helpers, and server-side attachment reads for private payment proof, retail price screenshot, and booking-confirmed alert PDF objects.
 - `store.js` owns full-list and paginated reservation tickets/settings client hooks, account-scoped dashboard preference hooks and normalization, persisted status constants, dashboard filter option constants, default/settings normalization, and legacy `ritz_*` localStorage migration keys.
@@ -39,7 +39,7 @@
 
 ## Local Contracts
 
-- Treat Convex `tickets` and `settings` tables as the live persistence contract for reservation/settings data, including app name, public home page variant, quote webhook URL/enabled settings, email/SMS alert settings and staff/hotel recipients, `bookingConfirmedHotelAlertAttachments`, `reservationConfirmationNumber`, lifecycle `*SmsEnabled`, `*SmsTemplates`, `*SmsTemplateId`, and `*SmsSentAt` fields, email delivery stamps, and R2 object-key fields such as `paymentScreenshotKey` and `retailPriceScreenshotKey`.
+- Treat Convex `tickets` and `settings` tables as the live persistence contract for reservation/settings data, including app name, global desktop table Columns-button visibility, public home page variant, quote webhook URL/enabled settings, email/SMS alert settings and staff/hotel recipients, `bookingConfirmedHotelAlertAttachments`, `reservationConfirmationNumber`, lifecycle `*SmsEnabled`, `*SmsTemplates`, `*SmsTemplateId`, and `*SmsSentAt` fields, email delivery stamps, and R2 object-key fields such as `paymentScreenshotKey` and `retailPriceScreenshotKey`.
 - Booking-confirmed hotel email delivery requires a nonblank reservation confirmation number and must never substitute placeholder copy for a missing number.
 - Treat legacy `ritz_*` localStorage keys as import-only compatibility contracts for existing browser data.
 - Keep dashboard paginated ticket hook arguments aligned with `convex/tickets.ts` pagination and filter query args.

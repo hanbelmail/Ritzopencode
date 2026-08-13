@@ -7,13 +7,13 @@
 ## Ownership
 
 - `layout.jsx` owns client-side staff route guarding and wraps pages with `components/StaffLayout.jsx`; `middleware.js` owns server-side staff route redirects.
-- `dashboard/` owns the server-paginated reservation list, board/table switching, account-scoped saved dashboard preferences, table column controls, table row action dialogs, multi-status filtering with status counts, CSV export, deletion, status updates, price-sent email triggering, and summary stats.
+- `dashboard/` owns the server-paginated reservation list, board/table switching, account-scoped saved dashboard preferences, table column controls, shared board-card/table-row action dialogs, multi-status filtering with status counts, CSV export, deletion, status updates, price-sent email triggering, and summary stats.
 - `analytics/` owns staff-only reservation analytics computed from Convex tickets, including KPI cards, charts, grouped tables, date range filtering, and analytics CSV export.
 - `api-dashboard/` owns the staff-only quote webhook URL/enabled setting and the public home page variant setting.
 - `email-dashboard/` owns guest, staff, and hotel email alert controls, active/inactive staff email recipients, active/inactive hotel email recipients, the new quote alert setting, the active-by-default guest price-sent email setting, the disabled-by-default price-sent staff copy setting, the disabled-by-default payment-submitted staff alert setting, the disabled-by-default Booking Requests and Booking Confirmed Hotel Alert settings, and up to two saved PDF attachments for booking-confirmed alerts.
 - `sms-dashboard/` owns tabbed guest lifecycle SMS settings for `PRICE SENT`, `PAYMENT SUBMITTED`, `PAYMENT VERIFIED`, and `BOOKING CONFIRMED`; each status has an independent disabled-by-default switch and active editable Quo template selection, with three price-sent templates and two templates for each later status.
 - `new/` owns reservation creation and edit saves, the staff-entered `reservationConfirmationNumber` that must be saved before booking confirmation, optional retail price screenshot upload to R2, warning before `PRICE SENT` saves without that screenshot, and status-driven email alert triggering after saves.
-- `calendar/`, `clients/`, and `settings/` own their respective staff management views; `settings/` includes hotel info and the persisted app name used for the browser/tab title.
+- `calendar/`, `clients/`, and `settings/` own their respective staff management views; `settings/` includes hotel info, the persisted app name used for the browser/tab title, and the global desktop table Columns-button visibility setting.
 - `sara-dashboard/` owns Sona web/SMS activation, the code-controlled Sona name and initial disclosure display, model and quote-validity settings, approved Terms and editable handoff messaging, SMS test allowlists, Knowledge draft/approval management, conversation review, human pause/resume controls, and confirmed conversation deletion for testing cleanup.
 
 ## Local Contracts
@@ -22,6 +22,8 @@
 - Staff reservation mutations use Convex-backed hooks from `lib/store.js`; do not create separate persistence flows without updating `lib/AGENTS.md` and `convex/AGENTS.md`.
 - Dashboard reservation filtering and paging use the paginated Convex ticket query through `lib/store.js`; avoid reintroducing full-list browser filtering for the main dashboard list.
 - Dashboard defaults to table view for staff accounts without saved preferences; view mode, search text, status filters, date filter, page size, and table column visibility persist per authenticated staff account through Convex dashboard preferences; pagination cursor/page index and selected row IDs remain session-only.
+- The dashboard table Columns button is always hidden below the `md` breakpoint and appears on desktop only when the global `tableColumnsButtonVisible` setting is enabled; its field selections remain per authenticated staff account.
+- Dashboard table rows and To Do cards open the same reservation action dialog; To Do cards do not use a separate action menu or navigate directly when the card is clicked.
 - Status labels must stay aligned with `STATUSES` from `lib/store.js`.
 - Saving or changing a reservation to `PRICE SENT` should call the protected notification API after Convex persistence; when enabled, guests receive the ticket link and quote details by email and the ticket link by Quo SMS once each; if a retail price screenshot is selected, upload it and persist `retailPriceScreenshotKey` before calling the notification API.
 - `new/` must validate before saving that a reservation has at least one guest name, check-in, check-out, room type, valid email, valid status, and a positive retail price and E.164 guest phone number when status is `PRICE SENT`.

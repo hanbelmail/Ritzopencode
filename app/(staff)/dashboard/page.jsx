@@ -21,6 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { BadgeCheck, BadgeDollarSign, Check, CheckCircle2, ChevronLeft, ChevronRight, Clock, CreditCard, Download, Filter, Search, Plus, ListTodo, Table2, Trash2, XCircle } from "lucide-react";
 import TicketCard from "@/components/tickets/TicketCard";
+import TicketActionsDialog from "@/components/tickets/TicketActionsDialog";
 import TicketTable, { ticketTableColumnKeys } from "@/components/tickets/TicketTable";
 import {
   DASHBOARD_DATE_FIELD_OPTIONS,
@@ -28,6 +29,7 @@ import {
   STATUSES,
   useDashboardPreferenceActions,
   useDashboardPreferences,
+  useSettings,
   useTicketActions,
   useTicketPage,
 } from "@/lib/store";
@@ -111,6 +113,7 @@ export default function Dashboard() {
   const convex = useConvex();
   const { deleteTicket, updateTicket } = useTicketActions();
   const { toast } = useToast();
+  const settings = useSettings();
   const savedDashboardPreferences = useDashboardPreferences(ticketTableColumnKeys);
   const { saveDashboardPreferences } = useDashboardPreferenceActions(ticketTableColumnKeys);
   const preferencesLoadedRef = useRef(false);
@@ -121,6 +124,7 @@ export default function Dashboard() {
   const [dateFilter, setDateFilter] = useState({ field: "checkIn", from: "", to: "" });
   const [visibleColumns, setVisibleColumns] = useState(() => readDashboardTableColumns(ticketTableColumnKeys));
   const [selectedIds, setSelectedIds] = useState([]);
+  const [selectedBoardTicketId, setSelectedBoardTicketId] = useState(null);
   const [pageSize, setPageSize] = useState(25);
   const [pageIndex, setPageIndex] = useState(0);
   const [pageCursors, setPageCursors] = useState([null]);
@@ -136,6 +140,7 @@ export default function Dashboard() {
   const pageTickets = isMultiStatusFilter
     ? multiStatusTickets.slice(pageIndex * pageSize, pageIndex * pageSize + pageSize)
     : pageResult?.page || [];
+  const selectedBoardTicket = pageTickets.find((ticket) => ticket.id === selectedBoardTicketId) || null;
   const isLoadingPage = isMultiStatusFilter ? loadingMultiStatus : pageResult === undefined;
 
   const hasDateFilter = Boolean(dateFilter.from || dateFilter.to);
@@ -253,10 +258,6 @@ export default function Dashboard() {
       </div>
     </div>
   );
-
-  const handleDelete = async (id) => {
-    await deleteTicket(id);
-  };
 
   const handleStatusChange = async (id, status) => {
     if (status === "PRICE SENT") {
@@ -641,16 +642,22 @@ export default function Dashboard() {
       {view === "board" ? (
         <div className="space-y-3">
           {pageTickets.map((t) => (
-            <TicketCard key={t.id} ticket={t} onDelete={handleDelete} onStatusChange={handleStatusChange} />
+            <TicketCard key={t.id} ticket={t} onClick={() => setSelectedBoardTicketId(t.id)} />
           ))}
           {!isLoadingPage && pageTickets.length === 0 && (
             <div className="border border-dashed border-[#e6dfd8] rounded-[12px] bg-[#faf9f5] py-16 text-center text-sm text-[#6c6a64]">
               No reservations found. <Link href="/new" className="text-[#cc785c] underline underline-offset-4">Create one</Link>.
             </div>
           )}
+          <TicketActionsDialog
+            ticket={selectedBoardTicket}
+            onOpenChange={(open) => { if (!open) setSelectedBoardTicketId(null); }}
+            onStatusChange={handleStatusChange}
+            onTicketUpdate={updateTicket}
+          />
         </div>
       ) : (
-        <TicketTable tickets={pageTickets} selectedIds={selectedIds} onSelectedIdsChange={setSelectedIds} visibleColumns={visibleColumns} onVisibleColumnsChange={setVisibleColumns} onStatusChange={handleStatusChange} onTicketUpdate={updateTicket} />
+        <TicketTable tickets={pageTickets} selectedIds={selectedIds} onSelectedIdsChange={setSelectedIds} visibleColumns={visibleColumns} onVisibleColumnsChange={setVisibleColumns} showColumnsButton={settings?.tableColumnsButtonVisible !== false} onStatusChange={handleStatusChange} onTicketUpdate={updateTicket} />
       )}
       {paginationControls}
       </div>

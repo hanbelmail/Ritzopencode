@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Check, Plus, X, Eye, EyeOff } from "lucide-react";
 import { DEFAULT_SETTINGS, useSettings, useSettingsActions } from "@/lib/store";
 
@@ -57,9 +58,24 @@ export default function SettingsPage() {
   return (
     <div className="p-5 md:p-8 max-w-2xl mx-auto">
       <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
-      <p className="text-sm text-muted-foreground mt-0.5 mb-6">Defaults used across all new reservations.</p>
+      <p className="text-sm text-muted-foreground mt-0.5 mb-6">Workspace preferences and defaults used across reservations.</p>
 
       <form onSubmit={save} className="space-y-6">
+        {/* Table view */}
+        <div className="border rounded-xl bg-card p-5 md:p-6">
+          <div className="flex items-center justify-between gap-4">
+            <div className="space-y-1">
+              <Label htmlFor="table-columns-button-visible">Show Columns button on desktop</Label>
+              <p className="text-xs text-muted-foreground">The button is always hidden on mobile to prevent accidental taps.</p>
+            </div>
+            <Switch
+              id="table-columns-button-visible"
+              checked={settings.tableColumnsButtonVisible}
+              onCheckedChange={(value) => set("tableColumnsButtonVisible", value)}
+            />
+          </div>
+        </div>
+
         {/* Pricing */}
         <div className="border rounded-xl bg-card p-5 md:p-6 space-y-5">
           <p className="text-xs uppercase tracking-wider text-muted-foreground">Pricing defaults</p>

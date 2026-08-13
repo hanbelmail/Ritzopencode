@@ -10,7 +10,7 @@
 - `forms/` owns reservation form inputs shared by staff and quote flows.
 - `home/` owns public-home-specific quote components.
 - `ticket/` owns single-ticket preview and payment-dialog components.
-- `tickets/` owns staff reservation list, card, table, stats, status badge components, reservation confirmation number table display, and quick editing in the ticket dialog.
+- `tickets/` owns staff reservation list, card, table, stats, status badge components, and the shared board-card/table-row reservation action dialog with confirmation-number editing.
 - `chat/AGENTS.md` owns the public Sona chat launcher, dialog, transcript, composer, and web-chat transport behavior.
 - `ui/AGENTS.md` owns shadcn-style UI primitives and toast helpers.
 
@@ -26,6 +26,7 @@
 - `components/home/QuoteForm.jsx` limits public quote requests to 4 guest names, including children; `components/forms/GuestNamesInput.jsx` accepts optional `maxGuests` for callers that need a cap.
 - `components/forms/ReservationDatePicker.jsx` marks finalized reservations (`PAYMENT VERIFIED`, `BOOKING CONFIRMED`) and must preserve same-day checkout/check-in turnover behavior.
 - Staff ticket quick actions must disable `BOOKING CONFIRMED` until the reservation confirmation number has completed its separate save.
+- `components/tickets/TicketTable.jsx` must keep its Columns control hidden below the `md` breakpoint and omit it on desktop when its settings-driven visibility prop is false.
 - `components/ticket/PayDialog.jsx` guides guests through separate Terms, payment-method, and image-proof steps; it displays the exact immutable Terms content and version in the dialog's single content scroller, keeps the version-bound agreement checkbox visible with the Terms action, records acceptance before revealing configured payment instructions, honors an already-current Sona acceptance without overwriting its evidence, validates proof images before upload, and labels completion as proof submitted pending verification.
 - Keep shared components route-agnostic unless they are in a domain folder such as `home/`, `ticket/`, or `tickets/`.
 - Preserve `@/components/ui/*` import paths for UI primitives.
