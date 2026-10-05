@@ -8,6 +8,8 @@ import { sendPaymentSubmittedNotifications } from "@/lib/payment-submitted-notif
 import { sendPaymentVerifiedNotifications } from "@/lib/payment-verified-notifications-server";
 import { sendBookingConfirmedNotifications } from "@/lib/booking-confirmed-notifications-server";
 import { BOOKING_CONFIRMATION_CLEAR_ERROR, BOOKING_CONFIRMATION_SEQUENCE_ERROR } from "@/convex/ticketConfirmation";
+import { STALE_QUOTE_CALLBACK_ERROR } from "@/convex/quoteRevision";
+import { sendQuoteFailureNotification, sendQuoteReadyNotification } from "@/lib/requote-notification-server";
 
 const pricingInputFields = new Set(["retailPrice", "adjustment", "checkIn", "checkOut"]);
 
@@ -82,6 +84,8 @@ export async function PATCH(request, { params }) {
     let paymentSubmittedAlert = null;
     let bookingRequestHotelAlert = null;
     let bookingConfirmedHotelAlert = null;
+    let quoteReadyNotification = null;
+    let quoteFailureNotification = null;
 
     if (ticket.status === "PRICE SENT") {
       const priceSentNotifications = await sendPriceSentNotifications({
@@ -92,6 +96,15 @@ export async function PATCH(request, { params }) {
       ticket = priceSentNotifications.ticket;
       priceSentEmail = priceSentNotifications.email;
       priceSentSms = priceSentNotifications.sms;
+      quoteReadyNotification = await sendQuoteReadyNotification({
+        client,
+        ticket,
+        origin: request.nextUrl.origin,
+      });
+    }
+
+    if (ticket.status === "QUOTE REQUESTED" && ticket.quoteError) {
+      quoteFailureNotification = await sendQuoteFailureNotification({ client, ticket });
     }
 
     if (ticket.status === "PAYMENT SUBMITTED") {
@@ -138,9 +151,12 @@ export async function PATCH(request, { params }) {
       }
     }
 
-    return NextResponse.json({ ticket, priceSentEmail, priceSentSms, paymentSubmittedAlert, bookingRequestHotelAlert, bookingConfirmedHotelAlert });
+    return NextResponse.json({ ticket, priceSentEmail, priceSentSms, quoteReadyNotification, quoteFailureNotification, paymentSubmittedAlert, bookingRequestHotelAlert, bookingConfirmedHotelAlert });
   } catch (error) {
     const message = error.message || "Failed to update ticket";
+    if (message.includes(STALE_QUOTE_CALLBACK_ERROR)) {
+      return jsonError(message, 409);
+    }
     if (
       message === "Invalid JSON body" ||
       message.includes("must be a number") ||

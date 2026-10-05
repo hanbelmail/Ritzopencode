@@ -1,11 +1,19 @@
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { internalAction, internalMutation } from "./_generated/server";
+import { expectedQuoteWebhookKey } from "./quoteRevision";
 
 const MAX_ATTEMPTS = 5;
 const DELIVERY_LEASE_MS = 60_000;
 const REQUEST_TIMEOUT_MS = 15_000;
 const RETRY_DELAYS_MS = [30_000, 5 * 60_000, 30 * 60_000, 2 * 60 * 60_000];
+const SUPERSEDED_ERROR = "Superseded by a newer quote request";
+const AWAITING_QUOTE_STATUSES = new Set(["QUOTE REQUESTED", ""]);
+
+function currentTicketStatus(ticket: any) {
+  const status = String(ticket?.status || "").toUpperCase();
+  return status === "QUOTE" ? "QUOTE REQUESTED" : status;
+}
 
 function deliveryError(error: unknown) {
   const message = error instanceof Error ? error.message : String(error || "Unknown webhook error");
@@ -18,15 +26,36 @@ function webhookUrl(value: unknown) {
   return url.toString();
 }
 
-export async function queueQuoteWebhook(ctx: any, ticket: any) {
+async function supersedeOpenDeliveries(ctx: any, ticketId: string, keepKey: string) {
+  const rows = await ctx.db
+    .query("quoteWebhookDeliveries")
+    .withIndex("by_ticketId", (q: any) => q.eq("ticketId", ticketId))
+    .collect();
+  const now = new Date().toISOString();
+  for (const row of rows) {
+    if (row.idempotencyKey === keepKey || !["pending", "sending"].includes(row.status)) continue;
+    await ctx.db.patch(row._id, {
+      status: "skipped",
+      retryable: false,
+      lastError: SUPERSEDED_ERROR,
+      claimToken: undefined,
+      leaseExpiresAt: undefined,
+      updatedAt: now,
+    });
+  }
+}
+
+export async function queueQuoteWebhook(ctx: any, ticket: any, options: { key?: string } = {}) {
   if (ticket?.status !== "QUOTE REQUESTED" || !ticket?.id) return null;
 
-  const idempotencyKey = `quote-created:${ticket.id}`;
+  const idempotencyKey = String(options.key || expectedQuoteWebhookKey(ticket));
   const existing = await ctx.db
     .query("quoteWebhookDeliveries")
     .withIndex("by_idempotencyKey", (q: any) => q.eq("idempotencyKey", idempotencyKey))
     .first();
   if (existing) return existing._id;
+
+  await supersedeOpenDeliveries(ctx, ticket.id, idempotencyKey);
 
   const now = new Date().toISOString();
   const deliveryId = await ctx.db.insert("quoteWebhookDeliveries", {
@@ -71,6 +100,30 @@ export const claim = internalMutation({
         status: "skipped",
         retryable: false,
         lastError: "Ticket no longer exists",
+        updatedAt: now.toISOString(),
+      });
+      return { claimed: false as const };
+    }
+
+    if (delivery.idempotencyKey !== expectedQuoteWebhookKey(ticketRow.data)) {
+      await ctx.db.patch(deliveryId, {
+        status: "skipped",
+        retryable: false,
+        lastError: SUPERSEDED_ERROR,
+        claimToken: undefined,
+        leaseExpiresAt: undefined,
+        updatedAt: now.toISOString(),
+      });
+      return { claimed: false as const };
+    }
+
+    if (!AWAITING_QUOTE_STATUSES.has(currentTicketStatus(ticketRow.data))) {
+      await ctx.db.patch(deliveryId, {
+        status: "skipped",
+        retryable: false,
+        lastError: "Ticket is no longer waiting for a quote",
+        claimToken: undefined,
+        leaseExpiresAt: undefined,
         updatedAt: now.toISOString(),
       });
       return { claimed: false as const };

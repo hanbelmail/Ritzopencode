@@ -4,6 +4,8 @@ import { isAutomationKey, requireServiceKey } from "./security";
 import { availableRangesForWindow, isCalendarDate, monthAvailabilityWindow } from "./saraAvailability";
 import { getSmsConsent, normalizeSmsPhone } from "./smsConsent";
 import { queueQuoteWebhook } from "./quoteWebhook";
+import { applyRequoteReset, nextQuoteRevision, quoteRevisionOf } from "./quoteRevision";
+import { changeSummaryFields, classifyChangeReply, isReservationChangeExpired } from "./reservationChange";
 import {
   classifyTermsReply,
   isReplyAfterTermsPresentation,
@@ -455,13 +457,18 @@ export const getTicketStatus = query({
       id: ticket.id,
       status: normalizedStatus(ticket.status),
       guests: ticket.guests,
+      email: ticket.email,
+      phone: ticket.phone,
       checkIn: ticket.checkIn,
       checkOut: ticket.checkOut,
+      nights: Number(ticket.nights || 0),
       roomType: ticket.roomType,
       rateOffered: ticket.rateOffered,
       retailPrice: ticket.retailPrice,
       discountPct: ticket.discountPct,
       quoteExpiresAt: ticket.quoteExpiresAt,
+      quoteError: ticket.quoteError || null,
+      quoteRequestedAt: ticket.quoteRequestedAt || null,
       reservationConfirmationNumber: ticket.reservationConfirmationNumber,
       termsAcceptedAt: ticket.termsAcceptedAt,
       termsVersion: ticket.termsVersion,
@@ -476,6 +483,7 @@ export const getBookingTerms = query({
     requireServiceKey(args.serviceKey);
     const conversation = await getConversation(ctx, args.publicId);
     if (!conversation.ticketId) throw new Error("A quote ticket is required");
+    if (conversation.pendingReservationChange) throw new Error("A reservation change is awaiting the guest's confirmation");
     const row = await getTicketRow(ctx, conversation.ticketId);
     if (normalizedStatus(row.data.status) !== "PRICE SENT") throw new Error("Booking Terms are available only after PRICE SENT");
     assertActiveQuote(row.data);
@@ -499,6 +507,7 @@ export const getPaymentInstructions = query({
     if (!conversation.ticketId) throw new Error("Ticket not found");
     const row = await getTicketRow(ctx, conversation.ticketId);
     if (normalizedStatus(row.data.status) !== "PRICE SENT") throw new Error("Payment instructions require a PRICE SENT ticket");
+    if (conversation.pendingReservationChange) throw new Error("A reservation change is awaiting the guest's confirmation");
     assertActiveQuote(row.data);
     if (await hasPaymentConflict(ctx, row.data, row.data.id)) throw new Error("These dates are no longer available for payment");
     const { settings, terms } = await getCurrentTerms(ctx);
@@ -632,6 +641,7 @@ export const acceptWebTerms = mutation({
     if (conversation.channel !== "web" || conversation.accessTokenHash !== args.accessTokenHash) throw new Error("Conversation access denied");
     if (!conversation.aiEnabled || ["human_required", "closed"].includes(conversation.status)) throw new Error("Sona is paused for this conversation");
     if (!conversation.ticketId) throw new Error("A quote ticket is required before accepting Terms");
+    if (conversation.pendingReservationChange) throw new Error("Confirm or cancel the pending reservation change before accepting Terms");
     const { terms } = await getCurrentTerms(ctx);
     if (
       args.termsVersion !== terms.version ||
@@ -871,5 +881,502 @@ export const setSmsOptOut = mutation({
       }
     }
     return { optedOut: args.optedOut, version, applied: true };
+  },
+});
+
+const EDITABLE_RESERVATION_STATUSES = new Set(["QUOTE REQUESTED", "PRICE SENT"]);
+const PRICE_SENT_SMS_STAMP_FIELDS = [
+  "priceSentSmsSentAt",
+  "priceSentSmsMessageId",
+  "priceSentSmsClaimedAt",
+  "priceSentSmsClaimToken",
+  "priceSentSmsSettingsUpdatedAt",
+  "priceSentSmsConsentVersion",
+  "priceSentSmsError",
+  "priceSentSmsDeliveryUnknownAt",
+];
+
+function assertSonaActive(conversation: any) {
+  if (!conversation.aiEnabled || ["human_required", "closed"].includes(conversation.status)) {
+    throw new Error("Sona is paused for this conversation");
+  }
+}
+
+function hasText(value: any) {
+  return value !== undefined && value !== null && String(value).trim() !== "";
+}
+
+function guestNames(value: any) {
+  return Array.isArray(value) ? value.map((guest) => String(guest || "").trim()).filter(Boolean) : [];
+}
+
+function ticketSnapshot(ticket: any) {
+  return {
+    status: normalizedStatus(ticket.status),
+    quoteRevision: quoteRevisionOf(ticket),
+    checkIn: dateStamp(ticket.checkIn),
+    checkOut: dateStamp(ticket.checkOut),
+    email: normalizeEmail(String(ticket.email || "")),
+    phone: normalizePhone(String(ticket.phone || "")),
+    guests: guestNames(ticket.guests),
+  };
+}
+
+function sameSnapshot(left: any, right: any) {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+async function prepareReservationChange(ctx: any, conversation: any, proposed: any) {
+  if (!conversation.ticketId) throw new Error("An existing reservation is required before making changes");
+  const ticketRow = await getTicketRow(ctx, conversation.ticketId);
+  const ticket = { ...ticketRow.data, status: normalizedStatus(ticketRow.data.status) };
+  if (!EDITABLE_RESERVATION_STATUSES.has(ticket.status)) {
+    throw new Error(`Reservations at ${ticket.status || "this stage"} cannot be edited here; a human reservations specialist can help`);
+  }
+
+  const currentGuests = guestNames(ticket.guests);
+  const guests = guestNames(proposed?.guests).length ? guestNames(proposed.guests) : currentGuests;
+  if (!guests.length || guests.length > 4) throw new Error("Provide 1 to 4 guest names, including children");
+  const email = hasText(proposed?.email) ? normalizeEmail(String(proposed.email)) : normalizeEmail(String(ticket.email || ""));
+  const phone = hasText(proposed?.phone) ? normalizePhone(String(proposed.phone)) : normalizePhone(String(ticket.phone || ""));
+  if (!EMAIL_PATTERN.test(email)) throw new Error("A valid email is required");
+  if (!PHONE_PATTERN.test(phone)) throw new Error("Phone must use E.164 format");
+  if (conversation.channel === "sms" && hasText(proposed?.phone) && phone !== normalizePhone(String(ticket.phone || ""))) {
+    throw new Error("Changing the mobile number on an SMS reservation requires a human reservations specialist");
+  }
+
+  const stay = hasText(proposed?.checkIn) || hasText(proposed?.checkOut)
+    ? validateStay(String(proposed?.checkIn || dateStamp(ticket.checkIn)), String(proposed?.checkOut || dateStamp(ticket.checkOut)))
+    : null;
+  if (stay) {
+    if (!await available(ctx, stay.checkIn, stay.checkOut, ticket.id)) throw new Error("Those dates are no longer available");
+    if (await hasPaymentConflict(ctx, { ...ticket, checkIn: stay.checkIn, checkOut: stay.checkOut }, ticket.id)) {
+      throw new Error("Those dates are no longer available for payment");
+    }
+  }
+
+  const guestsChanged = JSON.stringify(guests) !== JSON.stringify(currentGuests);
+  const emailChanged = email !== normalizeEmail(String(ticket.email || ""));
+  const phoneChanged = phone !== normalizePhone(String(ticket.phone || ""));
+  const checkInChanged = stay ? stay.checkIn !== dateStamp(ticket.checkIn) : false;
+  const checkOutChanged = stay ? stay.checkOut !== dateStamp(ticket.checkOut) : false;
+  const datesChanged = checkInChanged || checkOutChanged;
+
+  const fields: { field: string; from: any; to: any }[] = [];
+  if (checkInChanged) fields.push({ field: "checkIn", from: dateStamp(ticket.checkIn), to: stay!.checkIn });
+  if (checkOutChanged) fields.push({ field: "checkOut", from: dateStamp(ticket.checkOut), to: stay!.checkOut });
+  if (guestsChanged) fields.push({ field: "guests", from: currentGuests, to: guests });
+  if (emailChanged) fields.push({ field: "email", from: String(ticket.email || ""), to: email });
+  if (phoneChanged) fields.push({ field: "phone", from: String(ticket.phone || ""), to: phone });
+
+  let contactRow: any = null;
+  if (guestsChanged || emailChanged || phoneChanged) {
+    const matches = await findContacts(ctx, phone, email);
+    if (matches.ambiguous) throw new Error("Phone and email match different client records; staff review is required");
+    const matched = matches.byPhone || matches.byEmail;
+    if (matched && ticket.contactId && String(matched._id) !== String(ticket.contactId)) {
+      throw new Error("Those details belong to a different client record; staff review is required");
+    }
+    contactRow = matched || null;
+  }
+
+  return {
+    ticketRow,
+    ticket,
+    guests,
+    email,
+    phone,
+    stay,
+    fields,
+    guestsChanged,
+    emailChanged,
+    phoneChanged,
+    datesChanged,
+    quoteInvalidating: datesChanged && ticket.status === "PRICE SENT",
+    contactRow,
+  };
+}
+
+async function applyReservationChange(ctx: any, options: {
+  conversation: any;
+  prepared: any;
+  eventKey: string;
+  actorType: "assistant" | "system";
+}) {
+  const { conversation, prepared, eventKey, actorType } = options;
+  const { ticketRow, ticket, guests, email, phone, stay, fields, datesChanged, emailChanged, phoneChanged, quoteInvalidating, contactRow } = prepared;
+  const now = new Date().toISOString();
+
+  let updated: any = { ...ticket, guests, email, phone };
+  if (datesChanged && stay) {
+    updated.checkIn = stay.checkIn;
+    updated.checkOut = stay.checkOut;
+    updated.nights = stay.nights;
+  }
+  if (datesChanged) {
+    updated = applyRequoteReset(updated, nextQuoteRevision(updated, now));
+  } else if (ticket.status === "PRICE SENT") {
+    if (emailChanged) {
+      delete updated.priceSentEmailSentAt;
+      delete updated.priceSentStaffEmailSentAt;
+    }
+    if (phoneChanged) for (const field of PRICE_SENT_SMS_STAMP_FIELDS) delete updated[field];
+  }
+
+  await ctx.db.patch(ticketRow._id, {
+    data: updated,
+    updatedAt: now,
+    ...ticketIndexFields(updated),
+  });
+
+  if (contactRow) {
+    await ctx.db.patch(contactRow._id, {
+      displayName: guests[0],
+      normalizedPhone: phone,
+      normalizedEmail: email,
+      smsOptOut: (await getSmsConsent(ctx, phone)).optedOut,
+      updatedAt: now,
+    });
+  }
+
+  await ctx.db.insert("reservationEvents", {
+    ticketId: ticket.id,
+    conversationId: conversation._id,
+    type: "reservation_updated",
+    actorType,
+    idempotencyKey: eventKey,
+    payload: {
+      applied: true,
+      fields: fields.map((field: any) => field.field),
+      datesChanged,
+      quoteInvalidating,
+      quoteRevision: quoteRevisionOf(updated),
+      checkIn: dateStamp(updated.checkIn),
+      checkOut: dateStamp(updated.checkOut),
+    },
+    createdAt: now,
+  });
+
+  if (datesChanged) {
+    await ctx.db.insert("reservationEvents", {
+      ticketId: ticket.id,
+      conversationId: conversation._id,
+      type: "requote_requested",
+      actorType,
+      payload: {
+        reasons: quoteInvalidating ? ["sona_quote_invalidated"] : ["sona_dates_changed"],
+        quoteRevision: quoteRevisionOf(updated),
+        checkIn: dateStamp(updated.checkIn),
+        checkOut: dateStamp(updated.checkOut),
+      },
+      createdAt: now,
+    });
+    await queueQuoteWebhook(ctx, updated);
+  }
+
+  const smsOptedOut = conversation.channel === "sms" && conversation.externalParticipant
+    ? (await getSmsConsent(ctx, conversation.externalParticipant)).optedOut
+    : false;
+  await ctx.db.patch(conversation._id, {
+    pendingReservationChange: undefined,
+    ...(datesChanged ? {
+      stage: "quote_requested" as const,
+      status: smsOptedOut ? ("closed" as const) : ("waiting_for_staff" as const),
+      aiEnabled: smsOptedOut ? false : conversation.aiEnabled,
+      termsVersion: undefined,
+      termsPresentedVersion: undefined,
+      termsPresentedAt: undefined,
+      termsPresentedMessageId: undefined,
+      termsPresentedHash: undefined,
+      termsAcceptedAt: undefined,
+      termsAcceptedMessageId: undefined,
+    } : {}),
+    collected: {
+      ...conversation.collected,
+      guests,
+      email,
+      phone,
+      ...(datesChanged && stay ? { checkIn: stay.checkIn, checkOut: stay.checkOut } : {}),
+    },
+    updatedAt: now,
+  });
+
+  return { updated, datesChanged, quoteInvalidating, fields, emailChanged, phoneChanged };
+}
+
+function changeResult(result: any) {
+  return {
+    applied: true,
+    confirmationRequired: false,
+    requote: result.datesChanged,
+    ticketId: result.updated.id,
+    ticketStatus: normalizedStatus(result.updated.status),
+    checkIn: dateStamp(result.updated.checkIn),
+    checkOut: dateStamp(result.updated.checkOut),
+    nights: Number(result.updated.nights || 0),
+    fields: changeSummaryFields({ fields: result.fields }),
+    emailChanged: result.emailChanged,
+    phoneChanged: result.phoneChanged,
+  };
+}
+
+export const proposeReservationChange = mutation({
+  args: {
+    serviceKey: v.string(),
+    publicId: v.string(),
+    expectedControlVersion: v.number(),
+    idempotencyKey: v.string(),
+    guests: v.optional(v.array(v.string())),
+    email: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    checkIn: v.optional(v.string()),
+    checkOut: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    requireServiceKey(args.serviceKey);
+    const conversation = await getConversation(ctx, args.publicId);
+    assertControlVersion(conversation, args.expectedControlVersion);
+    assertSonaActive(conversation);
+    if (conversation.channel === "sms" && conversation.externalParticipant && (await getSmsConsent(ctx, conversation.externalParticipant)).optedOut) {
+      throw new Error("SMS recipient opted out");
+    }
+
+    const existingEvent = await ctx.db
+      .query("reservationEvents")
+      .withIndex("by_idempotencyKey", (q) => q.eq("idempotencyKey", args.idempotencyKey))
+      .first();
+    if (existingEvent) {
+      const pending = conversation.pendingReservationChange;
+      if (pending && pending.changeId === existingEvent.payload?.changeId) {
+        return {
+          applied: false,
+          duplicate: true,
+          confirmationRequired: true,
+          changeId: pending.changeId,
+          ticketStatus: pending.ticketSnapshot?.status || "QUOTE REQUESTED",
+          fields: changeSummaryFields(pending),
+        };
+      }
+      if (existingEvent.payload?.applied) {
+        return { applied: true, duplicate: true, confirmationRequired: false, requote: Boolean(existingEvent.payload?.datesChanged), fields: changeSummaryFields({ fields: existingEvent.payload?.detail || [] }) };
+      }
+    }
+
+    const prepared = await prepareReservationChange(ctx, conversation, args);
+    if (!prepared.fields.length) {
+      if (conversation.pendingReservationChange) {
+        await cancelPendingChange(ctx, conversation, conversation.pendingReservationChange, "guest_kept_current_reservation");
+      }
+      return { applied: false, noChange: true, confirmationRequired: false, ticketStatus: prepared.ticket.status, fields: [] };
+    }
+
+    if (!prepared.quoteInvalidating) {
+      const result = await applyReservationChange(ctx, {
+        conversation,
+        prepared,
+        eventKey: args.idempotencyKey,
+        actorType: "assistant",
+      });
+      return changeResult(result);
+    }
+
+    const now = new Date().toISOString();
+    const changeId = crypto.randomUUID();
+    await ctx.db.insert("reservationEvents", {
+      ticketId: prepared.ticket.id,
+      conversationId: conversation._id,
+      type: "reservation_change_proposed",
+      actorType: "assistant",
+      idempotencyKey: args.idempotencyKey,
+      payload: { changeId, applied: false, fields: prepared.fields.map((field) => field.field), detail: prepared.fields },
+      createdAt: now,
+    });
+    await ctx.db.patch(conversation._id, {
+      pendingReservationChange: {
+        changeId,
+        requestedAt: now,
+        expectedControlVersion: args.expectedControlVersion,
+        quoteInvalidating: true,
+        proposed: {
+          ...(args.guests ? { guests: guestNames(args.guests) } : {}),
+          ...(hasText(args.email) ? { email: normalizeEmail(String(args.email)) } : {}),
+          ...(hasText(args.phone) ? { phone: normalizePhone(String(args.phone)) } : {}),
+          ...(prepared.stay ? { checkIn: prepared.stay.checkIn, checkOut: prepared.stay.checkOut } : {}),
+        },
+        ticketSnapshot: ticketSnapshot(prepared.ticket),
+        fields: prepared.fields,
+      },
+      termsPresentedVersion: undefined,
+      termsPresentedAt: undefined,
+      termsPresentedMessageId: undefined,
+      termsPresentedHash: undefined,
+      updatedAt: now,
+    });
+
+    return {
+      applied: false,
+      confirmationRequired: true,
+      changeId,
+      ticketStatus: prepared.ticket.status,
+      currentCheckIn: dateStamp(prepared.ticket.checkIn),
+      currentCheckOut: dateStamp(prepared.ticket.checkOut),
+      fields: changeSummaryFields({ fields: prepared.fields }),
+    };
+  },
+});
+
+export const recordReservationChangePresented = mutation({
+  args: {
+    serviceKey: v.string(),
+    publicId: v.string(),
+    changeId: v.string(),
+    messageId: v.string(),
+    expectedControlVersion: v.number(),
+  },
+  handler: async (ctx, args) => {
+    requireServiceKey(args.serviceKey);
+    const conversation = await getConversation(ctx, args.publicId);
+    assertControlVersion(conversation, args.expectedControlVersion);
+    const pending = conversation.pendingReservationChange;
+    if (!pending || pending.changeId !== args.changeId) throw new Error("Pending reservation change not found");
+    const outbound = await ctx.db.query("messages").withIndex("by_idempotencyKey", (q) => q.eq("idempotencyKey", args.messageId)).first();
+    if (!outbound || outbound.conversationId !== conversation._id || outbound.direction !== "outbound") {
+      throw new Error("Reservation change message not found");
+    }
+    const now = new Date().toISOString();
+    await ctx.db.patch(conversation._id, {
+      pendingReservationChange: { ...pending, presentedMessageId: args.messageId, presentedAt: now },
+      updatedAt: now,
+    });
+    return { presented: true, presentedAt: now };
+  },
+});
+
+export const cancelReservationChange = mutation({
+  args: {
+    serviceKey: v.string(),
+    publicId: v.string(),
+    changeId: v.optional(v.string()),
+    reason: v.optional(v.string()),
+    expectedControlVersion: v.number(),
+  },
+  handler: async (ctx, args) => {
+    requireServiceKey(args.serviceKey);
+    const conversation = await getConversation(ctx, args.publicId);
+    assertControlVersion(conversation, args.expectedControlVersion);
+    const pending = conversation.pendingReservationChange;
+    if (!pending) return { cancelled: false };
+    if (args.changeId && pending.changeId !== args.changeId) return { cancelled: false };
+    const now = new Date().toISOString();
+    await ctx.db.patch(conversation._id, { pendingReservationChange: undefined, updatedAt: now });
+    if (conversation.ticketId) {
+      await ctx.db.insert("reservationEvents", {
+        ticketId: conversation.ticketId,
+        conversationId: conversation._id,
+        type: "reservation_change_cancelled",
+        actorType: "assistant",
+        payload: { changeId: pending.changeId, reason: String(args.reason || "guest_declined").slice(0, 200), fields: pending.fields.map((field: any) => field.field) },
+        createdAt: now,
+      });
+    }
+    return { cancelled: true, changeId: pending.changeId, fields: changeSummaryFields(pending) };
+  },
+});
+
+export const processReservationChangeReply = mutation({
+  args: {
+    serviceKey: v.string(),
+    publicId: v.string(),
+    messageId: v.string(),
+    expectedControlVersion: v.number(),
+  },
+  handler: async (ctx, args) => {
+    requireServiceKey(args.serviceKey);
+    const conversation = await getConversation(ctx, args.publicId);
+    assertControlVersion(conversation, args.expectedControlVersion);
+    const pending = conversation.pendingReservationChange;
+    if (!pending || !conversation.ticketId) return { status: "not_applicable" as const };
+    const fields = changeSummaryFields(pending);
+
+    if (isReservationChangeExpired(pending)) {
+      await ctx.db.patch(conversation._id, { pendingReservationChange: undefined, updatedAt: new Date().toISOString() });
+      return { status: "expired" as const, fields };
+    }
+
+    const inbound = await ctx.db.query("messages").withIndex("by_idempotencyKey", (q) => q.eq("idempotencyKey", args.messageId)).first();
+    if (!inbound || inbound.conversationId !== conversation._id || inbound.direction !== "inbound") {
+      throw new Error("Change confirmation must reference the current guest message");
+    }
+    const presented = pending.presentedMessageId
+      ? await ctx.db.query("messages").withIndex("by_idempotencyKey", (q) => q.eq("idempotencyKey", pending.presentedMessageId!)).first()
+      : null;
+    if (!presented || presented.conversationId !== conversation._id || presented.direction !== "outbound") {
+      return { status: "presentation_unconfirmed" as const, fields };
+    }
+    if (!isReplyAfterTermsPresentation(inbound._creationTime, presented._creationTime)) return { status: "not_applicable" as const };
+
+    const classification = classifyChangeReply(inbound.content);
+    if (classification === "unrecognized") return { status: "not_applicable" as const };
+    if (classification === "cancelled") {
+      await cancelPendingChange(ctx, conversation, pending, "guest_declined");
+      return { status: "cancelled" as const, fields };
+    }
+
+    try {
+      const prepared = await prepareReservationChange(ctx, conversation, pending.proposed || {});
+      if (!sameSnapshot(ticketSnapshot(prepared.ticket), pending.ticketSnapshot)) {
+        await cancelPendingChange(ctx, conversation, pending, "reservation_changed_while_pending");
+        return { status: "stale" as const, fields };
+      }
+      if (!prepared.fields.length) {
+        await cancelPendingChange(ctx, conversation, pending, "no_change_required");
+        return { status: "cancelled" as const, fields };
+      }
+      const result = await applyReservationChange(ctx, {
+        conversation,
+        prepared,
+        eventKey: `sara-change-apply:${pending.changeId}`,
+        actorType: "assistant",
+      });
+      return { status: "applied" as const, ...changeResult(result) };
+    } catch (error) {
+      await cancelPendingChange(ctx, conversation, pending, "validation_failed");
+      return { status: "invalid" as const, reason: String((error as Error)?.message || "Change could not be applied").slice(0, 300), fields };
+    }
+  },
+});
+
+async function cancelPendingChange(ctx: any, conversation: any, pending: any, reason: string) {
+  const now = new Date().toISOString();
+  await ctx.db.patch(conversation._id, { pendingReservationChange: undefined, updatedAt: now });
+  if (conversation.ticketId) {
+    await ctx.db.insert("reservationEvents", {
+      ticketId: conversation.ticketId,
+      conversationId: conversation._id,
+      type: "reservation_change_cancelled",
+      actorType: "assistant",
+      payload: { changeId: pending.changeId, reason, fields: (pending.fields || []).map((field: any) => field.field) },
+      createdAt: now,
+    });
+  }
+}
+
+export const recordQuoteNotification = mutation({
+  args: {
+    serviceKey: v.string(),
+    ticketId: v.string(),
+    quoteRevision: v.number(),
+    kind: v.union(v.literal("ready"), v.literal("failure")),
+  },
+  handler: async (ctx, args) => {
+    requireServiceKey(args.serviceKey);
+    const row = await getTicketRow(ctx, args.ticketId);
+    if (quoteRevisionOf(row.data) !== args.quoteRevision) return { notified: false, reason: "Quote revision moved on" };
+    const stampField = args.kind === "ready" ? "requoteNotifiedRevision" : "quoteFailureNotifiedRevision";
+    const data = { ...row.data, [stampField]: args.quoteRevision };
+    // The row-level updatedAt is the lifecycle SMS concurrency fence, so this notification stamp
+    // deliberately leaves it untouched.
+    await ctx.db.patch(row._id, { data, ...ticketIndexFields(data) });
+    return { notified: true, quoteRevision: args.quoteRevision, kind: args.kind };
   },
 });

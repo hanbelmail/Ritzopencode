@@ -5,6 +5,14 @@ import { isAutomationKey, isStaff, requireStaff, requireStaffOrAutomation } from
 import { getSmsConsent, normalizeSmsPhone } from "./smsConsent";
 import { termsAgreementText, WEB_TERMS_ACCEPTANCE_CONTRACT } from "./termsContract";
 import { queueQuoteWebhook } from "./quoteWebhook";
+import {
+  applyRequoteReset,
+  initialQuoteRound,
+  isStalePricingCallback,
+  nextQuoteRevision,
+  shouldRequote,
+  STALE_QUOTE_CALLBACK_ERROR,
+} from "./quoteRevision";
 import { ensureBookingConfirmationSequence, normalizeReservationConfirmationNumberPatch } from "./ticketConfirmation";
 
 const legacyStatusMap: Record<string, string> = {
@@ -704,6 +712,7 @@ export const create = mutation({
       ...normalizedData,
       id: crypto.randomUUID(),
       createdAt: now,
+      ...initialQuoteRound(now),
     };
     if (ticket.status === "PRICE SENT" && (!Number.isFinite(Number(ticket.rateOffered)) || Number(ticket.rateOffered) <= 0)) {
       throw new Error("PRICE SENT requires a positive offered price");
@@ -742,6 +751,22 @@ export const update = mutation({
     if (!trusted) throw new Error("Guest updates must use the ticket-scoped payment operation");
     let allowedData = normalizeReservationConfirmationNumberPatch(data);
     const currentTicket = normalizeTicket(row.data);
+    const now = new Date().toISOString();
+    if (serviceRequest) {
+      const patch = allowedData && typeof allowedData === "object" ? allowedData : {};
+      const setsStatus = Object.prototype.hasOwnProperty.call(patch, "status");
+      const incomingStatus = normalizeTicket({ ...row.data, ...patch })?.status;
+      const pricingCallback =
+        setsStatus && incomingStatus === "PRICE SENT" ||
+        Object.prototype.hasOwnProperty.call(patch, "quoteToken") ||
+        Object.prototype.hasOwnProperty.call(patch, "quoteError") ||
+        Object.prototype.hasOwnProperty.call(patch, "retailPrice") ||
+        Object.prototype.hasOwnProperty.call(patch, "rateOffered");
+      if (pricingCallback && isStalePricingCallback(currentTicket, patch.quoteToken)) {
+        throw new Error(STALE_QUOTE_CALLBACK_ERROR);
+      }
+      delete patch.quoteToken;
+    }
     const numericQuoteFields = new Set(["retailPrice", "adjustment", "rateOffered", "discountPct"]);
     const quoteInputsChanged = ["retailPrice", "adjustment", "rateOffered", "discountPct", "checkIn", "checkOut", "roomType"].some((field) => {
       if (!Object.prototype.hasOwnProperty.call(data || {}, field)) return false;
@@ -764,10 +789,17 @@ export const update = mutation({
         quoteExpiresAt: await quoteExpiry(ctx),
       };
     }
-    const updated = normalizeTicket({ ...row.data, ...allowedData, id });
+    let updated = normalizeTicket({ ...row.data, ...allowedData, id });
+    const requote = shouldRequote(currentTicket, allowedData, String(updated?.status || ""), PAYMENT_BLOCKING_STATUSES.has(currentTicket.status));
 
     if (trusted && quoteInputsChanged && !PAYMENT_BLOCKING_STATUSES.has(currentTicket.status)) {
       for (const field of ["termsAcceptedAt", "termsVersion", "termsAcceptedText", "termsAcceptedHash", "termsAcceptedMessageId", "termsAcceptanceSource", "termsAcceptanceAction", "termsAcceptanceContract", "termsAcceptedNormalizedText"]) delete updated[field];
+    }
+    if (!Object.prototype.hasOwnProperty.call(data || {}, "quoteError") && String(updated?.status || "") === "PRICE SENT") {
+      delete updated.quoteError;
+    }
+    if (requote.requote) {
+      updated = applyRequoteReset(updated, nextQuoteRevision(updated, now));
     }
     ensureBookingConfirmationSequence(
       currentTicket,
@@ -777,12 +809,13 @@ export const update = mutation({
     );
     await ensureFinalStayAvailable(ctx, updated, row._id);
 
-    const now = new Date().toISOString();
     await ctx.db.patch(row._id, {
       data: updated,
       updatedAt: now,
       ...ticketIndexFields(updated),
     });
+
+    if (requote.requote) await queueQuoteWebhook(ctx, updated);
 
     if (updated.conversationId) {
       const conversation = await ctx.db.query("conversations").withIndex("by_publicId", (q) => q.eq("publicId", String(updated.conversationId))).first();
@@ -798,7 +831,7 @@ export const update = mutation({
           "BOOKING CONFIRMED": "booking_confirmed",
         };
         const stage = stages[updated.status];
-        const controlChanged = quoteInputsChanged || updated.status !== currentTicket.status;
+        const controlChanged = quoteInputsChanged || requote.requote || updated.status !== currentTicket.status;
         await ctx.db.patch(conversation._id, {
           ...(stage ? { stage } : {}),
           status: smsOptedOut
@@ -810,7 +843,7 @@ export const update = mutation({
               : "waiting_for_guest",
           aiEnabled: !smsOptedOut && updated.status !== "CANCELLED" && conversation.aiEnabled,
           ...(controlChanged ? { controlVersion: (conversation.controlVersion || 0) + 1 } : {}),
-          ...(quoteInputsChanged ? {
+          ...((quoteInputsChanged || requote.requote) ? {
             termsVersion: undefined,
             termsPresentedVersion: undefined,
             termsPresentedAt: undefined,
@@ -818,10 +851,21 @@ export const update = mutation({
             termsPresentedHash: undefined,
             termsAcceptedAt: undefined,
             termsAcceptedMessageId: undefined,
+            pendingReservationChange: undefined,
           } : {}),
           updatedAt: now,
         });
       }
+    }
+
+    if (requote.requote) {
+      await ctx.db.insert("reservationEvents", {
+        ticketId: id,
+        type: "requote_requested",
+        actorType: serviceRequest ? "automation" : "staff",
+        payload: { reasons: requote.reasons, quoteRevision: updated.quoteRevision, checkIn: updated.checkIn, checkOut: updated.checkOut },
+        createdAt: now,
+      });
     }
 
     if (updated.status !== currentTicket.status) {

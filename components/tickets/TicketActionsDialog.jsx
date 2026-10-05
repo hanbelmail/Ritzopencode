@@ -125,6 +125,12 @@ export default function TicketActionsDialog({ ticket, onOpenChange, onStatusChan
                     <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-[#8e8b82]">Rate Offered</p>
                     <p className="mt-1 font-medium">{fmtMoney(ticket.rateOffered)}</p>
                   </div>
+                  {ticket.quoteError && (
+                    <div className="min-w-0 rounded-[10px] border border-[#e4b5a7] bg-[#fff7f4] p-3 sm:col-span-2">
+                      <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-[#a9583e]">Automatic quote failed</p>
+                      <p className="mt-1 text-sm text-[#a9583e]">{ticket.quoteError}</p>
+                    </div>
+                  )}
                   <div className="min-w-0 sm:col-span-2">
                     <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-[#8e8b82]">Reservation confirmation number</p>
                     <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-center">

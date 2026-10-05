@@ -10,7 +10,7 @@
 - `globals.css` owns Tailwind globals and theme variables consumed across the app.
 - `login/` and `register/` own guest authentication flows backed by Convex Auth through `lib/AuthContext.jsx`.
 - `forgot-password/` and `reset-password/` own Convex Auth password reset request and verification flows.
-- `api/tickets/` owns demo REST endpoints for fetching, status-filtered fetching, updating, deleting, and sending price-sent guest email/SMS notifications for Convex-backed reservation tickets.
+- `api/tickets/` owns demo REST endpoints for fetching, status-filtered fetching, updating, deleting, rejecting stale automation pricing callbacks, delivering one Sona quote-ready conversation message per quote revision, and sending price-sent guest email/SMS notifications for Convex-backed reservation tickets.
 - `api/payment-proof/` owns private Cloudflare R2 signed upload, server-side upload confirmation, and signed view URL endpoints for payment screenshots.
 - `api/retail-price-screenshot/` owns private Cloudflare R2 signed upload and signed view URL endpoints for Ritz website retail price screenshots.
 - `api/booking-confirmed-hotel-alert-attachments/` owns private Cloudflare R2 signed upload URLs for the two PDF attachments configured for booking-confirmed hotel email alerts.
@@ -19,7 +19,7 @@
 - `api/payment-submitted-alerts/` owns independent server-side payment-submitted staff email and guest SMS delivery, including payment proof screenshot attachments from R2 when present.
 - `api/booking-request-hotel-alerts/` owns independent server-side payment-verified booking request hotel email and guest SMS delivery, with the fixed `1609E` email subject.
 - `api/booking-confirmed-hotel-alerts/` owns independent server-side booking-confirmed hotel email and guest SMS delivery, with the reservation confirmation number in the email subject.
-- `api/sara/chat/` owns the public web-chat adapter, opaque HTTP-only conversation sessions, origin checks, Sona execution, safe transcript responses, version/hash-bound Terms acceptance actions, and immediate deterministic payment-instruction replies after acceptance.
+- `api/sara/chat/` owns the public web-chat adapter, opaque HTTP-only conversation sessions, origin checks, Sona execution, safe transcript responses, deterministic reservation-change confirmation and result replies, version/hash-bound Terms acceptance actions, and immediate deterministic payment-instruction replies after acceptance.
 - `api/sara/staff-reply/` owns authenticated staff-only, stable-ID Quo reply dispatch after the staff reply and takeover are persisted in Convex.
 - `api/webhooks/quo/` owns Quo message ingestion, webhook-token validation, event deduplication, SMS allowlist/test-mode enforcement, STOP/START processing, Sona execution, and outbound delivery tracking.
 - `(public)/AGENTS.md` owns public guest pages and ticket lookup routes.
@@ -33,6 +33,9 @@
 - Payment proof upload preparation requires current Terms acceptance; the confirmation endpoint must inspect the R2 object and confirm its nonzero image metadata before the receipt can be consumed by public payment submission.
 - Retail price screenshot upload URLs are protected by Convex Auth or `N8N_API_KEY`; public read URL requests must validate the requested key against the ticket before returning a signed URL.
 - Ticket API updates that leave a reservation in `PRICE SENT` must attempt the server-side Resend guest email and Quo guest SMS paths and return notification metadata without rolling back the ticket update when either delivery fails.
+- Automation ticket updates that set `PRICE SENT`, a retail price, or a quote error must echo the persisted `quoteToken`; a superseded or missing token returns a 409 stale quote callback and writes nothing.
+- `PRICE SENT` transitions with a linked conversation must attempt one deterministic Sona quote-ready message per quote revision after the lifecycle email/SMS attempt, reporting its result without rolling back the ticket update when delivery fails.
+- A persisted `quoteError` on a `QUOTE REQUESTED` ticket with a linked conversation must attempt one deterministic Sona quote-failure message per quote revision, using guest-safe wording that never repeats internal provider detail and never promises a price.
 - Price-sent notification API routes must send guest emails server-side through Resend when `priceSentGuestEmailEnabled` is active, attach the retail price screenshot from R2 when `retailPriceScreenshotKey` is present, optionally send the same email and attachment to active staff recipients when the disabled-by-default staff copy setting is enabled, and stamp tickets only after each successful delivery.
 - Price-sent notification API routes must send Quo guest SMS when `priceSentSmsEnabled` is active and the ticket has an E.164 phone number, render the selected `priceSentSmsTemplates` entry with quote pricing placeholders, and stamp `priceSentSmsSentAt` only after Quo accepts delivery.
 - Ticket API updates that change price or stay-date inputs must recalculate derived pricing fields with `lib/calc.js` and Convex-backed settings.
@@ -48,6 +51,7 @@
 - Public Sona chat must reject cross-origin writes, keep the session token HTTP-only, enforce message limits, and use `PUBLIC_APP_URL` for durable guest links when configured.
 - Public Sona Terms actions must revalidate the HTTP-only conversation session, current presentation message, immutable version/hash, and payable quote server-side; browser-provided text, timestamps, and acceptance claims are never authoritative, and ordinary typed web-chat messages can never record acceptance.
 - After web Terms acceptance is recorded, the chat route must return the current authorized payment instructions and secure ticket link in the refreshed transcript; unavailable instructions must preserve acceptance and hand off to staff rather than report acceptance as failed.
+- Sona chat and SMS runs must resolve a pending reservation-change reply deterministically before any model run, and must not present Terms or payment instructions while a change is awaiting guest confirmation.
 - Production Quo webhooks must validate `openphone-signature` in `hmac;1;<unix-ms>;<base64-hmac>` format against the Base64-decoded `QUO_WEBHOOK_SECRET`, sign `<timestamp>.<raw-body>`, and enforce a five-minute replay window; `QUO_WEBHOOK_TOKEN` is a development-only local payload fallback.
 - Failed Quo signature checks may log only the rejection reason; never log webhook payloads, header values, signing secrets, or guest data.
 - Quo webhook processing must store disabled or non-allowlisted inbound messages without sending a paid response, and unsupported MMS proof must redirect the guest to the secure ticket upload path.

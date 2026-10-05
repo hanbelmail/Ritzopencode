@@ -35,6 +35,11 @@ yarn-error.log*
 # vercel
 .vercel
 
+# local automation exports (embed live API keys)
+/StayAPI*.json
+/n8n-*.json
+/n8n-workflows/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

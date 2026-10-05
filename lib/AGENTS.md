@@ -32,9 +32,11 @@
 - `utils.js` owns shared utility helpers such as class-name composition.
 - `defaults.js` also owns Sona's code-controlled display name, exact approved website opening message, adaptive SMS identity disclosure, and normalization over persisted legacy branding values.
 - `sara-date-resolver.js` owns deterministic Hawaii-current-date, explicit guest-year preservation, next-future date/month inference, and December-to-January stay rollover before Sona tools execute.
-- `sara-prompt.js` owns Sona's fixed identity, source hierarchy, Hawaii-relative date interpretation, exact-stay versus month-range availability behavior, booking/payment permissions, unsupported-action restraint, legal-Terms non-interpretation boundary, handoff rules, channel style, and prompt version; only an ambiguous phone/email contact match is a records conflict requiring handoff, while a repeat client stating a different acquisition source is an expected update.
-- `sara-agent-server.js` owns the server-only OpenAI Responses tool loop, strict exact-stay and month-availability tool schemas, control-fenced tool execution, provider-confirmed deterministic first-SMS disclosure without truncating authorized payment instructions, deterministic channel-specific Terms presentation and acceptance retry messages, channel formatting, and agent-run completion.
+- `sara-prompt.js` owns Sona's fixed identity, source hierarchy, Hawaii-relative date interpretation, exact-stay versus month-range availability behavior, reservation-edit permissions and re-quote wording limits, booking/payment permissions, unsupported-action restraint, legal-Terms non-interpretation boundary, handoff rules, channel style, and prompt version; only an ambiguous phone/email contact match is a records conflict requiring handoff, while a repeat client stating a different acquisition source is an expected update.
+- `sara-agent-server.js` owns the server-only OpenAI Responses tool loop, strict exact-stay and month-availability tool schemas, guest reservation-edit tool schemas limited to names, email, phone, and both stay dates, control-fenced tool execution, provider-confirmed deterministic first-SMS disclosure without truncating authorized payment instructions, deterministic channel-specific Terms presentation and acceptance retry messages, deterministic reservation-change confirmation and result messages, channel formatting, and agent-run completion.
 - `sara-payment-instructions.js` owns deterministic immediate and repeat payment replies containing configured methods, the secure ticket link, and the staff-verification notice without model rewriting or SMS truncation.
+- `sara-reservation-change.js` owns deterministic reservation-change confirmation, applied, cancelled, expired, unconfirmed, stale, and invalid replies plus the quote-ready and quote-failure messages; these must state only CRM-derived dates, nights, prices, and expiry, must never promise a price that has not been returned, and must never repeat internal quote-error detail to a guest.
+- `requote-notification-server.js` owns the post-`PRICE SENT` quote-ready and failed-quote conversation messages with their per-revision idempotency keys, consent-, allowlist-, and control-fenced SMS delivery through the Convex outbox, and re-sending the price email or price SMS after a contact-detail change on a priced ticket.
 - `quo-server.js` owns the shared server-only Quo text transport, sender/recipient normalization, timeout, and rejected-versus-ambiguous provider error classification.
 
 ## Local Contracts
@@ -58,6 +60,9 @@
 - Web transcript text never records Terms acceptance; current SMS presentations invite an explicit agree or accept reply, while deterministic Convex classification owns the approved phrase allowlist, case/whitespace/safe-trailing-punctuation normalization, rejection retries, and presentation-bound prior/legacy compatibility.
 - Keep default/client payment methods instruction-free; configured instructions may leave the server only through a current Terms-hash and payable-ticket gate.
 - Immediately after accepted web or SMS Terms, bypass model discretion and send the gated deterministic payment reply; later guest requests and repeated valid SMS acceptance may resend current instructions through the same deterministic formatter.
+- Reservation-change confirmations and results bypass model discretion the same way: the server stages the pending change, writes the confirmation request, classifies the guest reply with the Convex allowlist, and owns the applied, cancelled, expired, stale, and invalid wording. Model text may summarize only what a successful `update_reservation` returned.
+- Quote-ready conversation messages are one per ticket and `quoteRevision`, must not be sent when Sona is paused or the conversation is closed, and must not duplicate a lifecycle price-sent SMS that already delivered for the same revision.
+- Bump `SARA_PROMPT_VERSION` whenever Sona's permissions, deterministic boundaries, or identity wording change.
 - Conversational SMS must use `lib/quo-server.js` and the Convex outbox; do not add another direct Quo transport.
 
 ## Work Guidance
@@ -73,6 +78,7 @@
 - Run `npm test` after changing Sona date/year resolution.
 - Run `npm test` after changing Sona Terms presentation or acceptance handling.
 - Run `npm test` after changing deterministic Sona payment-instruction formatting or delivery behavior.
+- Run `npm test` after changing deterministic Sona reservation-change, quote-ready, or quote-failure message wording.
 
 ## Child DOX Index
 
