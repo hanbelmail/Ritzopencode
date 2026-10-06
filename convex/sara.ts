@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { isAutomationKey, requireServiceKey } from "./security";
+import { assertReferrerName } from "./acquisitionSource";
 import { availableRangesForWindow, isCalendarDate, monthAvailabilityWindow } from "./saraAvailability";
 import { getSmsConsent, normalizeSmsPhone } from "./smsConsent";
 import { queueQuoteWebhook } from "./quoteWebhook";
@@ -343,6 +344,7 @@ export const createQuoteRequest = mutation({
     if (!EMAIL_PATTERN.test(email)) throw new Error("A valid email is required");
     if (!PHONE_PATTERN.test(phone)) throw new Error("Phone must use E.164 format");
     const stay = validateStay(args.checkIn, args.checkOut);
+    const referredBy = assertReferrerName(args.acquisitionSource, args.referredBy);
     if (!await available(ctx, stay.checkIn, stay.checkOut)) throw new Error("Those dates are no longer available");
 
     const phoneConsent = await getSmsConsent(ctx, phone);
@@ -358,7 +360,7 @@ export const createQuoteRequest = mutation({
         normalizedEmail: email,
         relationship: "repeat",
         acquisitionSource: args.acquisitionSource,
-        referredBy: args.referredBy?.trim() || contact.referredBy,
+        referredBy: referredBy || contact.referredBy,
         smsOptOut: phoneConsent.optedOut,
         updatedAt: now,
       });
@@ -370,7 +372,7 @@ export const createQuoteRequest = mutation({
         normalizedEmail: email,
         relationship: "new",
         acquisitionSource: args.acquisitionSource,
-        referredBy: args.referredBy?.trim() || undefined,
+        referredBy: referredBy || undefined,
         smsOptOut: phoneConsent.optedOut,
         createdAt: now,
         updatedAt: now,
@@ -391,7 +393,7 @@ export const createQuoteRequest = mutation({
       checkOut: stay.checkOut,
       nights: stay.nights,
       roomType,
-      referredBy: args.referredBy?.trim() || "",
+      referredBy,
       clientRelationship: contact?.relationship || "new",
       acquisitionSource: args.acquisitionSource,
       contactId: String(contact?._id || ""),
@@ -435,7 +437,7 @@ export const createQuoteRequest = mutation({
         phone,
         checkIn: stay.checkIn,
         checkOut: stay.checkOut,
-        referredBy: args.referredBy?.trim(),
+        referredBy: referredBy || undefined,
         acquisitionSource: args.acquisitionSource,
       },
       updatedAt: now,
