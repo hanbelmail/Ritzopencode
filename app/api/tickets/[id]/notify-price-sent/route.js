@@ -1,6 +1,7 @@
 import { api } from "@/convex/_generated/api";
 import { getConvexClient, jsonError } from "@/lib/convex-server";
 import { sendPriceSentNotifications } from "@/lib/price-sent-notifications-server";
+import { sendQuoteReadyNotification } from "@/lib/requote-notification-server";
 
 export async function POST(request, { params }) {
   try {
@@ -16,7 +17,13 @@ export async function POST(request, { params }) {
       origin: request.nextUrl.origin,
     });
 
-    return Response.json(result);
+    const quoteReadyNotification = await sendQuoteReadyNotification({
+      client,
+      ticket: result.ticket || ticket,
+      origin: request.nextUrl.origin,
+    });
+
+    return Response.json({ ...result, quoteReadyNotification });
   } catch (error) {
     const message = error.message || "Failed to send price sent notifications";
     const status = message.includes("not found") ? 404 : message.includes("Missing required environment variable") ? 500 : 502;

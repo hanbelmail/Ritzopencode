@@ -197,6 +197,19 @@ export const getContext = query({
   },
 });
 
+export const getServiceContext = query({
+  args: {
+    serviceKey: v.string(),
+    publicId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    requireServiceKey(args.serviceKey);
+    const conversation = await findByPublicId(ctx, args.publicId);
+    if (!conversation) return null;
+    return conversationBundle(ctx, conversation);
+  },
+});
+
 export const appendInbound = mutation({
   args: {
     serviceKey: v.string(),
