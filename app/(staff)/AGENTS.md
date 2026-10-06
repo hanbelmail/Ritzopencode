@@ -14,7 +14,7 @@
 - `sms-dashboard/` owns tabbed guest lifecycle SMS settings for `PRICE SENT`, `PAYMENT SUBMITTED`, `PAYMENT VERIFIED`, and `BOOKING CONFIRMED`; each status has an independent disabled-by-default switch and active editable Quo template selection, with three price-sent templates and two templates for each later status.
 - `new/` owns reservation creation and edit saves, the staff-entered `reservationConfirmationNumber` that must be saved before booking confirmation, optional retail price screenshot upload to R2, warning before `PRICE SENT` saves without that screenshot, and status-driven email alert triggering after saves.
 - `calendar/`, `clients/`, and `settings/` own their respective staff management views; `settings/` includes hotel info, the persisted app name used for the browser/tab title, and the global desktop table Columns-button visibility setting.
-- `sara-dashboard/` owns Sona web/SMS activation, the code-controlled Sona name and initial disclosure display, model and quote-validity settings, approved Terms and editable handoff messaging, SMS test allowlists, Knowledge draft/approval management, conversation review, human pause/resume controls, and confirmed conversation deletion for testing cleanup.
+- `sara-dashboard/` owns Sona web/SMS activation, the code-controlled Sona name and initial disclosure display, model and quote-validity settings, approved Terms and editable handoff messaging, SMS test allowlists, Knowledge draft/approval management, conversation review, human pause/resume controls, confirmed conversation deletion for testing cleanup, and the read-only Quo webhook health panel reporting recent provider event types, statuses, attempts, and failures.
 
 ## Local Contracts
 
@@ -40,6 +40,7 @@
 - Sona channels are disabled by default; staff must review and publish Knowledge entries individually, configure Terms, and test the website before enabling Quo SMS.
 - Staff human takeover increments the conversation control version and sets `aiEnabled` false. Web replies persist directly; SMS replies require Convex Auth, stable message IDs, active channel/test policy, and current phone consent, and expose delivery state in the transcript.
 - Staff conversation deletion removes conversation-owned transcripts, agent runs, and SMS outbox records; it detaches but preserves linked reservation tickets and preserves contacts, SMS consent, reservation events, and provider webhook history.
+- The Sona webhook health panel is read-only staff reporting from `messaging.listForStaff`; it surfaces event types, statuses, attempts, notes, and bounded error text only, and re-enabling a webhook that Quo disabled remains a manual action in Quo settings.
 - Syncing the 42 starter Knowledge entries inserts missing drafts and refreshes changed non-archived starter entries; Sona-only branding migrations preserve approval, other changed approved entries return to draft for staff review, and archived entries remain untouched.
 
 ## Work Guidance

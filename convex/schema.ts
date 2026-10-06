@@ -262,13 +262,32 @@ export default defineSchema({
     payloadHash: v.string(),
     status: v.union(v.literal("received"), v.literal("processing"), v.literal("processed"), v.literal("ignored"), v.literal("failed")),
     error: v.optional(v.string()),
+    note: v.optional(v.string()),
     claimedAt: v.optional(v.string()),
     claimToken: v.optional(v.string()),
     leaseExpiresAt: v.optional(v.string()),
     attempts: v.optional(v.number()),
     createdAt: v.string(),
     processedAt: v.optional(v.string()),
-  }).index("by_provider_eventId", ["provider", "eventId"]),
+  })
+    .index("by_provider_eventId", ["provider", "eventId"])
+    .index("by_createdAt", ["createdAt"]),
+  ticketSmsReceipts: defineTable({
+    providerMessageId: v.string(),
+    ticketId: v.string(),
+    event: v.union(
+      v.literal("priceSent"),
+      v.literal("paymentSubmitted"),
+      v.literal("paymentVerified"),
+      v.literal("bookingConfirmed")
+    ),
+    status: v.union(v.literal("accepted"), v.literal("delivered"), v.literal("failed")),
+    error: v.optional(v.string()),
+    createdAt: v.string(),
+    updatedAt: v.string(),
+  })
+    .index("by_providerMessageId", ["providerMessageId"])
+    .index("by_ticketId", ["ticketId"]),
   smsConsents: defineTable({
     normalizedPhone: v.string(),
     optedOut: v.boolean(),

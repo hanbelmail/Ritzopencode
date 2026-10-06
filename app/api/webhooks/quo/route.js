@@ -4,10 +4,15 @@ import { api } from "@/convex/_generated/api";
 import { DEFAULT_SETTINGS, buildSmsInitialDisclosure, withDefaultSettings } from "@/lib/defaults";
 import { getConvexClient, getConvexServiceKey, jsonError } from "@/lib/convex-server";
 import { normalizePhone } from "@/lib/phone";
+import { quoProviderMessageId } from "@/lib/quo-provider";
 import { getQuoFrom, sendQuoText } from "@/lib/quo-server";
 import { runSaraAgent } from "@/lib/sara-agent-server";
 
 export const runtime = "nodejs";
+
+const DELIVERY_RECEIPT_TYPES = ["message.delivered", "message.failed", "message.undelivered"];
+const DELIVERY_RECEIPT_LEASE_SECONDS = 60;
+const UNMATCHED_DELIVERY_RECEIPT_NOTE = "delivery_receipt_unmatched";
 
 function secureEqual(left, right) {
   const a = Buffer.from(String(left || ""));
@@ -70,7 +75,7 @@ function eventType(payload) {
 }
 
 function providerMessageId(resource) {
-  return String(resource?.id || resource?.messageId || "").trim();
+  return quoProviderMessageId(resource) || "";
 }
 
 function eventOccurredAt(payload, resource, fallback) {
@@ -131,7 +136,7 @@ async function deliverReply({ client, serviceKey, publicId, to, content, message
       serviceKey,
       idempotencyKey,
       status: "accepted",
-      providerMessageId: result.data?.id,
+      providerMessageId: result.providerMessageId,
     });
   } catch (error) {
     await client.mutation(api.messaging.markSms, {
@@ -143,6 +148,26 @@ async function deliverReply({ client, serviceKey, publicId, to, content, message
     });
     throw error;
   }
+}
+
+async function resolveDeliveryReceipt({ client, serviceKey, type, messageId, resource }) {
+  if (!messageId) return { matched: false };
+  const delivered = type === "message.delivered";
+  const error = delivered ? undefined : String(resource?.error || resource?.status || type);
+  const conversationDelivery = await client.mutation(api.messaging.applyDeliveryEvent, {
+    serviceKey,
+    providerMessageId: messageId,
+    delivered,
+    error,
+  }).catch(() => null);
+  if (conversationDelivery?.matched) return { matched: true };
+  const ticketReceipt = await client.mutation(api.tickets.applySmsDeliveryReceipt, {
+    serviceKey,
+    providerMessageId: messageId,
+    delivered,
+    error,
+  }).catch(() => null);
+  return { matched: Boolean(ticketReceipt?.matched), ticketId: ticketReceipt?.ticketId || undefined };
 }
 
 export async function POST(request) {
@@ -166,6 +191,7 @@ export async function POST(request) {
     const messageId = providerMessageId(resource);
     eventId = String(request.headers.get("webhook-id") || payload?.id || messageId || "").trim();
     if (!eventId || !type) return jsonError("Webhook event ID and type are required", 400);
+    const isDeliveryReceipt = DELIVERY_RECEIPT_TYPES.includes(type);
 
     client = getConvexClient();
     serviceKey = getConvexServiceKey();
@@ -175,9 +201,14 @@ export async function POST(request) {
       type,
       payloadHash: createHash("sha256").update(rawBody).digest("hex"),
     });
-    const claim = await client.mutation(api.messaging.claimWebhook, { serviceKey, eventId });
+    const claim = await client.mutation(api.messaging.claimWebhook, {
+      serviceKey,
+      eventId,
+      ...(isDeliveryReceipt ? { leaseSeconds: DELIVERY_RECEIPT_LEASE_SECONDS } : {}),
+    });
     if (!claim.claimed) {
       if (claim.status === "processing") {
+        if (isDeliveryReceipt) return NextResponse.json({ received: true, deferred: true });
         return NextResponse.json(
           { error: "Webhook event is already processing" },
           { status: 503, headers: { "Retry-After": String(claim.retryAfterSeconds || 30) } }
@@ -188,18 +219,20 @@ export async function POST(request) {
     claimToken = claim.claimToken;
     const sourceTimestamp = eventOccurredAt(payload, resource, recorded.event.createdAt);
 
-    if (["message.delivered", "message.failed", "message.undelivered"].includes(type)) {
-      if (messageId) {
-        const delivery = await client.mutation(api.messaging.applyDeliveryEvent, {
-          serviceKey,
-          providerMessageId: messageId,
-          delivered: type === "message.delivered",
-          error: type === "message.delivered" ? undefined : String(resource?.error || resource?.status || type),
-        });
-        if (!delivery.matched) throw new Error("Delivery event arrived before its outbound message was registered");
-      }
-      await client.mutation(api.messaging.finishWebhook, { serviceKey, eventId, claimToken, status: "processed" });
-      return NextResponse.json({ received: true });
+    if (isDeliveryReceipt) {
+      const receipt = await resolveDeliveryReceipt({ client, serviceKey, type, messageId, resource });
+      await client.mutation(api.messaging.finishWebhook, {
+        serviceKey,
+        eventId,
+        claimToken,
+        status: receipt.matched ? "processed" : "ignored",
+        ...(receipt.matched ? {} : { note: UNMATCHED_DELIVERY_RECEIPT_NOTE }),
+      }).catch(() => {});
+      return NextResponse.json({
+        received: true,
+        matched: receipt.matched,
+        ...(receipt.ticketId ? { ticketId: receipt.ticketId } : {}),
+      });
     }
 
     if (type !== "message.received" || resource?.direction === "outgoing") {

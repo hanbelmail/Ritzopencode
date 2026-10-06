@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { mutation, query } from "./_generated/server";
-import { isAutomationKey, isStaff, requireStaff, requireStaffOrAutomation } from "./security";
+import { isAutomationKey, isStaff, requireServiceKey, requireStaff, requireStaffOrAutomation } from "./security";
 import { getSmsConsent, normalizeSmsPhone } from "./smsConsent";
 import { termsAgreementText, WEB_TERMS_ACCEPTANCE_CONTRACT } from "./termsContract";
 import { queueQuoteWebhook } from "./quoteWebhook";
@@ -575,6 +575,52 @@ function ticketStatusSmsConfig(event: string) {
   return configs[event];
 }
 
+async function recordTicketSmsReceipt(ctx: any, ticketId: string, event: string, providerMessageId: string) {
+  const now = new Date().toISOString();
+  const existing = await ctx.db
+    .query("ticketSmsReceipts")
+    .withIndex("by_providerMessageId", (q: any) => q.eq("providerMessageId", providerMessageId))
+    .first();
+  if (existing) {
+    await ctx.db.patch(existing._id, { ticketId, status: "accepted", error: undefined, updatedAt: now });
+    return;
+  }
+  await ctx.db.insert("ticketSmsReceipts", {
+    providerMessageId,
+    ticketId,
+    event,
+    status: "accepted",
+    createdAt: now,
+    updatedAt: now,
+  });
+}
+
+export const applySmsDeliveryReceipt = mutation({
+  args: {
+    serviceKey: v.string(),
+    providerMessageId: v.string(),
+    delivered: v.boolean(),
+    error: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    requireServiceKey(args.serviceKey);
+    const providerMessageId = String(args.providerMessageId || "").trim();
+    if (!providerMessageId) return { matched: false };
+    const receipt = await ctx.db
+      .query("ticketSmsReceipts")
+      .withIndex("by_providerMessageId", (q) => q.eq("providerMessageId", providerMessageId))
+      .first();
+    if (!receipt) return { matched: false };
+    const status = args.delivered ? "delivered" : "failed";
+    await ctx.db.patch(receipt._id, {
+      status,
+      error: args.delivered ? undefined : String(args.error || status).slice(0, 1000),
+      updatedAt: new Date().toISOString(),
+    });
+    return { matched: true, ticketId: receipt.ticketId, event: receipt.event, status };
+  },
+});
+
 export const claimTicketStatusSms = mutation({
   args: { id: v.string(), event: ticketStatusSmsEvent, serviceKey: v.string(), phone: v.string() },
   handler: async (ctx, args) => {
@@ -680,11 +726,16 @@ export const finishTicketStatusSms = mutation({
     const row = await ctx.db.query("tickets").withIndex("by_ticketId", (q) => q.eq("ticketId", args.id)).first();
     if (!row) throw new Error("Ticket not found");
     const claimTokenKey = `${config.prefix}SmsClaimToken`;
-    if (row.data[claimTokenKey] !== args.claimToken) return row.data;
+    const providerMessageId = String(args.providerMessageId || "").trim();
+    if (row.data[claimTokenKey] !== args.claimToken) {
+      if (args.accepted && providerMessageId) await recordTicketSmsReceipt(ctx, args.id, args.event, providerMessageId);
+      return row.data;
+    }
     const now = new Date().toISOString();
+    if (args.accepted && providerMessageId) await recordTicketSmsReceipt(ctx, args.id, args.event, providerMessageId);
     const updated: any = {
       ...row.data,
-      ...(args.accepted ? { [`${config.prefix}SmsSentAt`]: now, [`${config.prefix}SmsMessageId`]: args.providerMessageId || null } : {}),
+      ...(args.accepted ? { [`${config.prefix}SmsSentAt`]: now, [`${config.prefix}SmsMessageId`]: providerMessageId || null } : {}),
       [`${config.prefix}SmsError`]: args.error || null,
     };
     if (args.accepted || args.retryable) {

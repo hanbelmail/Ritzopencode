@@ -23,14 +23,23 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { DEFAULT_SETTINGS, useSaraSettingsActions, useSettings } from "@/lib/store";
 import { isE164Phone, normalizePhone } from "@/lib/phone";
-import { Bot, BookOpen, Check, ExternalLink, Inbox, Loader2, Pause, Play, Plus, Save, Send, ShieldCheck, Trash2 } from "lucide-react";
+import { Activity, Bot, BookOpen, Check, ExternalLink, Inbox, Loader2, Pause, Play, Plus, Save, Send, ShieldCheck, Trash2 } from "lucide-react";
 
 const serif = "font-['Cormorant_Garamond',_'EB_Garamond',_'Times_New_Roman',_serif]";
 const tabs = [
   { id: "controls", label: "Controls", icon: Bot },
   { id: "knowledge", label: "Knowledge", icon: BookOpen },
   { id: "inbox", label: "Inbox", icon: Inbox },
+  { id: "webhook", label: "Webhook", icon: Activity },
 ];
+
+const WEBHOOK_STATUS_STYLES = {
+  processed: "bg-[#e8f5ec] text-[#2f7d45]",
+  ignored: "bg-[#efe9de] text-[#6c6a64]",
+  failed: "bg-red-100 text-red-800",
+  processing: "bg-amber-100 text-amber-900",
+  received: "bg-[#efe9de] text-[#6c6a64]",
+};
 
 const emptyKnowledge = {
   id: null,
@@ -474,6 +483,84 @@ function InboxPanel() {
   );
 }
 
+function WebhookPanel() {
+  const report = useQuery(api.messaging.listForStaff, { limit: 100 });
+
+  if (report === undefined) {
+    return <div className="flex min-h-[300px] items-center justify-center rounded-[14px] border border-[#e6dfd8] bg-white"><Loader2 className="h-5 w-5 animate-spin text-[#cc785c]" /></div>;
+  }
+
+  const { summary, events } = report;
+  const healthy = summary.failed === 0 && summary.processing === 0;
+
+  return (
+    <div className="space-y-5">
+      <section className="rounded-[14px] border border-[#e6dfd8] bg-white p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-medium">Quo webhook health</h2>
+            <p className="mt-1 text-sm text-[#6c6a64]">The last {summary.total} provider events received at <code>/api/webhooks/quo</code>.</p>
+          </div>
+          <Badge className={healthy ? "bg-[#5db872] text-white" : "bg-red-600 text-white"}>{healthy ? "Healthy" : "Needs attention"}</Badge>
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
+          {[
+            { label: "Processed", value: summary.processed },
+            { label: "Ignored", value: summary.ignored },
+            { label: "Failed", value: summary.failed },
+            { label: "In flight", value: summary.processing },
+            { label: "Retried", value: summary.retried },
+          ].map((stat) => (
+            <div key={stat.label} className="rounded-[10px] bg-[#faf9f5] px-3 py-2.5">
+              <p className="text-2xl font-medium leading-none">{stat.value}</p>
+              <p className="mt-1.5 text-[11px] uppercase tracking-[0.12em] text-[#8e8b82]">{stat.label}</p>
+            </div>
+          ))}
+        </div>
+        {!healthy && (
+          <p className="mt-4 rounded-[10px] border border-red-200 bg-red-50 px-3 py-2.5 text-xs leading-relaxed text-red-800">
+            Quo automatically disables this webhook after repeated failed deliveries, which stops all inbound guest SMS until it is re-enabled in Quo settings under Developer &rarr; Webhooks &rarr; <strong>Sara SMS Webhook</strong>. Every non-2xx response below counts toward that limit.
+          </p>
+        )}
+        {Object.keys(summary.byType).length > 0 && (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {Object.entries(summary.byType).map(([type, counts]) => (
+              <span key={type} className="rounded-full bg-[#efe9de] px-3 py-1 text-[11px] text-[#4d4b46]">
+                <code>{type}</code> · {counts.total}{counts.failed ? ` · ${counts.failed} failed` : ""}{counts.ignored ? ` · ${counts.ignored} ignored` : ""}
+              </span>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="rounded-[14px] border border-[#e6dfd8] bg-white">
+        <div className="border-b border-[#e6dfd8] p-5">
+          <h2 className="font-medium">Recent events</h2>
+          <p className="mt-1 text-xs text-[#6c6a64]">Delivery receipts that match no tracked outbound message are marked <code>ignored</code> with <code>delivery_receipt_unmatched</code> and still answer Quo successfully, so they can never disable the webhook.</p>
+        </div>
+        {events.length === 0 && <p className="p-5 text-sm text-[#6c6a64]">No Quo events recorded yet.</p>}
+        {events.length > 0 && (
+          <ul className="divide-y divide-[#eee9e1]">
+            {events.map((event) => (
+              <li key={event.id} className="flex flex-wrap items-start justify-between gap-2 p-4">
+                <div className="min-w-0">
+                  <p className="truncate text-sm"><code>{event.type}</code></p>
+                  <p className="mt-1 truncate text-xs text-[#6c6a64]">{event.error || event.note || event.eventId}</p>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  {event.attempts > 1 && <span className="text-[11px] uppercase tracking-[0.1em] text-[#8e8b82]">{event.attempts} attempts</span>}
+                  <Badge className={WEBHOOK_STATUS_STYLES[event.status] || WEBHOOK_STATUS_STYLES.received}>{event.status}</Badge>
+                  <span className="text-[11px] text-[#8e8b82]">{formatTime(event.createdAt)}</span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </div>
+  );
+}
+
 export default function SaraDashboardPage() {
   const [activeTab, setActiveTab] = useState("controls");
 
@@ -503,6 +590,7 @@ export default function SaraDashboardPage() {
           {activeTab === "controls" && <ControlsPanel />}
           {activeTab === "knowledge" && <KnowledgePanel />}
           {activeTab === "inbox" && <InboxPanel />}
+          {activeTab === "webhook" && <WebhookPanel />}
         </div>
       </div>
     </div>

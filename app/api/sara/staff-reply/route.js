@@ -51,8 +51,8 @@ export async function POST(request) {
 
     try {
       const result = await sendQuoText({ content: claim.outbox.content, to: claim.outbox.to, from: claim.outbox.from });
-      await client.mutation(api.messaging.markSms, { serviceKey, idempotencyKey, status: "accepted", providerMessageId: result.data?.id });
-      return NextResponse.json({ sent: true, messageId, providerMessageId: result.data?.id || null });
+      await client.mutation(api.messaging.markSms, { serviceKey, idempotencyKey, status: "accepted", providerMessageId: result.providerMessageId });
+      return NextResponse.json({ sent: true, messageId, providerMessageId: result.providerMessageId || null });
     } catch (error) {
       await client.mutation(api.messaging.markSms, {
         serviceKey,

@@ -21,7 +21,7 @@
 - `api/booking-confirmed-hotel-alerts/` owns independent server-side booking-confirmed hotel email and guest SMS delivery, with the reservation confirmation number in the email subject.
 - `api/sara/chat/` owns the public web-chat adapter, opaque HTTP-only conversation sessions, origin checks, Sona execution, safe transcript responses, deterministic reservation-change confirmation and result replies, version/hash-bound Terms acceptance actions, and immediate deterministic payment-instruction replies after acceptance.
 - `api/sara/staff-reply/` owns authenticated staff-only, stable-ID Quo reply dispatch after the staff reply and takeover are persisted in Convex.
-- `api/webhooks/quo/` owns Quo message ingestion, webhook-token validation, event deduplication, SMS allowlist/test-mode enforcement, STOP/START processing, Sona execution, and outbound delivery tracking.
+- `api/webhooks/quo/` owns Quo message ingestion, webhook-token validation, event deduplication, SMS allowlist/test-mode enforcement, STOP/START processing, Sona execution, best-effort provider delivery-receipt ingestion, and outbound delivery tracking.
 - `(public)/AGENTS.md` owns public guest pages and ticket lookup routes.
 - `(staff)/AGENTS.md` owns authenticated staff pages.
 
@@ -55,7 +55,9 @@
 - Production Quo webhooks must validate `openphone-signature` in `hmac;1;<unix-ms>;<base64-hmac>` format against the Base64-decoded `QUO_WEBHOOK_SECRET`, sign `<timestamp>.<raw-body>`, and enforce a five-minute replay window; `QUO_WEBHOOK_TOKEN` is a development-only local payload fallback.
 - Failed Quo signature checks may log only the rejection reason; never log webhook payloads, header values, signing secrets, or guest data.
 - Quo webhook processing must store disabled or non-allowlisted inbound messages without sending a paid response, and unsupported MMS proof must redirect the guest to the secure ticket upload path.
-- Quo webhook workers use owned leases; terminal duplicates return success, active leases return a retryable non-2xx response, and deterministic pending replies recover on provider retries without duplicating ambiguous sends.
+- Quo webhook workers use owned leases; terminal duplicates return success, active leases on inbound message events return a retryable non-2xx response, active leases on delivery receipts return success without processing, and deterministic pending replies recover on provider retries without duplicating ambiguous sends.
+- Quo delivery receipts (`message.delivered`, `message.failed`, `message.undelivered`) must always answer 2xx because Quo disables the webhook after repeated failed deliveries: they resolve against the SMS outbox and conversation messages first, then the ticket lifecycle SMS receipt index, an unmatched provider message ID is stored as `ignored` with a `delivery_receipt_unmatched` note rather than failing, and delivery-state resolution errors are absorbed because a receipt only updates status badges and must never take down inbound guest SMS.
+- Delivery receipts claim a 60-second lease instead of the 10-minute inbound lease, and their webhook completion is best-effort, so neither a slow receipt nor a lost receipt lease can consume Quo's retry budget.
 
 ## Work Guidance
 

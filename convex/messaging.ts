@@ -1,7 +1,10 @@
 import { v } from "convex/values";
-import { mutation } from "./_generated/server";
-import { requireServiceKey } from "./security";
+import { mutation, query } from "./_generated/server";
+import { requireServiceKey, requireStaff } from "./security";
 import { getSmsConsent, normalizeSmsPhone } from "./smsConsent";
+
+const MAX_WEBHOOK_LEASE_SECONDS = 600;
+const MIN_WEBHOOK_LEASE_SECONDS = 15;
 
 async function updateInitialDisclosureState(ctx: any, message: any, status: string, now: string) {
   if (message?.metadata?.initialDisclosure !== true) return;
@@ -66,6 +69,7 @@ export const finishWebhook = mutation({
     claimToken: v.string(),
     status: v.union(v.literal("processed"), v.literal("ignored"), v.literal("failed")),
     error: v.optional(v.string()),
+    note: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     requireServiceKey(args.serviceKey);
@@ -78,6 +82,7 @@ export const finishWebhook = mutation({
     await ctx.db.patch(event._id, {
       status: args.status,
       error: args.error,
+      note: args.note,
       processedAt: new Date().toISOString(),
       claimToken: undefined,
       leaseExpiresAt: undefined,
@@ -86,7 +91,7 @@ export const finishWebhook = mutation({
 });
 
 export const claimWebhook = mutation({
-  args: { serviceKey: v.string(), eventId: v.string() },
+  args: { serviceKey: v.string(), eventId: v.string(), leaseSeconds: v.optional(v.number()) },
   handler: async (ctx, args) => {
     requireServiceKey(args.serviceKey);
     const event = await ctx.db
@@ -99,9 +104,11 @@ export const claimWebhook = mutation({
     if (!["received", "failed"].includes(event.status) && !staleProcessing) {
       return { claimed: false, status: event.status, retryAfterSeconds: event.status === "processing" ? 30 : undefined };
     }
+    const requested = Math.floor(Number(args.leaseSeconds) || MAX_WEBHOOK_LEASE_SECONDS);
+    const leaseSeconds = Math.min(Math.max(Number.isFinite(requested) ? requested : MAX_WEBHOOK_LEASE_SECONDS, MIN_WEBHOOK_LEASE_SECONDS), MAX_WEBHOOK_LEASE_SECONDS);
     const claimToken = crypto.randomUUID();
     const claimedAt = now.toISOString();
-    const leaseExpiresAt = new Date(now.getTime() + 10 * 60_000).toISOString();
+    const leaseExpiresAt = new Date(now.getTime() + leaseSeconds * 1000).toISOString();
     await ctx.db.patch(event._id, {
       status: "processing",
       error: undefined,
@@ -248,5 +255,42 @@ export const applyDeliveryEvent = mutation({
       await updateInitialDisclosureState(ctx, message, status, new Date().toISOString());
     }
     return { matched: Boolean(outbox || message) };
+  },
+});
+
+export const listForStaff = query({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    await requireStaff(ctx);
+    const requested = Math.floor(Number(args.limit) || 60);
+    const limit = Math.min(Math.max(Number.isFinite(requested) ? requested : 60, 1), 200);
+    const events = await ctx.db.query("webhookEvents").withIndex("by_createdAt").order("desc").take(limit);
+    const statuses = ["processing", "processed", "ignored", "failed", "received"] as const;
+    const counts: Record<string, number> = { total: events.length, retried: 0 };
+    for (const status of statuses) counts[status] = 0;
+    const byType: Record<string, { total: number; failed: number; ignored: number }> = {};
+    for (const event of events) {
+      counts[event.status] = (counts[event.status] || 0) + 1;
+      if ((event.attempts || 0) > 1) counts.retried += 1;
+      const bucket = byType[event.type] || { total: 0, failed: 0, ignored: 0 };
+      bucket.total += 1;
+      if (event.status === "failed") bucket.failed += 1;
+      if (event.status === "ignored") bucket.ignored += 1;
+      byType[event.type] = bucket;
+    }
+    return {
+      summary: { ...counts, byType },
+      events: events.map((event) => ({
+        id: event._id,
+        eventId: event.eventId,
+        type: event.type,
+        status: event.status,
+        error: event.error || null,
+        note: event.note || null,
+        attempts: event.attempts || 0,
+        createdAt: event.createdAt,
+        processedAt: event.processedAt || null,
+      })),
+    };
   },
 });

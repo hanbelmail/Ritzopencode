@@ -37,7 +37,8 @@
 - `sara-payment-instructions.js` owns deterministic immediate and repeat payment replies containing configured methods, the secure ticket link, and the staff-verification notice without model rewriting or SMS truncation.
 - `sara-reservation-change.js` owns deterministic reservation-change confirmation, applied, cancelled, expired, unconfirmed, stale, and invalid replies plus the quote-failure message; these must state only CRM-derived dates, must never promise a price that has not been returned, and must never repeat internal quote-error detail to a guest. The date-change confirmation renders the full current and full requested stay from the pending change snapshot and proposed values, so one moved date still shows both ranges and a date label is never emitted without dates.
 - `requote-notification-server.js` owns the post-`PRICE SENT` quote-ready and failed-quote conversation messages with their per-revision idempotency keys, consent-, allowlist-, and control-fenced SMS delivery through the Convex outbox, and re-sending the price email or price SMS after a contact-detail change on a priced ticket; quote-ready content renders the active price-sent SMS template verbatim with the same ticket and retail-screenshot URLs as the lifecycle SMS so web transcripts match the guest SMS text, and linked conversations are read through `conversations.getServiceContext` so web conversations without a guest session still receive their notifications.
-- `quo-server.js` owns the shared server-only Quo text transport, sender/recipient normalization, timeout, and rejected-versus-ambiguous provider error classification.
+- `quo-provider.js` owns the single dependency-free Quo provider message ID extraction contract shared by outbound sends and inbound webhook delivery receipts.
+- `quo-server.js` owns the shared server-only Quo text transport, sender/recipient normalization, timeout, resolved `providerMessageId` on every successful send, and rejected-versus-ambiguous provider error classification.
 
 ## Local Contracts
 
@@ -65,12 +66,14 @@
 - Quote-ready conversation messages are one per ticket and `quoteRevision`, render the active price-sent SMS template verbatim, must not be sent when Sona is paused or the conversation is closed, and must not duplicate a lifecycle price-sent SMS that already delivered for the same revision.
 - Bump `SARA_PROMPT_VERSION` whenever Sona's permissions, deterministic boundaries, or identity wording change.
 - Conversational SMS must use `lib/quo-server.js` and the Convex outbox; do not add another direct Quo transport.
+- Every outbound Quo send must persist the `providerMessageId` that `quo-server.js` resolved, because delivery receipts are matched only by that value; extract provider message IDs exclusively through `quo-provider.js` so the send side and the webhook receipt side cannot drift apart.
 
 ## Work Guidance
 
 - When changing persisted settings shapes, include migration/default handling near `normalizeSettings()`.
 - Keep calculation logic deterministic and independent from React components.
 - Keep auth behavior consistent with staff route guards in `app/(staff)/AGENTS.md`.
+- Keep `quo-provider.js` free of imports so `lib/quo-provider.test.mjs` can transpile and load it under `node --test`.
 
 ## Verification
 
@@ -80,6 +83,7 @@
 - Run `npm test` after changing Sona Terms presentation or acceptance handling.
 - Run `npm test` after changing deterministic Sona payment-instruction formatting or delivery behavior.
 - Run `npm test` after changing deterministic Sona reservation-change or quote-failure message wording.
+- Run `npm test` after changing Quo provider message ID extraction, because an ID mismatch silently turns every delivery receipt into an unmatched provider event.
 
 ## Child DOX Index
 
