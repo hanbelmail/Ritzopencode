@@ -5,7 +5,7 @@ import { availableRangesForWindow, isCalendarDate, monthAvailabilityWindow } fro
 import { getSmsConsent, normalizeSmsPhone } from "./smsConsent";
 import { queueQuoteWebhook } from "./quoteWebhook";
 import { applyRequoteReset, nextQuoteRevision, quoteRevisionOf } from "./quoteRevision";
-import { changeSummaryFields, classifyChangeReply, isReservationChangeExpired } from "./reservationChange";
+import { changeSummaryFields, classifyChangeReply, isReservationChangeExpired, isSameTicketSnapshot } from "./reservationChange";
 import {
   classifyTermsReply,
   isReplyAfterTermsPresentation,
@@ -922,10 +922,6 @@ function ticketSnapshot(ticket: any) {
   };
 }
 
-function sameSnapshot(left: any, right: any) {
-  return JSON.stringify(left) === JSON.stringify(right);
-}
-
 async function prepareReservationChange(ctx: any, conversation: any, proposed: any) {
   if (!conversation.ticketId) throw new Error("An existing reservation is required before making changes");
   const ticketRow = await getTicketRow(ctx, conversation.ticketId);
@@ -1324,7 +1320,7 @@ export const processReservationChangeReply = mutation({
 
     try {
       const prepared = await prepareReservationChange(ctx, conversation, pending.proposed || {});
-      if (!sameSnapshot(ticketSnapshot(prepared.ticket), pending.ticketSnapshot)) {
+      if (!isSameTicketSnapshot(pending.ticketSnapshot, ticketSnapshot(prepared.ticket))) {
         await cancelPendingChange(ctx, conversation, pending, "reservation_changed_while_pending");
         return { status: "stale" as const, fields };
       }

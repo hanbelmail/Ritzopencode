@@ -19,7 +19,7 @@
 - `knowledge.ts` and `knowledgeSeed.ts` own approved Knowledge retrieval, staff versioned edits, and synchronization of the 42 draft starter entries.
 - `sara.ts` and `saraAvailability.ts` own Sona's one-unit exact-stay and Hawaii calendar-month range availability, exact client matching, control-fenced quote creation, guest-reservation edits limited to `QUOTE REQUESTED` and `PRICE SENT` with confirmation-gated date changes, guest-safe ticket context, immutable Terms presentation/acceptance, payment-instruction authorization, quote-ready notification stamping, handoff, and ordered SMS consent updates.
 - `quoteRevision.ts` owns quote-round mechanics: revision and token minting, revision-scoped webhook idempotency keys, quote-input change detection, the re-quote reset field set including quote errors and price-sent notification stamps, and stale pricing-callback detection.
-- `reservationChange.ts` owns deterministic reservation-change reply normalization, confirmation/cancellation allowlists, changed-field labels, quote-invalidating detection, and pending-change expiry.
+- `reservationChange.ts` owns deterministic reservation-change reply normalization, confirmation/cancellation allowlists, changed-field labels, quote-invalidating detection, pending-change expiry, and the order-independent pending ticket-snapshot comparison.
 - `termsContract.ts` owns the canonical versioned web agreement label, current explicit agree/accept SMS allowlist, deterministic case/whitespace/safe-trailing-punctuation normalization, presentation-bound prior/legacy classifiers, and acceptance-attempt classification.
 - `smsConsent.ts` owns canonical normalized-phone consent reads and explicit legacy STOP/START recovery.
 - `messaging.ts` owns owned Quo webhook leases, SMS outbox idempotency, final consent/control/policy claims, send attempts, and delivery-state updates.
@@ -30,6 +30,7 @@
 ## Local Contracts
 
 - Keep Convex backend files TypeScript, matching Convex conventions, while the Next.js app remains JavaScript/JSX unless explicitly changed.
+- Convex returns persisted object values with alphabetically sorted keys, so never compare a stored object against an in-memory one with `JSON.stringify`; compare normalized fields instead.
 - Include `authTables` in `schema.ts` for Convex Auth compatibility.
 - Keep `dashboardPreferences` scoped to the authenticated Convex Auth user; unauthenticated reads return `null` and unauthenticated saves fail.
 - Do not store Convex secrets in source files; use `npx convex env set` or the Convex dashboard.
@@ -46,7 +47,7 @@
 - Starter Knowledge synchronization inserts missing entries, refreshes changed non-archived starter entries, preserves approval for Sona-only branding migrations, and returns other changed approved entries to draft for staff review; archived entries remain untouched. Known starter-entry reads normalize legacy Sara mentions to Sona until persisted rows are synchronized without rewriting unrelated custom Knowledge.
 - All Sona service functions require `SARA_SERVICE_KEY`; OpenAI must receive no direct Convex credential or unrestricted ticket mutation.
 - Sona reservation edits accept only guest names, email, phone, and both stay dates; they run the same validation as quote creation, refuse paid/confirmed/cancelled statuses and SMS-channel mobile-number changes, refuse identifier changes that resolve to a different client record, and never write pricing, status, Terms, payment, or confirmation fields.
-- A date change on a `PRICE SENT` ticket is staged as one pending change with a ticket snapshot, cleared Terms presentation, and a deterministic guest confirmation; applying it re-runs validation, rejects a ticket that moved meanwhile, expires after 30 minutes, and must not bump the conversation control version while Sona's own run is in flight.
+- A date change on a `PRICE SENT` ticket is staged as one pending change with a ticket snapshot, cleared Terms presentation, and a deterministic guest confirmation; applying it re-runs validation, rejects a ticket whose normalized snapshot fields moved meanwhile, expires after 30 minutes, and must not bump the conversation control version while Sona's own run is in flight.
 - Automation callbacks that set `PRICE SENT`, a retail price, or a quote error must echo the ticket's current `quoteToken`; a superseded callback is rejected as a stale quote, while stamp-only automation updates remain unfenced.
 - A guest-safe `quoteError` recorded by automation survives only until the next quote round: every re-quote reset clears it, and any save that lands a ticket on `PRICE SENT` removes it so a priced ticket never reports a failed lookup.
 - `sara.recordQuoteNotification` stamps one quote-ready or quote-failure notification per ticket and revision; it deliberately leaves the row-level `updatedAt` untouched because that value is the lifecycle SMS concurrency fence.
@@ -66,7 +67,7 @@
 ## Verification
 
 - Use `npx convex dev` for backend sync/codegen when Convex functions or schema change.
-- Use `npm test` for deterministic Sona branding, prompt identity, year/date resolution, Terms acceptance classification, calendar-month availability range checks, re-quote round mechanics, and reservation-change reply classification.
+- Use `npm test` for deterministic Sona branding, prompt identity, year/date resolution, Terms acceptance classification, calendar-month availability range checks, re-quote round mechanics, reservation-change reply classification, and pending-change ticket-snapshot comparison.
 
 ## Child DOX Index
 

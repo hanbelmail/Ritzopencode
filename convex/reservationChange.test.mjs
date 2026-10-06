@@ -12,7 +12,9 @@ const {
   classifyChangeReply,
   isQuoteInvalidatingChange,
   isReservationChangeExpired,
+  isSameTicketSnapshot,
   normalizeChangeReply,
+  normalizeTicketSnapshot,
   RESERVATION_CHANGE_CONFIRMATION_CONTRACT,
   RESERVATION_CHANGE_TTL_MS,
 } = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString("base64")}`);
@@ -57,4 +59,56 @@ test("expires a pending change after the confirmation window", () => {
   assert.equal(isReservationChangeExpired({ requestedAt: "2026-10-02T11:59:00.000Z" }, now), false);
   assert.equal(isReservationChangeExpired({ requestedAt: new Date(now - RESERVATION_CHANGE_TTL_MS - 1000).toISOString() }, now), true);
   assert.equal(isReservationChangeExpired({}, now), true);
+});
+
+const stagedSnapshot = {
+  status: "PRICE SENT",
+  quoteRevision: 0,
+  checkIn: "2026-10-25",
+  checkOut: "2026-10-30",
+  email: "eee@gmail.com",
+  phone: "+17867002222",
+  guests: ["Walid Sdfd", "Sara Diidou"],
+};
+
+const convexPersisted = (snapshot) =>
+  Object.fromEntries(Object.entries(snapshot).sort(([left], [right]) => (left === right ? 0 : left < right ? -1 : 1)));
+
+test("matches a staged ticket snapshot that Convex returned with sorted keys", () => {
+  const persisted = convexPersisted(stagedSnapshot);
+  assert.notEqual(JSON.stringify(persisted), JSON.stringify(stagedSnapshot));
+  assert.equal(
+    JSON.stringify(persisted),
+    '{"checkIn":"2026-10-25","checkOut":"2026-10-30","email":"eee@gmail.com","guests":["Walid Sdfd","Sara Diidou"],"phone":"+17867002222","quoteRevision":0,"status":"PRICE SENT"}'
+  );
+  assert.equal(isSameTicketSnapshot(persisted, stagedSnapshot), true);
+  assert.equal(isSameTicketSnapshot(stagedSnapshot, persisted), true);
+});
+
+test("still reports a reservation that moved while a change was pending", () => {
+  assert.equal(isSameTicketSnapshot({ ...stagedSnapshot, quoteRevision: 1 }, stagedSnapshot), false);
+  assert.equal(isSameTicketSnapshot({ ...stagedSnapshot, status: "QUOTE REQUESTED" }, stagedSnapshot), false);
+  assert.equal(isSameTicketSnapshot({ ...stagedSnapshot, checkIn: "2026-10-28" }, stagedSnapshot), false);
+  assert.equal(isSameTicketSnapshot({ ...stagedSnapshot, checkOut: "2026-11-02" }, stagedSnapshot), false);
+  assert.equal(isSameTicketSnapshot({ ...stagedSnapshot, email: "other@example.com" }, stagedSnapshot), false);
+  assert.equal(isSameTicketSnapshot({ ...stagedSnapshot, phone: "+17867000000" }, stagedSnapshot), false);
+  assert.equal(isSameTicketSnapshot({ ...stagedSnapshot, guests: ["Sara Diidou", "Walid Sdfd"] }, stagedSnapshot), false);
+  assert.equal(isSameTicketSnapshot({ ...stagedSnapshot, guests: ["Walid Sdfd"] }, stagedSnapshot), false);
+});
+
+test("normalizes missing and malformed ticket snapshot values before comparing", () => {
+  assert.deepEqual(normalizeTicketSnapshot(undefined), {
+    status: "",
+    quoteRevision: 0,
+    checkIn: "",
+    checkOut: "",
+    email: "",
+    phone: "",
+    guests: [],
+  });
+  assert.equal(normalizeTicketSnapshot({ quoteRevision: "2" }).quoteRevision, 2);
+  assert.equal(normalizeTicketSnapshot({ quoteRevision: null }).quoteRevision, 0);
+  assert.equal(normalizeTicketSnapshot({ quoteRevision: -1 }).quoteRevision, 0);
+  assert.deepEqual(normalizeTicketSnapshot({ guests: "not-an-array" }).guests, []);
+  assert.equal(isSameTicketSnapshot({}, { quoteRevision: 0, guests: [] }), true);
 });

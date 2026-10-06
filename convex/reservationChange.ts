@@ -113,6 +113,32 @@ export function changeSnapshotFields(change: any) {
     .join(",");
 }
 
+export function normalizeTicketSnapshot(snapshot: any) {
+  const quoteRevision = Number(snapshot?.quoteRevision);
+  return {
+    status: String(snapshot?.status ?? ""),
+    quoteRevision: Number.isFinite(quoteRevision) && quoteRevision > 0 ? Math.floor(quoteRevision) : 0,
+    checkIn: String(snapshot?.checkIn ?? ""),
+    checkOut: String(snapshot?.checkOut ?? ""),
+    email: String(snapshot?.email ?? ""),
+    phone: String(snapshot?.phone ?? ""),
+    guests: Array.isArray(snapshot?.guests) ? snapshot.guests.map((guest: any) => String(guest ?? "")) : [],
+  };
+}
+
+export function isSameTicketSnapshot(left: any, right: any) {
+  const current = normalizeTicketSnapshot(left);
+  const staged = normalizeTicketSnapshot(right);
+  if (current.status !== staged.status) return false;
+  if (current.quoteRevision !== staged.quoteRevision) return false;
+  if (current.checkIn !== staged.checkIn) return false;
+  if (current.checkOut !== staged.checkOut) return false;
+  if (current.email !== staged.email) return false;
+  if (current.phone !== staged.phone) return false;
+  if (current.guests.length !== staged.guests.length) return false;
+  return current.guests.every((guest: string, index: number) => guest === staged.guests[index]);
+}
+
 export function isReservationChangeExpired(change: any, now = Date.now()) {
   const requestedAt = Date.parse(String(change?.requestedAt || ""));
   if (!Number.isFinite(requestedAt)) return true;
