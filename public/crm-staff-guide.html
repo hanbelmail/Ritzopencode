@@ -630,7 +630,7 @@
           <div class="email-head"><strong>New Quote Alert</strong><span class="badge">Staff</span></div>
           <div class="email-body">
             <div class="email-line"><span>To</span><span>Active staff recipients</span></div>
-            <div class="email-line"><span>When</span><span>A guest submits a public quote request</span></div>
+            <div class="email-line"><span>When</span><span>A new quote request is saved from the public form, Sona web/SMS, or staff entry</span></div>
             <div class="email-line"><span>Example</span><span>New quote from Jane Guest for Deluxe Ocean View, Dec 12 to Dec 16.</span></div>
           </div>
         </article>
@@ -662,6 +662,15 @@
           </div>
         </article>
       </div>
+    </section>
+
+    <section id="attention">
+      <h2>Needs Attention And Staff Alert Delivery</h2>
+      <p>Open <a href="/attention">Needs attention</a> for failed quotes, quotes still awaiting a price after ten minutes, Sona human handoffs, and notification failures. Open the linked reservation or conversation to take action. Quote and handoff items clear when the underlying issue is resolved.</p>
+      <p>New-inquiry staff alerts are queued server-side for the public form, Sona web/SMS, and staff entry. They remain eligible if the quote becomes priced before the alert runs. The system retries transient email failures up to five attempts and records each attempt. Historical inquiries and legacy imports are not automatically resent.</p>
+      <p>The latest 100 staff alerts show pending, sending, accepted, skipped, or failed status. Accepted means Resend accepted the email, not confirmed inbox delivery. Use the provider ID in Resend to investigate delivery, bounces, or spam placement. Skipped alerts show the reason, such as disabled settings or missing recipients.</p>
+      <p>After correcting configuration, use Retry staff email when available. Retries reuse the same provider idempotency key and stop before its 24-hour retention window expires. After the retry limit, check Resend history before sending manually. Mark a delivery issue reviewed only after handling it; this does not resend the guest message.</p>
+      <p>The Needs attention alerts switch in <a href="/email-dashboard">Email Dashboard</a> controls proactive operational emails to active staff recipients and follows the staff email master switch. A failed staff-email transport remains visible here instead of recursively sending more failure emails.</p>
     </section>
 
     <section id="daily-process">
@@ -738,8 +747,8 @@
           <p>Require staff to confirm the screenshot shows the same room, dates, retail total, and Ritz source.</p>
         </article>
         <article class="suggestion">
-          <h3>Email Failure SOP</h3>
-          <p>Explain what staff should do when an email alert fails, such as manually contacting the guest or checking Email Dashboard settings.</p>
+          <h3>Email Failure Review</h3>
+          <p>Use the <a href="/attention">Needs attention</a> queue and delivery history to investigate failed alerts and check provider history before manually resending.</p>
         </article>
         <article class="suggestion">
           <h3>Lead Priority Rules</h3>
@@ -762,6 +771,7 @@
         <a class="pill-link" href="/dashboard">Dashboard</a>
         <a class="pill-link" href="/new">New Reservation</a>
         <a class="pill-link" href="/email-dashboard">Email Dashboard</a>
+        <a class="pill-link" href="/attention">Needs attention</a>
         <a class="pill-link" href="/analytics">Analytics</a>
         <a class="pill-link" href="/api-documentation.html">API Documentation</a>
       </div>

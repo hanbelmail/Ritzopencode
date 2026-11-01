@@ -4,7 +4,7 @@ import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, Bot, LayoutGrid, Plus, Settings, Globe, LogOut, Users, Calendar, Code, Menu, Workflow, UserRound, X, Mail, MessageSquare } from "lucide-react";
+import { AlertTriangle, BarChart3, Bot, LayoutGrid, Plus, Settings, Globe, LogOut, Users, Calendar, Code, Menu, Workflow, UserRound, X, Mail, MessageSquare } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 
 const navItems = [
@@ -14,6 +14,7 @@ const navItems = [
 ];
 
 const drawerItems = [
+  { to: "/attention", label: "Needs attention", description: "Failures and staff alerts", icon: AlertTriangle },
   { to: "/clients", label: "Clients", description: "Guest records", icon: Users },
   { to: "/email-dashboard", label: "Email", description: "Alerts and recipients", icon: Mail },
   { to: "/sms-dashboard", label: "SMS", description: "Quote message alerts", icon: MessageSquare },
@@ -26,6 +27,7 @@ const drawerItems = [
 
 const sideItems = [
   { to: "/dashboard", label: "Reservations", icon: LayoutGrid },
+  { to: "/attention", label: "Needs attention", icon: AlertTriangle },
   { to: "/analytics", label: "Analytics", icon: BarChart3 },
   { to: "/calendar", label: "Calendar", icon: Calendar },
   { to: "/new", label: "New Reservation", icon: Plus },

@@ -89,13 +89,6 @@ export default function QuoteForm() {
       rateOffered: null,
       costPerNight: null,
     });
-    fetch("/api/quote-alerts", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ticketId: ticket.id }),
-    }).catch((error) => {
-      console.error("Failed to send quote alert", error);
-    });
     setCreated(ticket);
   };
 

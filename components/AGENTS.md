@@ -18,7 +18,7 @@
 
 - Components must not introduce new persistence contracts; route mutations and storage live in `lib/`.
 - `PublicLayout.jsx` must not mount the Sona guest chat widget on `/ticket` or `/ticket/*` reservation pages.
-- `components/home/QuoteForm.jsx` creates Convex quote tickets through `lib/store.js`; Convex owns quote-webhook delivery after persistence so the browser must not dispatch it.
+- `components/home/QuoteForm.jsx` creates Convex quote tickets through `lib/store.js`; Convex owns both quote-webhook delivery and new-inquiry staff email, so the browser must not dispatch either.
 - `components/home/QuoteForm.jsx` requires at least one guest name, check-in, check-out, room name, and a valid email before creating a public quote ticket.
 - `components/home/QuoteForm.jsx` auto-selects the only visible room type from settings for public quote requests.
 - `components/home/QuoteForm.jsx` does not render room-name selection in the public quote UI; room data remains part of form state and ticket creation.
@@ -30,6 +30,7 @@
 - `components/tickets/TicketTable.jsx` must keep its Columns control hidden below the `md` breakpoint and omit it on desktop when its settings-driven visibility prop is false.
 - `components/ticket/PayDialog.jsx` guides guests through separate Terms, payment-method, and image-proof steps; it displays the exact immutable Terms content and version in the dialog's single content scroller, keeps the version-bound agreement checkbox visible with the Terms action, records acceptance before revealing configured payment instructions, honors an already-current Sona acceptance without overwriting its evidence, validates proof images before upload, and labels completion as proof submitted pending verification.
 - Keep shared components route-agnostic unless they are in a domain folder such as `home/`, `ticket/`, or `tickets/`.
+- `StaffLayout.jsx` exposes `/attention` in desktop navigation and the mobile More menu.
 - Preserve `@/components/ui/*` import paths for UI primitives.
 
 ## Work Guidance

@@ -16,7 +16,7 @@
 - `price-sent-notifications-server.js` owns independent dispatch of price-sent email and SMS delivery.
 - `phone.js` owns shared E.164 phone normalization and validation.
 - `sms-templates.js` owns fixed-ID normalization, legacy price-sent single-template migration, active-template selection, and validation for three price-sent templates and two templates for each later lifecycle status.
-- `quote-alert-email-server.js` owns the server-side Resend template, active staff-recipient filtering, skip rules, and successful-delivery ticket stamp for new quote staff alerts.
+- `staff-notification-monitor-server.js` reports lifecycle email/SMS failures and later successful sends to the Convex staff-alert outbox without rolling back reservation saves or blocking independent channels. New-inquiry staff email rendering/delivery belongs to `convex/staffNotifications.ts` and `convex/staffNotificationPolicy.ts`.
 - `payment-submitted-alert.js` owns the client helper for calling the payment-submitted staff alert API after ticket payment updates.
 - `payment-submitted-alert-email-server.js` owns the server-side Resend template, active staff-recipient filtering, payment proof screenshot attachment, skip rules, and successful-delivery ticket stamp for payment-submitted staff alerts.
 - `booking-request-hotel-alert.js` owns the client helper for calling the Booking Requests Hotel Alert API after payment-verification saves or updates.
@@ -68,6 +68,7 @@
 - Bump `SARA_PROMPT_VERSION` whenever Sona's permissions, deterministic boundaries, or identity wording change.
 - Conversational SMS must use `lib/quo-server.js` and the Convex outbox; do not add another direct Quo transport.
 - Every outbound Quo send must persist the `providerMessageId` that `quo-server.js` resolved, because delivery receipts are matched only by that value; extract provider message IDs exclusively through `quo-provider.js` so the send side and the webhook receipt side cannot drift apart.
+- `staffAttentionEmailEnabled` defaults on and is independently editable under the existing staff-email master switch. Lifecycle notification aggregators report actual failures, not normal disabled/already-sent skips; monitoring failure never changes the provider result returned to callers.
 
 ## Work Guidance
 

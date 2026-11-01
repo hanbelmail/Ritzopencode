@@ -7,6 +7,7 @@ import { NextResponse } from "next/server";
 
 const isProtectedRoute = createRouteMatcher([
   "/dashboard(.*)",
+  "/attention(.*)",
   "/calendar(.*)",
   "/clients(.*)",
   "/analytics(.*)",
@@ -20,6 +21,7 @@ const isProtectedRoute = createRouteMatcher([
 
 const isProtectedApiRoute = createRouteMatcher([
   "/api/tickets(.*)",
+  "/api/quote-alerts",
   "/api/retail-price-screenshot/upload-url",
   "/api/booking-confirmed-hotel-alert-attachments/upload-url",
 ]);

@@ -5,6 +5,7 @@ import { isAutomationKey, isStaff, requireServiceKey, requireStaff, requireStaff
 import { getSmsConsent, normalizeSmsPhone } from "./smsConsent";
 import { termsAgreementText, WEB_TERMS_ACCEPTANCE_CONTRACT } from "./termsContract";
 import { queueQuoteWebhook } from "./quoteWebhook";
+import { queueNewQuoteAlert, queueQuoteProblem, queueStaffAlert } from "./staffNotifications";
 import {
   applyRequoteReset,
   initialQuoteRound,
@@ -617,6 +618,13 @@ export const applySmsDeliveryReceipt = mutation({
       error: args.delivered ? undefined : String(args.error || status).slice(0, 1000),
       updatedAt: new Date().toISOString(),
     });
+    const alertKey = `sms-receipt:${providerMessageId}`;
+    if (!args.delivered) {
+      await queueStaffAlert(ctx, { key: alertKey, kind: "deliveryFailure", ticketId: receipt.ticketId, reason: `${receipt.event} SMS delivery failed. Review the provider receipt and guest contact details.` });
+    } else {
+      const alert = await ctx.db.query("staffNotifications").withIndex("by_key", (q) => q.eq("key", alertKey)).first();
+      if (alert) await ctx.db.patch(alert._id, { resolvedAt: new Date().toISOString() });
+    }
     return { matched: true, ticketId: receipt.ticketId, event: receipt.event, status };
   },
 });
@@ -780,6 +788,7 @@ export const create = mutation({
       ...ticketIndexFields(ticket),
     });
     await queueQuoteWebhook(ctx, ticket);
+    await queueNewQuoteAlert(ctx, ticket);
 
     return ticket;
   },
@@ -867,6 +876,9 @@ export const update = mutation({
     });
 
     if (requote.requote) await queueQuoteWebhook(ctx, updated);
+    if (updated.status === "QUOTE REQUESTED" && updated.quoteError) {
+      await queueQuoteProblem(ctx, updated, "quoteFailure", String(updated.quoteError));
+    }
 
     if (updated.conversationId) {
       const conversation = await ctx.db.query("conversations").withIndex("by_publicId", (q) => q.eq("publicId", String(updated.conversationId))).first();

@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as acquisitionSource from "../acquisitionSource.js";
 import type * as auth from "../auth.js";
 import type * as conversations from "../conversations.js";
 import type * as dashboardPreferences from "../dashboardPreferences.js";
@@ -23,6 +24,8 @@ import type * as saraAvailability from "../saraAvailability.js";
 import type * as security from "../security.js";
 import type * as settings from "../settings.js";
 import type * as smsConsent from "../smsConsent.js";
+import type * as staffNotificationPolicy from "../staffNotificationPolicy.js";
+import type * as staffNotifications from "../staffNotifications.js";
 import type * as terms from "../terms.js";
 import type * as termsContract from "../termsContract.js";
 import type * as ticketConfirmation from "../ticketConfirmation.js";
@@ -35,6 +38,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  acquisitionSource: typeof acquisitionSource;
   auth: typeof auth;
   conversations: typeof conversations;
   dashboardPreferences: typeof dashboardPreferences;
@@ -50,6 +54,8 @@ declare const fullApi: ApiFromModules<{
   security: typeof security;
   settings: typeof settings;
   smsConsent: typeof smsConsent;
+  staffNotificationPolicy: typeof staffNotificationPolicy;
+  staffNotifications: typeof staffNotifications;
   terms: typeof terms;
   termsContract: typeof termsContract;
   ticketConfirmation: typeof ticketConfirmation;

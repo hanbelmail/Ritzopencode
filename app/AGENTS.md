@@ -15,7 +15,7 @@
 - `api/retail-price-screenshot/` owns private Cloudflare R2 signed upload and signed view URL endpoints for Ritz website retail price screenshots.
 - `api/booking-confirmed-hotel-alert-attachments/` owns private Cloudflare R2 signed upload URLs for the two PDF attachments configured for booking-confirmed hotel email alerts.
 - `api/quote-webhook/` preserves manual forwarding to the configured external webhook; normal ticket creation uses the durable Convex quote-webhook outbox instead.
-- `api/quote-alerts/` owns server-side new quote staff email alerts through Resend and stamps tickets after successful delivery.
+- `api/quote-alerts/` is a staff/automation-authenticated compatibility endpoint that queues an idempotent Convex new-inquiry alert and returns 202; normal inquiry creation queues it atomically in Convex.
 - `api/payment-submitted-alerts/` owns independent server-side payment-submitted staff email and guest SMS delivery, including payment proof screenshot attachments from R2 when present.
 - `api/booking-request-hotel-alerts/` owns independent server-side payment-verified booking request hotel email and guest SMS delivery, with the fixed `1609E` email subject.
 - `api/booking-confirmed-hotel-alerts/` owns independent server-side booking-confirmed hotel email and guest SMS delivery, with the reservation confirmation number in the email subject.
@@ -41,7 +41,7 @@
 - Ticket API updates that change price or stay-date inputs must recalculate derived pricing fields with `lib/calc.js` and Convex-backed settings.
 - Ticket API automation must save `reservationConfirmationNumber` successfully before a separate update sets `BOOKING CONFIRMED`; sequencing violations return a client error and do not send lifecycle notifications.
 - Automatic quote webhook forwarding must be queued by Convex from persisted `QUOTE REQUESTED` tickets, use the current Convex-backed `webhookUrl` and `webhookEnabled` settings, and not depend on a browser request; the manual compatibility route must also read those settings before forwarding.
-- Quote alert delivery must read email alert settings and active staff recipients from Convex-backed settings, send through server-side Resend credentials, and stamp `quoteAlertEmailSentAt` only after successful delivery.
+- Quote alert delivery belongs to Convex, reads persisted staff email settings/recipients, and stamps `quoteAlertEmailSentAt` only after Resend acceptance. App routes and browsers must not send a second inquiry email; `/api/quote-alerts` only queues the existing job and requires middleware authentication.
 - Payment-submitted alert delivery must read email alert settings and active staff recipients from Convex-backed settings, attach the private payment proof screenshot from R2 when `paymentScreenshotKey` is present, and stamp `paymentSubmittedStaffEmailSentAt` only after successful delivery.
 - Booking requests hotel alert delivery must read email alert settings and active hotel recipients from Convex-backed settings after `PAYMENT VERIFIED`, use the fixed `1609E` subject, and stamp `bookingRequestHotelEmailSentAt` only after successful delivery.
 - Booking confirmed hotel alert delivery must read email alert settings and active hotel recipients from Convex-backed settings after `BOOKING CONFIRMED`, attach up to two configured private R2 PDFs, use `Ritz Confirmation #: <reservation confirmation number>` as the subject, and stamp `bookingConfirmedHotelEmailSentAt` only after successful delivery.

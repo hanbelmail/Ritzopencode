@@ -16,6 +16,7 @@ export default defineSchema({
   })
     .index("by_ticketId", ["ticketId"])
     .index("by_createdAt", ["createdAt"])
+    .index("by_status_createdAt", ["status", "createdAt"])
     .searchIndex("search_text", {
       searchField: "searchText",
       filterFields: ["status"],
@@ -216,6 +217,38 @@ export default defineSchema({
     .index("by_ticketId", ["ticketId"])
     .index("by_idempotencyKey", ["idempotencyKey"])
     .index("by_status", ["status"]),
+  staffNotifications: defineTable({
+    key: v.string(),
+    kind: v.union(v.literal("newQuote"), v.literal("quoteFailure"), v.literal("quoteStalled"), v.literal("quoteWebhookFailure"), v.literal("handoff"), v.literal("deliveryFailure")),
+    ticketId: v.optional(v.string()),
+    conversationId: v.optional(v.string()),
+    quoteRevision: v.optional(v.number()),
+    reason: v.optional(v.string()),
+    status: v.union(v.literal("pending"), v.literal("sending"), v.literal("accepted"), v.literal("failed"), v.literal("skipped")),
+    attempts: v.number(),
+    payload: v.optional(v.object({ from: v.string(), to: v.array(v.string()), subject: v.string(), text: v.string(), html: v.string() })),
+    claimToken: v.optional(v.string()),
+    firstAttemptAt: v.optional(v.string()),
+    lastError: v.optional(v.string()),
+    providerMessageId: v.optional(v.string()),
+    acceptedAt: v.optional(v.string()),
+    resolvedAt: v.optional(v.string()),
+    createdAt: v.string(),
+    updatedAt: v.string(),
+  })
+    .index("by_key", ["key"])
+    .index("by_createdAt", ["createdAt"])
+    .index("by_status_createdAt", ["status", "createdAt"])
+    .index("by_kind_createdAt", ["kind", "createdAt"]),
+  staffNotificationAttempts: defineTable({
+    notificationId: v.id("staffNotifications"),
+    attempt: v.number(),
+    status: v.string(),
+    error: v.optional(v.string()),
+    providerMessageId: v.optional(v.string()),
+    createdAt: v.string(),
+    completedAt: v.optional(v.string()),
+  }).index("by_notification_attempt", ["notificationId", "attempt"]),
   agentRuns: defineTable({
     conversationId: v.id("conversations"),
     inboundMessageId: v.string(),

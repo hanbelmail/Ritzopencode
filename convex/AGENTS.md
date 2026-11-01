@@ -25,6 +25,7 @@
 - `smsConsent.ts` owns canonical normalized-phone consent reads and explicit legacy STOP/START recovery.
 - `messaging.ts` owns owned Quo webhook leases with caller-bounded lease durations, SMS outbox idempotency, final consent/control/policy claims, send attempts, conversation delivery-state updates, and staff-authenticated Quo webhook-health reporting.
 - `quoteWebhook.ts` owns idempotent revision-scoped quote-webhook enqueueing, superseding of open earlier rounds, authoritative persisted-ticket payloads, delivery leases, bounded retries, and response/error records.
+- `staffNotifications.ts` owns durable new-inquiry and operational staff email jobs, per-attempt history, lease recovery, quote-stall checks, staff-only attention/history queries and retry/review actions, and automation-authenticated lifecycle failure reporting. `staffNotificationPolicy.ts` owns recipient normalization, eligibility, email rendering, and retry limits. `schema.ts` owns `staffNotifications`, `staffNotificationAttempts`, and the ticket status/creation-time index used by the attention view.
 - `terms.ts` owns public immutable Terms-version reads.
 - `tsconfig.json` owns TypeScript settings for Convex backend files.
 
@@ -68,12 +69,17 @@
 - Finalizing a ticket as `PAYMENT VERIFIED` or `BOOKING CONFIRMED` must atomically reject overlapping one-unit stays while preserving same-day checkout/check-in turnover.
 - Creating a ticket as `BOOKING CONFIRMED` is prohibited. A transition to `BOOKING CONFIRMED` requires the same nonblank confirmation number to exist on the persisted ticket before the transition mutation; the transition must not submit that field, and confirmed tickets must not clear it. Legacy confirmed records without a number may add one as a repair.
 - Operational creation of a `QUOTE REQUESTED` ticket through `tickets.create` or `sara.createQuoteRequest` must enqueue exactly one `quote-created:<ticketId>` delivery; legacy imports do not replay historical quote webhooks.
+- Those creation mutations also enqueue one `new-quote:<ticketId>` staff email job. The job is independent of quote-webhook delivery and remains eligible after pricing; cancellation, deletion, an existing acceptance stamp, disabled email settings, or missing recipients suppress it.
+- Staff email actions read `AUTH_RESEND_KEY`, `AUTH_RESEND_FROM`, and `PUBLIC_APP_URL` (falling back to `SITE_URL`) from Convex environment variables. Freeze the provider payload on the first attempt, reuse `staff-alert/<notificationId>` as the Resend idempotency key, allow at most five attempts within 23 hours of the first call, and never retry a frozen payload to a removed recipient. Record provider acceptance and ID; never label acceptance as confirmed inbox delivery. Inquiry acceptance stamps must not change ticket `updatedAt`, which fences lifecycle SMS claims.
+- Each quote-webhook enqueue schedules a revision-bound 10-minute stall check. Quote errors, terminal quote-webhook failures, Sona handoffs, and lifecycle/conversation delivery failures queue deduplicated operational emails under `staffAttentionEmailEnabled` (default on) and the existing staff-email master switch. Resolved/superseded work is checked again before dispatch. Failure of staff email itself is visible in the attention view and never recursively emails about itself.
+- Attention/history queries and manual retry/review operations are staff-only. History shows the latest 100 alerts, attention reads up to 200 records per category with an explicit truncation indicator, and bounded attempt history excludes frozen message bodies and recipients. Existing pending tickets and human-required conversations are visible without replaying historical emails.
 - Quote-input edits that leave a ticket at `QUOTE REQUESTED`, and `PRICE SENT` to `QUOTE REQUESTED` transitions, must apply the shared re-quote reset, bump `quoteRevision`, mint a new `quoteToken`, and enqueue exactly one `quote-requote:<ticketId>:<revision>` delivery; price-only edits, payment-blocking tickets, and superseded or already-priced deliveries never re-fire.
 
 ## Verification
 
 - Use `npx convex dev` for backend sync/codegen when Convex functions or schema change.
 - Use `npm test` for deterministic Sona branding, prompt identity, year/date resolution, Terms acceptance classification, calendar-month availability range checks, acquisition-source referrer-name gating, re-quote round mechanics, reservation-change reply classification, and pending-change ticket-snapshot comparison.
+- `staffNotifications.test.mjs` exercises production handlers with an in-memory Convex boundary: all inquiry entry points, duplicate requests, fast-pricing races, lease recovery, stable provider payloads/keys, retry limits, suppression, handoffs, and staff authorization. Run `npx tsc --noEmit -p convex/tsconfig.json` after backend changes; deployment still requires authenticated Convex CLI access.
 
 ## Child DOX Index
 

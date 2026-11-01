@@ -103,7 +103,7 @@ export default function EmailDashboardPage() {
   const activeStaffRecipients = staffRecipients.filter((recipient) => recipient.active !== false && recipient.email.trim());
   const activeHotelRecipients = hotelRecipients.filter((recipient) => recipient.active !== false && recipient.email.trim());
   const guestAlertCount = [settings.priceSentGuestEmailEnabled].filter(Boolean).length;
-  const staffAlertCount = [settings.quoteAlertEnabled, settings.priceSentStaffAlertEnabled, settings.paymentSubmittedAlertEnabled].filter(Boolean).length;
+  const staffAlertCount = [settings.quoteAlertEnabled, settings.staffAttentionEmailEnabled, settings.priceSentStaffAlertEnabled, settings.paymentSubmittedAlertEnabled].filter(Boolean).length;
   const hotelAlertCount = [settings.bookingRequestHotelAlertEnabled, settings.bookingConfirmedHotelAlertEnabled].filter(Boolean).length;
   const enabledAlertCount = guestAlertCount + staffAlertCount + hotelAlertCount;
   const staffAlertsReady = staffAlertCount > 0 && activeStaffRecipients.length > 0;
@@ -274,9 +274,18 @@ export default function EmailDashboardPage() {
                 <div className="flex items-center justify-between rounded-[8px] border border-[#e6dfd8] bg-[#faf9f5] px-3 py-3">
                   <div>
                     <Label htmlFor="quote-alert-enabled" className="text-sm font-medium text-[#252523]">New quote alert</Label>
-                    <p className="mt-0.5 text-xs text-[#6c6a64]">Email active staff when a guest requests a quote.</p>
+                    <p className="mt-0.5 text-xs text-[#6c6a64]">Email active staff for new inquiries from the public form, Sona, and staff entry.</p>
                   </div>
                   <Switch id="quote-alert-enabled" checked={settings.quoteAlertEnabled} onCheckedChange={(value) => setField("quoteAlertEnabled", value)} />
+                </div>
+
+                <div className="flex items-center justify-between rounded-[8px] border border-[#e6dfd8] bg-[#faf9f5] px-3 py-3">
+                  <div>
+                    <Label htmlFor="staff-attention-email-enabled" className="text-sm font-medium text-[#252523]">Needs attention alerts</Label>
+                    <p className="mt-0.5 text-xs text-[#6c6a64]">Email staff for failed or stalled quotes, notification failures, and Sona handoffs.</p>
+                    <a href="/attention" className="text-xs text-[#a9583e] underline">View attention queue and delivery history</a>
+                  </div>
+                  <Switch id="staff-attention-email-enabled" checked={settings.staffAttentionEmailEnabled} onCheckedChange={(value) => setField("staffAttentionEmailEnabled", value)} />
                 </div>
 
                 <div className="flex items-center justify-between rounded-[8px] border border-[#e6dfd8] bg-[#faf9f5] px-3 py-3">

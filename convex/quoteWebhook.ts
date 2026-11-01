@@ -2,6 +2,8 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { internalAction, internalMutation } from "./_generated/server";
 import { expectedQuoteWebhookKey } from "./quoteRevision";
+import { queueQuoteProblem } from "./staffNotifications";
+import { QUOTE_STALLED_MS } from "./staffNotificationPolicy";
 
 const MAX_ATTEMPTS = 5;
 const DELIVERY_LEASE_MS = 60_000;
@@ -67,6 +69,7 @@ export async function queueQuoteWebhook(ctx: any, ticket: any, options: { key?: 
     updatedAt: now,
   });
   await ctx.scheduler.runAfter(0, internal.quoteWebhook.deliver, { deliveryId });
+  await ctx.scheduler.runAfter(QUOTE_STALLED_MS, internal.staffNotifications.checkStalledQuote, { ticketId: ticket.id, quoteRevision: ticket.quoteRevision || 0 });
   return deliveryId;
 }
 
@@ -197,6 +200,11 @@ export const finish = internalMutation({
     if (retryable) {
       const delay = RETRY_DELAYS_MS[Math.min(delivery.attempts - 1, RETRY_DELAYS_MS.length - 1)];
       await ctx.scheduler.runAfter(delay, internal.quoteWebhook.deliver, { deliveryId: args.deliveryId });
+    } else {
+      const ticket = await ctx.db.query("tickets").withIndex("by_ticketId", (q) => q.eq("ticketId", delivery.ticketId)).first();
+      if (ticket && expectedQuoteWebhookKey(ticket.data) === delivery.idempotencyKey) {
+        await queueQuoteProblem(ctx, ticket.data, "quoteWebhookFailure", args.error || "Quote webhook retries were exhausted");
+      }
     }
   },
 });
@@ -224,6 +232,10 @@ export const recoverStale = internalMutation({
       updatedAt: now.toISOString(),
     });
     if (retryable) await ctx.scheduler.runAfter(0, internal.quoteWebhook.deliver, { deliveryId: args.deliveryId });
+    else {
+      const ticket = await ctx.db.query("tickets").withIndex("by_ticketId", (q) => q.eq("ticketId", delivery.ticketId)).first();
+      if (ticket && expectedQuoteWebhookKey(ticket.data) === delivery.idempotencyKey) await queueQuoteProblem(ctx, ticket.data, "quoteWebhookFailure", "Quote webhook delivery lease expired after the final attempt");
+    }
   },
 });
 

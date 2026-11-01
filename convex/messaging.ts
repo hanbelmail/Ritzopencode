@@ -2,6 +2,22 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireServiceKey, requireStaff } from "./security";
 import { getSmsConsent, normalizeSmsPhone } from "./smsConsent";
+import { queueStaffAlert } from "./staffNotifications";
+
+async function recordSmsAttention(ctx: any, conversationId: any, key: string, failed: boolean) {
+  if (failed) {
+    const conversation = await ctx.db.get(conversationId);
+    if (!conversation) return;
+    await queueStaffAlert(ctx, {
+      key, kind: "deliveryFailure", conversationId: conversation.publicId,
+      ...(conversation.ticketId ? { ticketId: conversation.ticketId } : {}),
+      reason: "A conversational or staff SMS failed. Review the delivery status in the Sona inbox before sending again.",
+    });
+  } else {
+    const alert = await ctx.db.query("staffNotifications").withIndex("by_key", (q: any) => q.eq("key", key)).first();
+    if (alert) await ctx.db.patch(alert._id, { resolvedAt: new Date().toISOString() });
+  }
+}
 
 const MAX_WEBHOOK_LEASE_SECONDS = 600;
 const MIN_WEBHOOK_LEASE_SECONDS = 15;
@@ -233,6 +249,7 @@ export const markSms = mutation({
       deliveryStatus,
     });
     await updateInitialDisclosureState(ctx, message, args.status, now);
+    if (["failed", "accepted", "delivered"].includes(args.status)) await recordSmsAttention(ctx, outbox.conversationId, `sms-outbox:${outbox._id}`, args.status === "failed");
     return ctx.db.get(outbox._id);
   },
 });
@@ -254,6 +271,7 @@ export const applyDeliveryEvent = mutation({
       await ctx.db.patch(message._id, { deliveryStatus: status });
       await updateInitialDisclosureState(ctx, message, status, new Date().toISOString());
     }
+    if (outbox || message) await recordSmsAttention(ctx, outbox?.conversationId || message?.conversationId, outbox ? `sms-outbox:${outbox._id}` : `sms-message:${message!._id}`, !args.delivered);
     return { matched: Boolean(outbox || message) };
   },
 });

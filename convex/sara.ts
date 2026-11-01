@@ -5,6 +5,7 @@ import { assertReferrerName } from "./acquisitionSource";
 import { availableRangesForWindow, isCalendarDate, monthAvailabilityWindow } from "./saraAvailability";
 import { getSmsConsent, normalizeSmsPhone } from "./smsConsent";
 import { queueQuoteWebhook } from "./quoteWebhook";
+import { queueNewQuoteAlert, queueStaffAlert } from "./staffNotifications";
 import { applyRequoteReset, nextQuoteRevision, quoteRevisionOf } from "./quoteRevision";
 import { changeSummaryFields, classifyChangeReply, isReservationChangeExpired, isSameTicketSnapshot } from "./reservationChange";
 import {
@@ -414,6 +415,7 @@ export const createQuoteRequest = mutation({
       ...ticketIndexFields(ticket),
     });
     await queueQuoteWebhook(ctx, ticket);
+    await queueNewQuoteAlert(ctx, ticket);
     await ctx.db.insert("reservationEvents", {
       ticketId: ticket.id,
       conversationId: conversation._id,
@@ -789,6 +791,15 @@ export const handoff = mutation({
         actorType: "assistant",
         payload: { reason: args.reason.trim().slice(0, 500) },
         createdAt: now,
+      });
+    }
+    if (!smsOptedOut) {
+      await queueStaffAlert(ctx, {
+        key: `handoff:${conversation.publicId}:${conversation.controlVersion || 0}`,
+        kind: "handoff",
+        conversationId: conversation.publicId,
+        ...(conversation.ticketId ? { ticketId: conversation.ticketId } : {}),
+        reason: args.reason.trim().slice(0, 500),
       });
     }
     return { handedOff: true };

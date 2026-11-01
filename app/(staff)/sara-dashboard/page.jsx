@@ -323,6 +323,10 @@ function KnowledgePanel() {
 function InboxPanel() {
   const conversations = useQuery(api.conversations.listForStaff, {});
   const [selectedId, setSelectedId] = useState(null);
+  useEffect(() => {
+    const conversationId = new URLSearchParams(window.location.search).get("conversation");
+    if (conversationId) setSelectedId(conversationId);
+  }, []);
   const detail = useQuery(api.conversations.getForStaff, selectedId ? { publicId: selectedId } : "skip");
   const setControl = useMutation(api.conversations.setStaffControl);
   const addReply = useMutation(api.conversations.addStaffReply);
@@ -563,6 +567,9 @@ function WebhookPanel() {
 
 export default function SaraDashboardPage() {
   const [activeTab, setActiveTab] = useState("controls");
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).has("conversation")) setActiveTab("inbox");
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#faf9f5] px-5 py-8 text-[#141413] md:px-8 lg:px-10">
