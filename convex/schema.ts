@@ -305,6 +305,36 @@ export default defineSchema({
   })
     .index("by_provider_eventId", ["provider", "eventId"])
     .index("by_createdAt", ["createdAt"]),
+  guestReminders: defineTable({
+    key: v.string(),
+    kind: v.union(v.literal("quoteReminder"), v.literal("checkoutReminder")),
+    ticketId: v.string(),
+    dueAt: v.number(),
+    deadline: v.number(),
+    quoteRevision: v.number(),
+    quoteToken: v.string(),
+    checkIn: v.string(),
+    checkOut: v.string(),
+    generation: v.number(),
+    status: v.union(v.literal("scheduled"), v.literal("preparing"), v.literal("sending"), v.literal("accepted"), v.literal("delivered"), v.literal("delivery_failed"), v.literal("cancelled"), v.literal("skipped"), v.literal("failed"), v.literal("unknown")),
+    attempts: v.number(),
+    reason: v.optional(v.string()),
+    claimToken: v.optional(v.string()),
+    content: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    ticketVersion: v.optional(v.string()),
+    settingsVersion: v.optional(v.string()),
+    consentVersion: v.optional(v.number()),
+    controlVersion: v.optional(v.number()),
+    providerMessageId: v.optional(v.string()),
+    acceptedAt: v.optional(v.string()),
+    createdAt: v.string(),
+    updatedAt: v.string(),
+  })
+    .index("by_key", ["key"])
+    .index("by_ticketId", ["ticketId"])
+    .index("by_createdAt", ["createdAt"])
+    .index("by_kind_createdAt", ["kind", "createdAt"]),
   ticketSmsReceipts: defineTable({
     providerMessageId: v.string(),
     ticketId: v.string(),
@@ -312,8 +342,11 @@ export default defineSchema({
       v.literal("priceSent"),
       v.literal("paymentSubmitted"),
       v.literal("paymentVerified"),
-      v.literal("bookingConfirmed")
+      v.literal("bookingConfirmed"),
+      v.literal("quoteReminder"),
+      v.literal("checkoutReminder")
     ),
+    reminderId: v.optional(v.id("guestReminders")),
     status: v.union(v.literal("accepted"), v.literal("delivered"), v.literal("failed")),
     error: v.optional(v.string()),
     createdAt: v.string(),

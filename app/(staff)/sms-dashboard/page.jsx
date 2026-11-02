@@ -1,6 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { validateReminderSettings } from "@/convex/guestReminderPolicy";
 import { Check, MessageSquare } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -92,6 +96,7 @@ function previewMessage(template) {
     retailPriceScreenshotBlock: "Ritz website retail price image: https://reservations.example.com/ticket/example-ticket/retail-price-image",
     retailPriceScreenshotUrl: "https://reservations.example.com/ticket/example-ticket/retail-price-image",
     ticketUrl: "https://reservations.example.com/ticket/example-ticket",
+    quoteExpiryHawaii: "Aug 3, 2026, 10:00 AM",
   };
 
   return Object.entries(replacements)
@@ -160,6 +165,41 @@ function SmsStatusPanel({ config, settings, setField, updateTemplate }) {
   );
 }
 
+function ScheduledRemindersPanel({ settings, setField }) {
+  const history = useQuery(api.guestReminders.list, {});
+  const time = (value) => new Date(value).toLocaleString("en-US", { timeZone: "Pacific/Honolulu" });
+  return <section className="mt-6 space-y-4 rounded-[12px] border border-[#e6dfd8] p-5">
+    <h2 className="text-xl font-medium">Scheduled guest reminders</h2>
+    <p className="text-sm text-[#6c6a64]">Off by default. Review the messages, test with the SMS allowlist, then enable and save. Eligible existing reservations are also scheduled; expired quotes and past checkout-reminder windows are never replayed.</p>
+    {[
+      { kind: "quoteReminder", title: "Day-3 quote reminder", description: "One SMS per quote round, 24 hours before expiration. Only unpaid, active quotes with payable dates are eligible." },
+      { kind: "checkoutReminder", title: "Day-before-checkout reminder", description: "One SMS per confirmed reservation on the day before checkout. Changing dates before sending reschedules it; changing dates after acceptance does not send it again." },
+    ].map(({ kind, title, description }) => <div key={kind} className="space-y-3 rounded-lg bg-[#efe9de] p-4">
+      <div className="flex items-center justify-between gap-4">
+        <div><Label htmlFor={`${kind}-enabled`}>{title}</Label><p className="mt-1 text-xs text-[#6c6a64]">{description}</p></div>
+        <Switch id={`${kind}-enabled`} checked={settings[`${kind}SmsEnabled`]} onCheckedChange={(value) => setField(`${kind}SmsEnabled`, value)} />
+      </div>
+      {kind === "checkoutReminder" && <div className="max-w-xs space-y-2"><Label htmlFor="checkout-reminder-time">Send time (Hawaii / Pacific/Honolulu)</Label><Input id="checkout-reminder-time" type="time" value={settings.checkoutReminderTime} onChange={(event) => setField("checkoutReminderTime", event.target.value)} /></div>}
+      <Label htmlFor={`${kind}-template`}>Message</Label>
+      <Textarea id={`${kind}-template`} value={settings[`${kind}SmsTemplate`]} onChange={(event) => setField(`${kind}SmsTemplate`, event.target.value)} className="min-h-28 bg-[#faf9f5]" />
+      <p className="whitespace-pre-wrap rounded-lg bg-[#faf9f5] p-3 text-sm">{previewMessage(settings[`${kind}SmsTemplate`])}</p>
+      <p className="text-xs text-[#6c6a64]">Values: {"{guestName}, {checkIn}, {checkOut}, {ticketUrl}, {quoteExpiryHawaii}"}. The quote reminder must retain its expiration and ticket link. Keep all housekeeping instructions in the checkout message.</p>
+    </div>)}
+    <p className="text-xs text-[#6c6a64]">STOP, staff takeover, test mode, and current reservation state are rechecked before every send. A skipped reminder is not automatically replayed for the same quote/stay. Ambiguous provider results are never retried automatically; check Quo history first. Only explicit rate-limit/retryable rejections are retried (up to 3 calls). <Link href="/attention" className="underline">Review failures</Link>.</p>
+    <h3 className="font-medium">Recent reminder jobs</h3>
+    <p className="text-xs text-[#6c6a64]">Latest 100 jobs. Times below are Hawaii time. Accepted is provider acceptance, not confirmed delivery.</p>
+    {history === undefined && <p className="text-sm">Loading reminders...</p>}
+    {history?.length === 0 && <p className="text-sm text-[#6c6a64]">No reminders scheduled yet.</p>}
+    <div className="max-h-96 space-y-2 overflow-y-auto">{history?.map((row) => <article key={row._id} className="rounded-lg border border-[#e6dfd8] bg-white p-3 text-sm">
+      <div className="flex flex-wrap items-center justify-between gap-2"><span>{row.kind === "quoteReminder" ? "Quote reminder" : "Checkout reminder"}</span><Badge variant="outline">{row.status}</Badge></div>
+      <p className="mt-1 text-xs text-[#6c6a64]">Due: {time(row.dueAt)} · {row.attempts} provider attempt(s)</p>
+      {row.reason && <p className="mt-1 text-xs text-amber-800">{row.reason}</p>}
+      {row.providerMessageId && <p className="mt-1 break-all text-xs text-[#6c6a64]">Provider ID: {row.providerMessageId}</p>}
+      <Link href={`/new?id=${encodeURIComponent(row.ticketId)}`} className="mt-1 inline-block text-xs text-[#a9583e] underline">Open reservation</Link>
+    </article>)}</div>
+  </section>;
+}
+
 export default function SmsDashboardPage() {
   const savedSettings = useSettings();
   const { saveSettings } = useSettingsActions();
@@ -187,6 +227,15 @@ export default function SmsDashboardPage() {
   async function save(event) {
     event.preventDefault();
     const nextSettings = { ...settings };
+    try {
+      Object.assign(nextSettings, validateReminderSettings(settings));
+      for (const kind of ["quoteReminder", "checkoutReminder"]) {
+        if (previewMessage(settings[`${kind}SmsTemplate`]).length > MAX_SMS_LENGTH) throw new Error("Reminder preview exceeds 1600 characters");
+      }
+    } catch (validationError) {
+      setError(validationError.message);
+      return;
+    }
 
     for (const config of SMS_STATUS_CONFIGS) {
       const templates = config.normalize(settings[config.templatesKey]).map((template) => ({
@@ -208,7 +257,12 @@ export default function SmsDashboardPage() {
     }
 
     setError("");
-    await saveSettings(nextSettings);
+    try {
+      await saveSettings(nextSettings);
+    } catch (saveError) {
+      setError(saveError.message || "Failed to save SMS settings");
+      return;
+    }
     setSettings(nextSettings);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
@@ -245,6 +299,8 @@ export default function SmsDashboardPage() {
               </TabsContent>
             ))}
           </Tabs>
+
+          <ScheduledRemindersPanel settings={settings} setField={setField} />
 
           <p className="mt-4 text-xs leading-relaxed text-[#6c6a64]">Quo sends to guest phone numbers in E.164 format, such as <code>+18085551234</code>. SMS test mode and the allowlist are enforced immediately before every delivery.</p>
           {error && <p className="mt-4 rounded-[8px] border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}

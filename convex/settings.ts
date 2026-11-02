@@ -1,6 +1,8 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { isAutomationKey, isServiceKey, isStaff, requireStaff } from "./security";
+import { internal } from "./_generated/api";
+import { validateReminderSettings } from "./guestReminderPolicy";
 
 const SETTINGS_KEY = "main";
 const SONA_AGENT_NAME = "Sona";
@@ -61,7 +63,7 @@ export const save = mutation({
       ? Object.fromEntries(Object.entries(row.data).filter(([key]) => key.startsWith("sara")))
       : {};
     const nonSaraSettings = Object.fromEntries(Object.entries(settings || {}).filter(([key]) => !key.startsWith("sara")));
-    const nextSettings = { ...nonSaraSettings, ...protectedSaraSettings };
+    const nextSettings = { ...nonSaraSettings, ...protectedSaraSettings, ...validateReminderSettings(nonSaraSettings) };
 
     if (row) {
       await ctx.db.patch(row._id, { data: nextSettings, updatedAt: now });
@@ -69,6 +71,7 @@ export const save = mutation({
       await ctx.db.insert("settings", { key: SETTINGS_KEY, data: nextSettings, updatedAt: now });
     }
 
+    await ctx.scheduler.runAfter(0, internal.guestReminders.reconcile, {});
     return nextSettings;
   },
 });

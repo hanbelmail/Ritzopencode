@@ -11,7 +11,10 @@
 import type * as acquisitionSource from "../acquisitionSource.js";
 import type * as auth from "../auth.js";
 import type * as conversations from "../conversations.js";
+import type * as crons from "../crons.js";
 import type * as dashboardPreferences from "../dashboardPreferences.js";
+import type * as guestReminderPolicy from "../guestReminderPolicy.js";
+import type * as guestReminders from "../guestReminders.js";
 import type * as http from "../http.js";
 import type * as knowledge from "../knowledge.js";
 import type * as knowledgeSeed from "../knowledgeSeed.js";
@@ -41,7 +44,10 @@ declare const fullApi: ApiFromModules<{
   acquisitionSource: typeof acquisitionSource;
   auth: typeof auth;
   conversations: typeof conversations;
+  crons: typeof crons;
   dashboardPreferences: typeof dashboardPreferences;
+  guestReminderPolicy: typeof guestReminderPolicy;
+  guestReminders: typeof guestReminders;
   http: typeof http;
   knowledge: typeof knowledge;
   knowledgeSeed: typeof knowledgeSeed;

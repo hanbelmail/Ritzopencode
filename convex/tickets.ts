@@ -6,6 +6,7 @@ import { getSmsConsent, normalizeSmsPhone } from "./smsConsent";
 import { termsAgreementText, WEB_TERMS_ACCEPTANCE_CONTRACT } from "./termsContract";
 import { queueQuoteWebhook } from "./quoteWebhook";
 import { queueNewQuoteAlert, queueQuoteProblem, queueStaffAlert } from "./staffNotifications";
+import { syncGuestReminders } from "./guestReminders";
 import {
   applyRequoteReset,
   initialQuoteRound,
@@ -532,6 +533,7 @@ export const submitGuestPayment = mutation({
     };
     await ctx.db.patch(row._id, { data: updated, updatedAt: now, ...ticketIndexFields(updated) });
     await ctx.db.patch(receipt._id, { consumedAt: now });
+    await syncGuestReminders(ctx, updated);
     await ctx.db.insert("reservationEvents", {
       ticketId: args.id,
       type: "payment_submitted",
@@ -618,6 +620,10 @@ export const applySmsDeliveryReceipt = mutation({
       error: args.delivered ? undefined : String(args.error || status).slice(0, 1000),
       updatedAt: new Date().toISOString(),
     });
+    if (receipt.reminderId) {
+      const reminder = await ctx.db.get(receipt.reminderId);
+      if (reminder) await ctx.db.patch(reminder._id, { status: args.delivered ? "delivered" : "delivery_failed", reason: args.delivered ? undefined : "Quo reported failed reminder delivery", updatedAt: new Date().toISOString() });
+    }
     const alertKey = `sms-receipt:${providerMessageId}`;
     if (!args.delivered) {
       await queueStaffAlert(ctx, { key: alertKey, kind: "deliveryFailure", ticketId: receipt.ticketId, reason: `${receipt.event} SMS delivery failed. Review the provider receipt and guest contact details.` });
@@ -789,6 +795,7 @@ export const create = mutation({
     });
     await queueQuoteWebhook(ctx, ticket);
     await queueNewQuoteAlert(ctx, ticket);
+    await syncGuestReminders(ctx, ticket);
 
     return ticket;
   },
@@ -940,6 +947,7 @@ export const update = mutation({
         createdAt: now,
       });
     }
+    await syncGuestReminders(ctx, updated);
     return updated;
   },
 });

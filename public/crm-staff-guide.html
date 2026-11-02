@@ -673,6 +673,18 @@
       <p>The Needs attention alerts switch in <a href="/email-dashboard">Email Dashboard</a> controls proactive operational emails to active staff recipients and follows the staff email master switch. A failed staff-email transport remains visible here instead of recursively sending more failure emails.</p>
     </section>
 
+    <section id="guest-reminders">
+      <h2>Scheduled Guest Reminders</h2>
+      <p>Open <a href="/sms-dashboard">SMS Dashboard</a> and review Scheduled guest reminders. Both reminder switches are off by default. Review the templates and run an allowlisted SMS test before enabling them. The checkout send time defaults to 10:00 AM Hawaii time and is editable.</p>
+      <ul>
+        <li><strong>Quote reminder:</strong> one SMS per quote round, scheduled 24 hours before the quote's actual expiration (the start of day 3 for a three-day quote). The quote must still be PRICE SENT, unexpired, unpaid and payable. Payment submission, cancellation, unavailable dates, or a superseding re-quote prevent an obsolete reminder. The message contains the exact Hawaii expiration and secure ticket link.</li>
+        <li><strong>Checkout reminder:</strong> one SMS per BOOKING CONFIRMED reservation, on the Hawaii calendar day before checkout. It reminds guests to remove opened food from the fridge, dispose of trash, and remove or discard personal belongings because Ritz housekeeping will not dispose of them. Date/time edits before sending reschedule the job; edits after provider acceptance do not send a second reminder.</li>
+      </ul>
+      <p>Saving enabled settings schedules eligible existing reservations, including those already inside their active reminder window. A 15-minute server reconciliation checks for missed plans and settings changes. Expired quotes and checkout-day/past reminder windows are never replayed. STOP, test allowlists, linked-conversation staff takeover, and pending reservation changes are checked immediately before dispatch. Skipped jobs are not automatically replayed.</p>
+      <p>Recent reminder jobs show up to 100 schedules and their status in Hawaii time. Accepted means Quo accepted the SMS, while delivered/failed reflect provider receipts. Explicit rate-limit/retryable rejections may retry up to three provider calls. Network errors, ambiguous responses, or a missing provider message ID are marked unknown and must be reviewed in <a href="/attention">Needs attention</a> and Quo history before any manual resend.</p>
+      <p>Deployment setup: the Convex deployment needs QUO_API_KEY, QUO_FROM and PUBLIC_APP_URL (or SITE_URL); setting these only on Next.js is not sufficient for scheduled reminders.</p>
+    </section>
+
     <section id="daily-process">
       <h2>Daily Staff Process</h2>
       <div class="checklist">
@@ -759,8 +771,8 @@
           <p>Document that cancelled reservations stay in reports and guest history, while deleted tickets disappear from the CRM.</p>
         </article>
         <article class="suggestion">
-          <h3>Guest Follow-Up Templates</h3>
-          <p>Add message templates for quote reminders, payment reminders, missing screenshot requests, and booking confirmation follow-up.</p>
+          <h3>Additional Guest Follow-Up Templates</h3>
+          <p>Scheduled quote and checkout SMS templates are available in SMS Dashboard. Consider separate future templates for missing screenshot requests and other follow-up needs.</p>
         </article>
       </div>
     </section>

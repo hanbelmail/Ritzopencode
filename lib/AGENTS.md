@@ -39,6 +39,8 @@
 - `requote-notification-server.js` owns the post-`PRICE SENT` quote-ready and failed-quote conversation messages with their per-revision idempotency keys, consent-, allowlist-, and control-fenced SMS delivery through the Convex outbox, and re-sending the price email or price SMS after a contact-detail change on a priced ticket; quote-ready content renders the active price-sent SMS template verbatim with the same ticket and retail-screenshot URLs as the lifecycle SMS so web transcripts match the guest SMS text, and linked conversations are read through `conversations.getServiceContext` so web conversations without a guest session still receive their notifications.
 - `quo-provider.js` owns the single dependency-free Quo provider message ID extraction contract shared by outbound sends and inbound webhook delivery receipts.
 - `quo-server.js` owns the shared server-only Quo text transport, sender/recipient normalization, timeout, resolved `providerMessageId` on every successful send, and rejected-versus-ambiguous provider error classification.
+- `defaults.js` owns disabled-by-default quote/checkout reminder switches, editable default reminder copy, and `checkoutReminderTime` (`10:00` Hawaii). `quo-server.js` uses relative dependency imports so both Next.js and Convex reminder actions reuse the same transport; no browser code may call that transport.
+- `convex-test-runtime.mjs` is the Node-only in-memory Convex/auth/scheduler boundary for notification-handler tests. It is never imported by application/backend runtime code.
 
 ## Local Contracts
 
@@ -69,6 +71,7 @@
 - Conversational SMS must use `lib/quo-server.js` and the Convex outbox; do not add another direct Quo transport.
 - Every outbound Quo send must persist the `providerMessageId` that `quo-server.js` resolved, because delivery receipts are matched only by that value; extract provider message IDs exclusively through `quo-provider.js` so the send side and the webhook receipt side cannot drift apart.
 - `staffAttentionEmailEnabled` defaults on and is independently editable under the existing staff-email master switch. Lifecycle notification aggregators report actual failures, not normal disabled/already-sent skips; monitoring failure never changes the provider result returned to callers.
+- Reminder settings normalization preserves missing-switch defaults as off and normalizes checkout time; Convex validates the saved templates/time. Quote reminder copy must retain the exact Hawaii expiration and secure ticket link; the checkout default contains all three guest housekeeping instructions and the hotel's disposal limitation.
 
 ## Work Guidance
 

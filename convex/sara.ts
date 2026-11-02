@@ -6,6 +6,7 @@ import { availableRangesForWindow, isCalendarDate, monthAvailabilityWindow } fro
 import { getSmsConsent, normalizeSmsPhone } from "./smsConsent";
 import { queueQuoteWebhook } from "./quoteWebhook";
 import { queueNewQuoteAlert, queueStaffAlert } from "./staffNotifications";
+import { syncGuestReminders } from "./guestReminders";
 import { applyRequoteReset, nextQuoteRevision, quoteRevisionOf } from "./quoteRevision";
 import { changeSummaryFields, classifyChangeReply, isReservationChangeExpired, isSameTicketSnapshot } from "./reservationChange";
 import {
@@ -1110,6 +1111,7 @@ async function applyReservationChange(ctx: any, options: {
     updatedAt: now,
   });
 
+  await syncGuestReminders(ctx, updated);
   return { updated, datesChanged, quoteInvalidating, fields, emailChanged, phoneChanged };
 }
 
